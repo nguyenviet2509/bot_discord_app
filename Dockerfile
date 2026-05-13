@@ -2,7 +2,7 @@ FROM node:20-bookworm-slim
 
 # Build deps cho better-sqlite3 (native module)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ \
+    python3 make g++ procps \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
