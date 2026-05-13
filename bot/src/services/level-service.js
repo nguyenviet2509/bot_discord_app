@@ -2,12 +2,23 @@ const { EmbedBuilder } = require('discord.js')
 const db = require('../../../shared/db')
 
 // ─── Level Formula ────────────────────────────────────────────────────────────
-// XP needed to go from level L to L+1 = LEVEL_XP_BASE * max(L, 1)
-// With default settings (avg 20 XP/msg):
-//   • Level 1 → 2: 20,000 XP  → 10 messages = 1% progress
-//   • Level 10 → 11: 200,000 XP → 10 messages = 0.1% progress
-// Admin can increase xp_min/xp_max in Settings to speed up progression.
-const LEVEL_XP_BASE = 20000
+// Mỗi 10 level là 1 bracket. Số tin nhắn cần để lên MỖI level trong từng bracket:
+//   bracket 1  (lvl 1-10):   50 msg/level
+//   bracket 2  (lvl 11-20):  100 msg/level
+//   bracket 3  (lvl 21-30):  120 msg/level
+//   bracket 4  (lvl 31-40):  140 msg/level
+//   bracket 5  (lvl 41-50):  160 msg/level
+//   bracket 6  (lvl 51-60):  260 msg/level  (= 160 + 100)
+//   bracket 7  (lvl 61-70):  460 msg/level  (= 260 + 200)
+//   bracket 8  (lvl 71-80):  760 msg/level  (= 460 + 300)
+//   bracket 9  (lvl 81-90):  1160 msg/level (= 760 + 400)
+//   bracket 10 (lvl 91-100): 1660 msg/level (= 1160 + 500)
+// XP threshold = msgs × AVG_XP_PER_MSG (xp_min=15, xp_max=25 mặc định → avg 20).
+const AVG_XP_PER_MSG = 20
+const LEVELS_PER_BRACKET = 10
+const BRACKET_MSGS_PER_LEVEL = [50, 100, 120, 140, 160, 260, 460, 760, 1160, 1660]
+// Bracket vượt quá 10 (level > 100) → giữ giá trị bracket cuối
+const LAST_BRACKET_MSGS = BRACKET_MSGS_PER_LEVEL[BRACKET_MSGS_PER_LEVEL.length - 1]
 
 // Tier milestones matching League-style ranks
 const LEVEL_TIERS = [
@@ -30,17 +41,38 @@ function getTierForLevel(level) {
   return { minLevel: 0, name: 'Chưa xếp hạng', color: 0x6b7280, badge: '▫️' }
 }
 
-// Total XP needed to reach level n from level 0:
-// = LEVEL_XP_BASE * (1 + (n-1)*n/2)   for n >= 1
-// = 0                                   for n = 0
-function totalXpToReachLevel(n) {
-  if (n <= 0) return 0
-  return LEVEL_XP_BASE * (1 + (n - 1) * n / 2)
+// Msg/level của bracket chứa target level (1-indexed)
+function bracketMsgsForTarget(target) {
+  const idx = Math.ceil(target / LEVELS_PER_BRACKET) - 1 // 0-indexed
+  if (idx < 0) return BRACKET_MSGS_PER_LEVEL[0]
+  if (idx >= BRACKET_MSGS_PER_LEVEL.length) return LAST_BRACKET_MSGS
+  return BRACKET_MSGS_PER_LEVEL[idx]
 }
 
-// XP needed to go from currentLevel to currentLevel+1
+// Số tin nhắn cần để lên level (target = currentLevel + 1)
+function msgsForNextLevel(currentLevel) {
+  const target = Math.max(currentLevel + 1, 1)
+  return bracketMsgsForTarget(target)
+}
+
+// XP cần để lên level kế tiếp
 function xpForNextLevel(currentLevel) {
-  return LEVEL_XP_BASE * Math.max(currentLevel, 1)
+  return msgsForNextLevel(currentLevel) * AVG_XP_PER_MSG
+}
+
+// Tổng XP cần để đạt level n (từ level 0) — cộng dồn theo từng bracket
+function totalXpToReachLevel(n) {
+  if (n <= 0) return 0
+  let totalMsgs = 0
+  let remaining = n
+  for (let i = 0; remaining > 0; i++) {
+    const bracketCost =
+      i < BRACKET_MSGS_PER_LEVEL.length ? BRACKET_MSGS_PER_LEVEL[i] : LAST_BRACKET_MSGS
+    const levelsInThisBracket = Math.min(remaining, LEVELS_PER_BRACKET)
+    totalMsgs += levelsInThisBracket * bracketCost
+    remaining -= levelsInThisBracket
+  }
+  return totalMsgs * AVG_XP_PER_MSG
 }
 
 // Keep for backward compat (returns same as totalXpToReachLevel)
@@ -155,6 +187,9 @@ module.exports = {
   buildProgressBar,
   getTierForLevel,
   LEVEL_TIERS,
-  LEVEL_XP_BASE,
+  AVG_XP_PER_MSG,
+  LEVELS_PER_BRACKET,
+  BRACKET_MSGS_PER_LEVEL,
+  msgsForNextLevel,
   handleLevelUp,
 }
