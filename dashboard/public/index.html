@@ -1,0 +1,612 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Level Bot - Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="/js/app.js"></script>
+  <style>
+    * { font-family: 'Inter', -apple-system, sans-serif; }
+    [x-cloak] { display: none !important; }
+    .sidebar-bg { background: linear-gradient(180deg, #0f172a 0%, #1e1040 100%); }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 10px;
+      color: #94a3b8; cursor: pointer; font-size: 14px; font-weight: 500;
+      transition: all .15s; border-left: 3px solid transparent; user-select: none;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.06); color: #e2e8f0; }
+    .nav-item.active { background: rgba(99,102,241,.15); color: #a5b4fc; border-left-color: #6366f1; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
+    .reward-card { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); transition: transform .15s, box-shadow .15s; border: 1px solid #f1f5f9; }
+    .reward-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.09); }
+    .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; transition: border-color .15s; outline: none; }
+    .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen" x-data="{ tab: 'rewards' }" x-init="if(!localStorage.getItem('token')){window.location.href='/login.html'}" x-cloak>
+<div class="flex min-h-screen">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar-bg w-60 min-h-screen fixed top-0 left-0 flex flex-col z-20">
+    <div class="px-5 pt-7 pb-5">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-900/40">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        <div>
+          <div class="text-white font-bold text-sm leading-tight">Level Bot</div>
+          <div class="text-indigo-400 text-xs mt-0.5">Admin Dashboard</div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 h-px bg-white/10"></div>
+    <nav class="px-3 pt-4 flex-1 space-y-0.5">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 pb-2">Quan ly</p>
+      <div @click="tab='servers'" :class="tab==='servers' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        <span>Host</span>
+      </div>
+      <div @click="tab='rewards'" :class="tab==='rewards' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+        <span>Rewards</span>
+      </div>
+      <div @click="tab='members'" :class="tab==='members' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Members</span>
+      </div>
+      <div @click="tab='commands'" :class="tab==='commands' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <span>Commands</span>
+      </div>
+      <div @click="tab='links'" :class="tab==='links' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span>Links</span>
+      </div>
+      <div @click="tab='settings'" :class="tab==='settings' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M19.07 4.93 4.93 19.07"/><path d="M12 2v2M12 20v2M4.93 4.93 6.34 6.34M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07 6.34 17.66M17.66 6.34l1.41-1.41"/></svg>
+        <span>Settings</span>
+      </div>
+    </nav>
+    <div class="px-3 pb-5">
+      <div class="mx-1 mb-3 h-px bg-white/10"></div>
+      <div @click="localStorage.removeItem('token'); window.location.href='/login.html'"
+        class="nav-item" style="color:#f87171">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Dang xuat</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="ml-60 flex-1">
+
+    <!-- REWARDS TAB -->
+    <div x-show="tab === 'rewards'" x-data="rewardsSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">Rewards</h1>
+          <p class="text-sm text-slate-400 mt-0.5">Phan thuong tu dong khi thanh vien dat level</p>
+        </div>
+        <button @click="openAdd()" class="btn-primary flex items-center gap-2 shadow-sm shadow-indigo-200">
+          <span class="text-lg leading-none font-light">+</span> Them reward
+        </button>
+      </div>
+      <div class="p-8">
+        <div x-show="toast" x-cloak
+          :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
+          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Dang tai...</div>
+        <div x-show="!loading && rewards.length === 0" class="text-center py-24">
+          <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+          </div>
+          <p class="text-slate-600 font-semibold mb-1">Chua co reward nao</p>
+          <p class="text-slate-400 text-sm mb-6">Them reward de thuong cho thanh vien tich cuc</p>
+          <button @click="openAdd()" class="btn-primary">+ Them reward dau tien</button>
+        </div>
+        <div x-show="!loading && rewards.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="r in rewards" :key="r.id">
+            <div class="reward-card">
+              <div class="flex items-start justify-between mb-4">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold" :style="levelBadgeStyle(r.level_required)">
+                  Level <span x-text="r.level_required"></span>
+                </span>
+                <div class="flex gap-1">
+                  <button @click="openEdit(r)" class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors" title="Sua">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button @click="remove(r.id)" class="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors" title="Xoa">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div x-show="r.type === 'role'" class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-indigo-50 rounded-xl flex items-center justify-center">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Role Discord</div>
+                  <div class="font-semibold text-slate-800" x-text="roleName(r.role_id)"></div>
+                </div>
+              </div>
+              <div x-show="r.type === 'badge'" class="flex items-center gap-3">
+                <img x-show="r.badge_url" :src="r.badge_url" class="w-11 h-11 rounded-xl object-cover border-2 border-slate-100" />
+                <div x-show="!r.badge_url" class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Huy hieu</div>
+                  <div class="font-semibold text-slate-800" x-text="r.badge_name || 'Khong co ten'"></div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+      <!-- Modal -->
+      <div x-show="modal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="modal = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-7 z-10">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-bold text-slate-800" x-text="editId ? 'Sua Reward' : 'Them Reward'"></h2>
+            <button @click="modal = false" class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-light">&times;</button>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Level yeu cau</label>
+              <input x-model.number="form.level_required" type="number" min="1" max="100" class="input-field" />
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-2">Loai reward</label>
+              <div class="grid grid-cols-2 gap-3">
+                <label :class="form.type==='role' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'" class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all">
+                  <input x-model="form.type" type="radio" value="role" class="accent-indigo-600" />
+                  <span class="text-sm font-medium">Role</span>
+                </label>
+                <label :class="form.type==='badge' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'" class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all">
+                  <input x-model="form.type" type="radio" value="badge" class="accent-indigo-600" />
+                  <span class="text-sm font-medium">Badge</span>
+                </label>
+              </div>
+            </div>
+            <div x-show="form.type === 'role'">
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Role Discord</label>
+              <select x-model="form.role_id" class="input-field">
+                <option value="">-- Chon role --</option>
+                <template x-for="role in roles" :key="role.id">
+                  <option :value="role.id" x-text="role.name"></option>
+                </template>
+              </select>
+            </div>
+            <div x-show="form.type === 'badge'" class="space-y-3">
+              <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-1.5">Ten huy hieu</label>
+                <input x-model="form.badge_name" type="text" placeholder="VD: Thanh vien tich cuc" class="input-field" />
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-1.5">Upload anh (max 2MB)</label>
+                <input type="file" accept="image/*" @change="uploadImage($event)"
+                  class="w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold file:text-sm cursor-pointer" />
+                <p x-show="uploading" class="text-indigo-500 text-xs mt-1.5">Dang upload anh...</p>
+              </div>
+              <img x-show="form.badge_url" :src="form.badge_url" class="h-20 w-20 rounded-xl object-cover border-2 border-slate-200" />
+            </div>
+          </div>
+          <div class="flex gap-3 mt-7">
+            <button @click="modal = false" class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-semibold transition-colors">Huy</button>
+            <button @click="save()" :disabled="saving || uploading" class="flex-1 btn-primary">
+              <span x-text="saving ? 'Dang luu...' : 'Luu reward'"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEMBERS TAB -->
+    <div x-show="tab === 'members'" x-data="membersSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">Thanh vien</h1>
+        </div>
+        <div class="relative">
+          <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input x-model="search" type="text" placeholder="Tim ten hoac Discord ID..."
+            class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-60 bg-slate-50" />
+        </div>
+      </div>
+      <div class="p-8">
+        <div x-show="toast" x-cloak
+          :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
+          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+        <div x-show="!loading && members.length > 0" class="grid grid-cols-3 gap-4 mb-6">
+          <div class="card p-5">
+            <div class="text-2xl font-bold text-slate-800" x-text="members.length"></div>
+            <div class="text-sm text-slate-500 mt-1">Tong thanh vien</div>
+          </div>
+          <div class="card p-5">
+            <div class="text-2xl font-bold text-slate-800" x-text="members.reduce((s,m)=>s+m.xp,0).toLocaleString()"></div>
+            <div class="text-sm text-slate-500 mt-1">Tong XP</div>
+          </div>
+          <div class="card p-5">
+            <div class="text-2xl font-bold text-slate-800" x-text="members.length ? Math.max(...members.map(m=>m.level)) : 0"></div>
+            <div class="text-sm text-slate-500 mt-1">Level cao nhat</div>
+          </div>
+        </div>
+        <!-- Tier reference -->
+        <div class="card p-4 mb-6 overflow-x-auto">
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Moc danh hieu</p>
+          <div class="flex gap-2 flex-wrap">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#f5f5f5;color:#455a64">⚫ Sat (Lv.10)</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#fbe9e7;color:#bf360c">🟤 Dong (Lv.20)</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#eceff1;color:#546e7a">⚪ Bac (Lv.30)</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#fffde7;color:#f9a825">🟡 Vang (Lv.40)</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#e0f7fa;color:#00838f">🩵 Bach Kim (Lv.50)</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#e8f5e9;color:#2e7d32">🟢 Luc Bao (Lv.60)</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#e3f2fd;color:#0277bd">🔵 Kim Cuong (Lv.70)</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#f3e5f5;color:#7b1fa2">🟣 Cao Thu (Lv.80)</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#fff3e0;color:#e65100">🟠 Dai Cao Thu (Lv.90)</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#fff0f0;color:#ff4655">🔴 Thach Dau (Lv.100)</span>
+          </div>
+        </div>
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Dang tai...</div>
+        <div x-show="!loading" class="card overflow-hidden">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-slate-100 bg-slate-50/60">
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-10">#</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Thanh vien</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Level</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">XP</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Hoat dong cuoi</th>
+                <th class="px-6 py-4 w-36"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="filtered.length === 0">
+                <tr><td colspan="6" class="text-center py-16 text-slate-400 text-sm">Khong tim thay thanh vien</td></tr>
+              </template>
+              <template x-for="(m, i) in filtered" :key="m.id">
+                <tr class="border-t border-slate-50 hover:bg-indigo-50/30 transition-colors">
+                  <td class="px-6 py-4 text-sm text-slate-400 font-mono" x-text="i + 1"></td>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="flex-shrink-0">
+                        <img x-show="getAvatarUrl(m.id, m.avatar)" :src="getAvatarUrl(m.id, m.avatar)"
+                          class="w-9 h-9 rounded-full object-cover ring-2 ring-white shadow-sm" />
+                        <div x-show="!getAvatarUrl(m.id, m.avatar)"
+                          class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-white shadow-sm"
+                          :style="'background:' + avatarBgColor(m.id)">
+                          <span x-text="getInitials(m.nickname || m.global_name || m.username)"></span>
+                        </div>
+                      </div>
+                      <div>
+                        <div class="font-semibold text-slate-800 text-sm leading-tight" x-text="m.nickname || m.global_name || m.username || 'Unknown'"></div>
+                        <div class="text-xs text-slate-400 mt-0.5" x-show="m.nickname || m.global_name" x-text="m.username"></div>
+                        <div class="text-xs text-slate-400 font-mono mt-0.5" x-text="m.id"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold" :style="levelBadgeStyle(m.level)">
+                      Lv.<span x-text="m.level"></span>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm font-semibold text-slate-700" x-text="m.xp.toLocaleString() + ' XP'"></td>
+                  <td class="px-6 py-4 text-sm text-slate-400" x-text="timeAgo(m.last_message_at)"></td>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <button @click="resetXp(m)"
+                        class="text-xs text-amber-600 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-50 font-semibold transition-colors whitespace-nowrap">
+                        Reset XP
+                      </button>
+                      <button @click="deleteMember(m)"
+                        class="text-xs text-red-500 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 font-semibold transition-colors">
+                        Xoa
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div x-show="tab === 'settings'" x-data="settingsSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5">
+        <h1 class="text-xl font-bold text-slate-800">Cai dat Bot</h1>
+        <p class="text-sm text-slate-400 mt-0.5">Cau hinh he thong XP va thong bao</p>
+      </div>
+      <div class="p-8">
+        <div x-show="toast" x-cloak
+          :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
+          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+        <div x-show="loading" class="text-slate-400 text-sm">Dang tai...</div>
+        <div x-show="!loading" class="max-w-xl space-y-4">
+          <div class="card p-6">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-800">XP moi tin nhan</h3>
+                <p class="text-xs text-slate-400">Ngau nhien trong khoang nay</p>
+              </div>
+            </div>
+            <div class="flex gap-4 items-center">
+              <div class="flex-1">
+                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Toi thieu</label>
+                <input x-model.number="form.xp_min" type="number" min="1" max="100" class="input-field" />
+              </div>
+              <div class="text-slate-300 text-xl mt-5">&rarr;</div>
+              <div class="flex-1">
+                <label class="text-xs font-semibold text-slate-500 block mb-1.5">Toi da</label>
+                <input x-model.number="form.xp_max" type="number" min="1" max="100" class="input-field" />
+              </div>
+            </div>
+          </div>
+          <div class="card p-6">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-800">Thoi gian cho (Cooldown)</h3>
+                <p class="text-xs text-slate-400">Khoang cach toi thieu giua 2 lan cong XP</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <input x-model.number="form.cooldown_seconds" type="number" min="5" max="3600"
+                class="input-field" style="width:112px" />
+              <span class="text-slate-500 text-sm">giay</span>
+              <span class="text-xs text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full">Khuyen nghi: 60s</span>
+            </div>
+          </div>
+          <div class="card p-6">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.09 9.83 19.79 19.79 0 0 1 1 1.18 2 2 0 0 1 3 0h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 7.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 15v1.92z"/></svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-800">Channel thong bao Level Up</h3>
+                <p class="text-xs text-slate-400">Chuot phai channel trong Discord &rarr; Copy Channel ID</p>
+              </div>
+            </div>
+            <input x-model="form.level_up_channel_id" type="text" placeholder="Paste Channel ID vao day"
+              class="input-field font-mono" />
+            <p class="text-xs text-emerald-600 mt-2 font-medium">Thay doi o day co hieu luc ngay, khong can restart bot</p>
+          </div>
+          <button @click="save()" :disabled="saving" class="btn-primary w-full py-3 text-base shadow-md shadow-indigo-200">
+            <span x-text="saving ? 'Dang luu...' : 'Luu cai dat'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMANDS TAB -->
+    <div x-show="tab === 'commands'" x-data="commandsSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5">
+        <h1 class="text-xl font-bold text-slate-800">Commands</h1>
+        <p class="text-sm text-slate-400 mt-0.5">Danh sach cac slash command cua bot</p>
+      </div>
+      <div class="p-8">
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Dang tai...</div>
+        <div x-show="!loading && commands.length === 0" class="text-center py-24">
+          <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </div>
+          <p class="text-slate-500 font-semibold">Khong tim thay command nao</p>
+        </div>
+        <div x-show="!loading && commands.length > 0" class="space-y-4">
+          <template x-for="cmd in commands" :key="cmd.name">
+            <div class="card p-6">
+              <div class="flex items-start gap-4">
+                <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-3 mb-1">
+                    <span class="font-bold text-slate-800 text-base font-mono">/<span x-text="cmd.name"></span></span>
+                  </div>
+                  <p class="text-sm text-slate-500 mb-3" x-text="cmd.description"></p>
+                  <div x-show="cmd.options && cmd.options.length > 0" class="space-y-1.5">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Tham so</p>
+                    <template x-for="opt in cmd.options" :key="opt.name">
+                      <div class="flex items-center gap-2 text-sm">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-semibold" x-text="opt.name"></span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                          :class="opt.required ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'"
+                          x-text="opt.required ? 'bat buoc' : 'tuy chon'"></span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-xs font-medium" x-text="optionTypeName(opt.type)"></span>
+                        <span class="text-slate-500 text-xs" x-text="opt.description"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERVERS TAB -->
+    <div x-show="tab === 'servers'" x-data="serversSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5">
+        <h1 class="text-xl font-bold text-slate-800">May chu</h1>
+        <p class="text-sm text-slate-400 mt-0.5">Cac may chu Discord dang su dung bot</p>
+      </div>
+      <div class="p-8">
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Dang tai...</div>
+        <div x-show="!loading && servers.length === 0" class="text-center py-24">
+          <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          </div>
+          <p class="text-slate-500 font-semibold">Bot chua tham gia may chu nao</p>
+        </div>
+        <div x-show="!loading && servers.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="s in servers" :key="s.id">
+            <div class="card p-5 flex items-center gap-4">
+              <div class="flex-shrink-0">
+                <img x-show="s.icon" :src="s.icon" class="w-12 h-12 rounded-xl object-cover shadow-sm" />
+                <div x-show="!s.icon" class="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-bold text-slate-800 text-sm truncate" x-text="s.name"></div>
+                <div class="text-xs text-slate-400 font-mono mt-0.5" x-text="s.id"></div>
+                <div x-show="s.member_count" class="flex items-center gap-3 mt-2">
+                  <span class="inline-flex items-center gap-1 text-xs text-slate-500">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span x-text="(s.member_count || 0).toLocaleString() + ' thanh vien'"></span>
+                  </span>
+                  <span x-show="s.online_count" class="inline-flex items-center gap-1 text-xs text-emerald-600">
+                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block"></span>
+                    <span x-text="(s.online_count || 0).toLocaleString() + ' online'"></span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINKS TAB -->
+    <div x-show="tab === 'links'" x-data="linksSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">Links</h1>
+          <p class="text-sm text-slate-400 mt-0.5">Tong hop cac duong link duoc gui trong kenh chat</p>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+          <select x-model="channelFilter" @change="onFilterChange()"
+            class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-slate-50 min-w-[160px]">
+            <option value="">Tat ca kenh</option>
+            <template x-for="ch in channels" :key="ch.channel_id">
+              <option :value="ch.channel_id" x-text="'#' + (ch.channel_name || ch.channel_id)"></option>
+            </template>
+          </select>
+          <div class="relative">
+            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input x-model="search" @input="onSearchInput()" type="text" placeholder="Tim link, ten mien..."
+              class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-56 bg-slate-50" />
+          </div>
+        </div>
+      </div>
+      <div class="p-8">
+        <div x-show="toast" x-cloak
+          :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
+          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+
+        <!-- Stats bar -->
+        <div x-show="!loading" class="flex items-center gap-2 mb-5 text-sm text-slate-500">
+          <span>Hien thi</span>
+          <span class="font-bold text-slate-800" x-text="links.length"></span>
+          <span>/</span>
+          <span class="font-bold text-slate-800" x-text="total"></span>
+          <span>link</span>
+          <span x-show="search || channelFilter" class="ml-2 text-xs bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full font-semibold">Dang loc</span>
+        </div>
+
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Dang tai...</div>
+
+        <div x-show="!loading && links.length === 0" class="text-center py-24">
+          <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <p class="text-slate-600 font-semibold mb-1" x-text="search || channelFilter ? 'Khong tim thay link phu hop' : 'Chua co link nao duoc ghi nhan'"></p>
+          <p class="text-slate-400 text-sm">Bot se tu dong ghi lai link khi thanh vien gui trong chat</p>
+        </div>
+
+        <div x-show="!loading && links.length > 0" class="card overflow-hidden">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-slate-100 bg-slate-50/60">
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Link</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-36">Kenh</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-32">Nguoi gui</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider w-32">Thoi gian</th>
+                <th class="px-6 py-4 w-28"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="link in links" :key="link.id">
+                <tr class="border-t border-slate-50 hover:bg-indigo-50/20 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3 max-w-lg">
+                      <img :src="getFaviconUrl(link.url)" class="w-5 h-5 rounded flex-shrink-0"
+                        onerror="this.style.display='none'" />
+                      <div class="min-w-0">
+                        <div class="font-semibold text-slate-700 text-xs mb-0.5" x-text="getDomain(link.url)"></div>
+                        <a :href="link.url" target="_blank" rel="noopener noreferrer"
+                          class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline break-all leading-snug"
+                          x-text="truncateUrl(link.url)"></a>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex items-center gap-1 text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
+                      <span class="text-slate-400">#</span>
+                      <span x-text="link.channel_name || link.channel_id"></span>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="text-xs text-slate-500 font-mono" x-text="link.user_id"></span>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-slate-400" x-text="timeAgo(link.created_at)"></td>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-1.5 justify-end">
+                      <button @click="copyUrl(link.url)" title="Copy link"
+                        class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      </button>
+                      <a :href="link.url" target="_blank" rel="noopener noreferrer" title="Mo link"
+                        class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-emerald-600 transition-colors">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      </a>
+                      <button @click="deleteLink(link)" title="Xoa"
+                        class="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div x-show="!loading && totalPages > 1" class="flex items-center justify-between mt-5">
+          <span class="text-sm text-slate-400">Trang <span class="font-semibold text-slate-700" x-text="page"></span> / <span x-text="totalPages"></span></span>
+          <div class="flex gap-2">
+            <button @click="prevPage()" :disabled="page <= 1"
+              class="px-4 py-2 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              &larr; Truoc
+            </button>
+            <button @click="nextPage()" :disabled="page >= totalPages"
+              class="px-4 py-2 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              Tiep &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</body>
+</html>

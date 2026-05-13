@@ -1,0 +1,15 @@
+{
+  "name": "discord-level-bot",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["bot", "dashboard"],
+  "dependencies": {
+    "better-sqlite3": "^11.9.1"
+  },
+  "scripts": {
+    "bot": "npm run dev --workspace=bot",
+    "dashboard": "npm run dev --workspace=dashboard",
+    "start:bot": "npm run start --workspace=bot",
+    "start:dashboard": "npm run start --workspace=dashboard"
+  }
+}

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Level Bot — Đăng nhập</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>[x-cloak]{display:none!important}</style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 to-indigo-950 flex items-center justify-center p-4">
+
+  <div x-data="loginApp()" x-cloak class="w-full max-w-sm">
+    <div class="bg-white rounded-2xl shadow-2xl p-8">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <div class="text-5xl mb-3">🤖</div>
+        <h1 class="text-2xl font-bold text-slate-800">Level Bot</h1>
+        <p class="text-slate-500 text-sm mt-1">Admin Dashboard</p>
+      </div>
+
+      <!-- Form -->
+      <form @submit.prevent="login">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Tên đăng nhập</label>
+          <input
+            x-model="username"
+            type="text"
+            autocomplete="username"
+            placeholder="admin"
+            class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+            :disabled="loading"
+          />
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Mật khẩu</label>
+          <input
+            x-model="password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+            :disabled="loading"
+          />
+        </div>
+
+        <!-- Error -->
+        <div x-show="error" x-cloak class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
+          <span x-text="error"></span>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors duration-150 disabled:opacity-60"
+          :disabled="loading"
+        >
+          <span x-show="!loading">Đăng nhập</span>
+          <span x-show="loading">Đang xử lý...</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function loginApp() {
+      return {
+        username: '',
+        password: '',
+        error: '',
+        loading: false,
+
+        async login() {
+          this.error = ''
+          if (!this.username || !this.password) {
+            this.error = 'Vui lòng nhập đầy đủ thông tin'
+            return
+          }
+          this.loading = true
+          try {
+            const res = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: this.username, password: this.password }),
+            })
+            const data = await res.json()
+            if (!res.ok) {
+              this.error = data.error || 'Đăng nhập thất bại'
+              return
+            }
+            localStorage.setItem('token', data.token)
+            window.location.href = '/index.html'
+          } catch {
+            this.error = 'Không thể kết nối đến server'
+          } finally {
+            this.loading = false
+          }
+        },
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Level-Up Notification Preview</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #313338;
+      font-family: 'gg sans', 'Noto Sans', Whitney, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: #dbdee1;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    h1 {
+      text-align: center;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #949ba4;
+      font-size: 13px;
+      margin-bottom: 32px;
+    }
+    .scenario-label {
+      color: #949ba4;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+      padding-left: 4px;
+    }
+    .message-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 32px;
+      padding: 16px 20px;
+      border-radius: 4px;
+    }
+    .message-row:hover { background: #2e3035; }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #5865f2;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .msg-body { flex: 1; min-width: 0; }
+    .msg-header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .bot-name { font-weight: 600; font-size: 15px; color: #fff; }
+    .bot-tag {
+      background: #5865f2;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .timestamp { font-size: 11px; color: #949ba4; }
+    .mention {
+      color: #c9cdfb;
+      background: rgba(88,101,242,.15);
+      border-radius: 3px;
+      padding: 0 2px;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1.375;
+    }
+    .mention:hover { background: rgba(88,101,242,.4); color: #fff; }
+
+    /* Embed */
+    .embed {
+      border-radius: 4px;
+      padding: 12px 16px 16px 12px;
+      margin-top: 4px;
+      max-width: 520px;
+      position: relative;
+      background: #2b2d31;
+    }
+    .embed-left-bar {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      border-radius: 4px 0 0 4px;
+    }
+    .embed-inner { margin-left: 4px; }
+    .embed-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+      line-height: 1.375;
+    }
+    .embed-desc {
+      font-size: 14px;
+      color: #dbdee1;
+      line-height: 1.5;
+      margin-bottom: 12px;
+      white-space: pre-line;
+    }
+    .embed-fields {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .embed-fields.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .embed-fields.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .embed-fields.cols-1 { grid-template-columns: 1fr; }
+    .embed-field { min-width: 0; }
+    .field-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #dbdee1;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .field-value {
+      font-size: 14px;
+      color: #dbdee1;
+      line-height: 1.4;
+    }
+    .embed-thumbnail {
+      position: absolute;
+      right: 16px;
+      top: 12px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #5865f2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      overflow: hidden;
+    }
+    .embed-thumbnail img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .embed-image {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+    .embed-footer {
+      font-size: 11px;
+      color: #949ba4;
+      margin-top: 8px;
+    }
+    .progress-bar {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #dbdee1;
+      letter-spacing: 1px;
+    }
+    .badge-image {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(88,101,242,0.12);
+      border: 1px solid rgba(88,101,242,0.3);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-top: 4px;
+    }
+    .badge-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #404249;
+    }
+    .badge-label { font-size: 13px; font-weight: 600; color: #c9cdfb; }
+
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1px solid #3f4147;
+      margin: 8px 0 24px;
+    }
+
+    /* Milestone glow badge */
+    .milestone-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, rgba(249,168,37,0.2), rgba(255,70,85,0.2));
+      border: 1px solid rgba(249,168,37,0.5);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #f9a825;
+      animation: glow 2s ease-in-out infinite alternate;
+      margin-top: 4px;
+    }
+    @keyframes glow {
+      from { box-shadow: 0 0 4px rgba(249,168,37,0.3); }
+      to   { box-shadow: 0 0 12px rgba(249,168,37,0.7); }
+    }
+
+    .reaction {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(88,101,242,.15);
+      border: 1px solid rgba(88,101,242,.4);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 14px;
+      color: #c9cdfb;
+      margin-top: 6px;
+      cursor: pointer;
+    }
+    .reaction:hover { background: rgba(88,101,242,.3); }
+    .reaction-count { font-size: 12px; font-weight: 600; }
+
+    .section-title {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      margin: 32px 0 4px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #3f4147;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<h1>🎮 Level-Up Notification Preview</h1>
+<p class="subtitle">Mô phỏng các thông báo Discord Bot sẽ gửi khi user đạt level</p>
+
+<!-- ═══════════════════════════════════════════════════
+     SCENARIO 1 — Level 1 (Badge "Tích cực")
+════════════════════════════════════════════════════ -->
+<p class="scenario-label">📌 Scenario 1 — Đạt Level 1 (kèm huy hiệu "Tích cực")</p>
+
+<div class="message-row">
+  <div class="avatar">🤖</div>
+  <div class="msg-body">
+    <div class="msg-header">
+      <span class="bot-name">LevelBot</span>
+      <span class="bot-tag">BOT</span>
+      <span class="timestamp">Hôm nay lúc 21:30</span>
+    </div>
+    <span class="mention">@Tohma</span>
+
+    <!-- Embed -->
+    <div class="embed" style="padding-right: 80px;">
+      <div class="embed-left-bar" style="background:#6b7280;"></div>
+      <div class="embed-thumbnail">🧑</div>
+      <div class="embed-inner">
+        <div class="embed-title">🎉 Level Up!</div>
+        <div class="embed-desc">Chúc mừng <strong>Tohma</strong> đã đạt <strong>Level 1</strong>!</div>
+
+        <div class="embed-fields cols-3">
+          <div class="embed-field">
+            <div class="field-name">Danh hiệu</div>
+            <div class="field-value">▫️ Chưa xếp hạng</div>
+          </div>
+          <div class="embed-field">
+            <div class="field-name">Tổng XP</div>
+            <div class="field-value">20,134 XP</div>
+          </div>
+          <div class="embed-field">
+            <div class="field-name">Tiến độ</div>
+            <div class="progress-bar">[█░░░░░░░░░] 8%</div>
+          </div>
+        </div>
+
+        <div class="embed-fields cols-1">
+          <div class="embed-field">
+            <div class="field-name">🖼️ Huy hiệu mới</div>
+            <div class="field-value">
+              <div class="badge-image">
+                <div class="badge-img" style="display:flex;align-items:center;justify-content:center;font-size:22px;">🪨</div>
+                <span class="badge-label">Tích cực</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="embed-footer">13/05/2026</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════
+     SCENARIO 2 — Level 10 (Milestone: Sắt) + Role
+════════════════════════════════════════════════════ -->
+<p class="scenario-label">🏆 Scenario 2 — Đạt Level 10 (Tier Milestone: Sắt + Role Discord)</p>
+
+<div class="message-row">
+  <div class="avatar">🤖</div>
+  <div class="msg-body">
+    <div class="msg-header">
+      <span class="bot-name">LevelBot</span>
+      <span class="bot-tag">BOT</span>
+      <span class="timestamp">Hôm nay lúc 22:14</span>
+    </div>
+    <span class="mention">@Tohma</span>
+
+    <div class="embed" style="padding-right: 80px;">
+      <div class="embed-left-bar" style="background:#546e7a;"></div>
+      <div class="embed-thumbnail">🧑</div>
+      <div class="embed-inner">
+        <div class="embed-title">🎉 Level Up!</div>
+        <div class="embed-desc">Chúc mừng <strong>Tohma</strong> đã đạt <strong>Level 10</strong>!
+⚫ Đạt danh hiệu <strong>Sắt</strong>!</div>
+
+        <div class="embed-fields cols-3">
+          <div class="embed-field">
+            <div class="field-name">Danh hiệu</div>
+            <div class="field-value">⚫ Sắt</div>
+          </div>
+          <div class="embed-field">
+            <div class="field-name">Tổng XP</div>
+            <div class="field-value">1,000,000 XP</div>
+          </div>
+          <div class="embed-field">
+            <div class="field-name">Tiến độ</div>
+            <div class="progress-bar">[██░░░░░░░░] 18%</div>
+          </div>
+        </div>
+
+        <div class="embed-fields cols-1">
+          <div class="embed-field">
+            <div class="field-name">🏅 Nhận được role</div>
+            <div class="field-value" style="color:#c9cdfb;">@⚫ Sắt</div>
+          </div>
+        </div>
+
+        <div class="embed-footer">13/05/2026</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════
+     SCENARIO 3 — Level 50 (Bạch Kim) — big milestone
+════════════════════════════════════════════════════ -->
+<p class="scenario-label">💎 Scenario 3 — Đạt Level 50 (Tier: Bạch Kim)</p>
+
+<div class="message-row">
+  <div class="avatar">🤖</div>
+  <div class="msg-body">
+    <div class="msg-header">
+      <span class="bot-name">LevelBot</span>
+      <span class="bot-tag">BOT</span>
+      <span class="timestamp">Hôm nay lúc 03:47</span>
+    </div>
+    <span class="mention">@Tohma</span>
+
+    <div class="embed" style="padding-right: 80px;">
+      <div class="embed-left-bar" style="background:#00838f;"></div>
+      <div class="embed-thumbnail">🧑</div>
+      <div class="embed-inner">
+        <div class="embed-title">🎉 Level Up!</div>
+        <div class="embed-desc">Chúc mừng <strong>Tohma</strong> đã đạt <strong>Level 50</strong>!
+🩵 Đạt danh hiệu <strong>Bạch Kim</strong>!</div>
+
+        <div class="embed-fields cols-3">
+          <div class="embed-field">
+            <div class="field-name">Danh hiệu</div>
+            <div class="field-value">🩵 Bạch Kim</div>
+          </div>
+          <div class="embed-field">
+            <div class="field-name">Tổng XP</div>
+            <div class="field-value">25,510,000 XP</div>
+          </div>
+          <div class="embed-field">
+            <div class="field-name">Tiến độ</div>
+            <div class="progress-bar">[████░░░░░░] 40%</div>
+          </div>
+        </div>
+
+        <div class="embed-fields cols-1">
+          <div class="embed-field">
+            <div class="field-name">🏅 Nhận được role</div>
+            <div class="field-value" style="color:#00bcd4;">@🩵 Bạch Kim</div>
+          </div>
+        </div>
+
+        <div class="embed-footer">13/05/2026</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════
+     SECTION 2 — Chat decoration / auto-reaction
+════════════════════════════════════════════════════ -->
+<p class="section-title">⚡ Chat Decoration — Hiệu ứng khi user tier cao nhắn tin</p>
+<p style="color:#949ba4;font-size:13px;margin-bottom:20px;">Bot tự động react emoji tier vào tin nhắn của user (xác suất ~8%). Người khác thấy reaction → tò mò → muốn level up.</p>
+
+<div class="grid-2">
+
+  <!-- Normal user chat -->
+  <div>
+    <p class="scenario-label">👤 User chưa có tier (level &lt; 10)</p>
+    <div class="message-row">
+      <div class="avatar" style="background:#747f8d;">T</div>
+      <div class="msg-body">
+        <div class="msg-header">
+          <span class="bot-name" style="color:#dbdee1;">Tohma</span>
+          <span class="timestamp">21:05</span>
+        </div>
+        <div style="font-size:15px;">hello mọi người!</div>
+        <!-- no reaction -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Iron tier chat -->
+  <div>
+    <p class="scenario-label">⚫ User level 10 — Tier Sắt (xác suất bot react)</p>
+    <div class="message-row">
+      <div class="avatar" style="background:#546e7a;">T</div>
+      <div class="msg-body">
+        <div class="msg-header">
+          <span class="bot-name" style="color:#78909c;">Tohma</span>
+          <span class="timestamp">21:05</span>
+        </div>
+        <div style="font-size:15px;">hello mọi người!</div>
+        <div class="reaction">⚫ <span class="reaction-count">1</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gold tier chat -->
+  <div>
+    <p class="scenario-label">🟡 User level 40 — Tier Vàng</p>
+    <div class="message-row">
+      <div class="avatar" style="background:#f9a825;">T</div>
+      <div class="msg-body">
+        <div class="msg-header">
+          <span class="bot-name" style="color:#f9a825;">Tohma</span>
+          <span class="timestamp">21:06</span>
+        </div>
+        <div style="font-size:15px;">có ai chơi game không?</div>
+        <div class="reaction">🟡 <span class="reaction-count">1</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diamond tier chat -->
+  <div>
+    <p class="scenario-label">🔵 User level 70 — Tier Kim Cương</p>
+    <div class="message-row">
+      <div class="avatar" style="background:#0288d1;">T</div>
+      <div class="msg-body">
+        <div class="msg-header">
+          <span class="bot-name" style="color:#0288d1;">Tohma</span>
+          <span class="timestamp">21:07</span>
+        </div>
+        <div style="font-size:15px;">rank cao rồi vẫn vào đây tám 😁</div>
+        <div class="reaction">🔵 <span class="reaction-count">1</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<hr class="divider">
+<p style="text-align:center;color:#949ba4;font-size:12px;margin-top:8px;">
+  💡 Role color (màu tên user) được tự động áp dụng bởi Discord khi bạn gán role có màu tương ứng với mỗi tier.
+</p>
+
+</body>
+</html>
