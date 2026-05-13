@@ -7,7 +7,8 @@ const db = require('../../shared/db')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
-const UPLOADS_DIR = path.join(__dirname, '../../uploads')
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../..')
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads')
 
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true })
 

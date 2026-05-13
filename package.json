@@ -2,14 +2,23 @@
   "name": "discord-level-bot",
   "version": "1.0.0",
   "private": true,
-  "workspaces": ["bot", "dashboard"],
+  "workspaces": [
+    "bot",
+    "dashboard"
+  ],
   "dependencies": {
-    "better-sqlite3": "^11.9.1"
+    "better-sqlite3": "^11.9.1",
+    "concurrently": "^9.2.1"
   },
   "scripts": {
+    "start": "concurrently -k -n bot,web -c blue,green \"npm run start --workspace=bot\" \"npm run start --workspace=dashboard\"",
     "bot": "npm run dev --workspace=bot",
     "dashboard": "npm run dev --workspace=dashboard",
     "start:bot": "npm run start --workspace=bot",
-    "start:dashboard": "npm run start --workspace=dashboard"
+    "start:dashboard": "npm run start --workspace=dashboard",
+    "deploy:commands": "npm run deploy --workspace=bot"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
