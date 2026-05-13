@@ -1,34 +1,39 @@
-// Spawn bot + dashboard trong cùng container. Khi 1 process exit → kill cái còn lại
-// → container exit → Railway tự restart. Không phụ thuộc `ps` hay `concurrently`.
+// Spawn dashboard (always up) + bot (auto-restart on crash). Không phụ thuộc `ps`.
 const { spawn } = require('child_process')
 const path = require('path')
 
-const procs = []
 let shuttingDown = false
+const children = []
 
-function run(name, cwd, color) {
-  const child = spawn(process.execPath, ['src/index.js'], {
+function spawnChild(name, cwd, script, color, { restart = false } = {}) {
+  const proc = spawn(process.execPath, [script], {
     cwd: path.join(__dirname, cwd),
     stdio: ['ignore', 'pipe', 'pipe'],
     env: process.env,
   })
   const tag = `\x1b[${color}m[${name}]\x1b[0m`
-  child.stdout.on('data', (d) => process.stdout.write(`${tag} ${d}`))
-  child.stderr.on('data', (d) => process.stderr.write(`${tag} ${d}`))
-  child.on('exit', (code, signal) => {
+  proc.stdout.on('data', (d) => process.stdout.write(`${tag} ${d}`))
+  proc.stderr.on('data', (d) => process.stderr.write(`${tag} ${d}`))
+  proc.on('exit', (code, signal) => {
     console.log(`${tag} exited (code=${code}, signal=${signal})`)
-    if (!shuttingDown) shutdown(code ?? 1)
+    children.splice(children.indexOf(proc), 1)
+    if (shuttingDown) return
+    if (restart) {
+      console.log(`${tag} restarting in 5s...`)
+      setTimeout(() => spawnChild(name, cwd, script, color, { restart }), 5000)
+    } else {
+      // Dashboard chết → cả container exit để Railway restart
+      shutdown(code ?? 1)
+    }
   })
-  procs.push(child)
-  return child
+  children.push(proc)
+  return proc
 }
 
 function shutdown(code) {
   shuttingDown = true
-  for (const p of procs) {
-    if (!p.killed) {
-      try { p.kill('SIGTERM') } catch (_) {}
-    }
+  for (const p of children) {
+    try { p.kill('SIGTERM') } catch (_) {}
   }
   setTimeout(() => process.exit(code), 5000).unref()
 }
@@ -36,18 +41,5 @@ function shutdown(code) {
 process.on('SIGTERM', () => shutdown(0))
 process.on('SIGINT', () => shutdown(0))
 
-// Dashboard chạy server.js, không phải src/index.js → spawn riêng
-const botProc = run('bot', 'bot', '34')
-const dashProc = spawn(process.execPath, ['server.js'], {
-  cwd: path.join(__dirname, 'dashboard'),
-  stdio: ['ignore', 'pipe', 'pipe'],
-  env: process.env,
-})
-const dashTag = '\x1b[32m[web]\x1b[0m'
-dashProc.stdout.on('data', (d) => process.stdout.write(`${dashTag} ${d}`))
-dashProc.stderr.on('data', (d) => process.stderr.write(`${dashTag} ${d}`))
-dashProc.on('exit', (code, signal) => {
-  console.log(`${dashTag} exited (code=${code}, signal=${signal})`)
-  if (!shuttingDown) shutdown(code ?? 1)
-})
-procs.push(dashProc)
+spawnChild('web', 'dashboard', 'server.js', '32')
+spawnChild('bot', 'bot', 'src/index.js', '34', { restart: true })
