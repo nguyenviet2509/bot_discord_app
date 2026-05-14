@@ -21,6 +21,8 @@ module.exports = {
       const now = new Date()
       db.incrementActivity(message.guild.id, now.getDay(), now.getHours())
       db.incrementChannelStat(message.guild.id, message.channel.id, message.channel?.name || null)
+      // Xoa user khoi silent list (vi ho da chat)
+      db.removeSilentMember(message.guild.id, message.author.id)
     } catch (err) {
       console.error('[Analytics] increment fail:', err.message)
     }

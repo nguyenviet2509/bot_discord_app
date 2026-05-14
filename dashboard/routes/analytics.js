@@ -1,5 +1,6 @@
 const express = require('express')
 const db = require('../../shared/db')
+const { scanSilentMembers } = require('../../shared/scan-silent-members')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
@@ -28,50 +29,30 @@ router.get('/inactive', (req, res) => {
   res.json(db.getInactiveMembers(GUILD_ID(), days, limit))
 })
 
-// Member co trong server nhung chua chat lan nao
-router.get('/silent-members', async (req, res) => {
-  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua duoc cau hinh' })
+// GET: tra ve list silent member tu DB (instant)
+router.get('/silent-members', (req, res) => {
   const guildId = GUILD_ID()
-  const limitOut = Math.min(Math.max(Number(req.query.limit) || 200, 1), 1000)
+  const limit = Math.min(Math.max(Number(req.query.limit) || 200, 1), 1000)
+  const members = db.getSilentMembers(guildId, limit).map(m => ({
+    id: m.user_id,
+    username: m.username,
+    global_name: m.global_name,
+    nickname: m.nickname,
+    avatar: m.avatar,
+    joined_at: m.joined_at,
+  }))
+  res.json({
+    total: db.countSilentMembers(guildId),
+    scanned_at: db.getSilentScannedAt(guildId),
+    members,
+  })
+})
 
+// POST: quet Discord + luu vao DB
+router.post('/silent-members/scan', async (req, res) => {
   try {
-    // Fetch member list tu Discord (max 1000/page, paginate by after)
-    const allMembers = []
-    let after = '0'
-    for (let i = 0; i < 10; i++) { // tối đa 10 trang = 10k member
-      const r = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`, {
-        headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
-      })
-      if (!r.ok) {
-        const errText = await r.text()
-        return res.status(r.status).json({ error: `Discord API ${r.status}: ${errText.slice(0, 200)}` })
-      }
-      const batch = await r.json()
-      if (!batch.length) break
-      allMembers.push(...batch)
-      after = batch[batch.length - 1].user.id
-      if (batch.length < 1000) break
-    }
-
-    // Set cac user_id da chat (co trong users table cho guild nay)
-    const chattedIds = new Set(
-      db.getAllUsers ? db.getAllUsers(guildId).map(u => u.id) : []
-    )
-
-    // Loc: member khong phai bot + chua chat
-    const silent = allMembers
-      .filter(m => m.user && !m.user.bot && !chattedIds.has(m.user.id))
-      .map(m => ({
-        id: m.user.id,
-        username: m.user.username,
-        global_name: m.user.global_name || null,
-        nickname: m.nick || null,
-        avatar: m.user.avatar || null,
-        joined_at: m.joined_at,
-      }))
-      .sort((a, b) => new Date(b.joined_at) - new Date(a.joined_at))
-
-    res.json({ total: silent.length, members: silent.slice(0, limitOut) })
+    const result = await scanSilentMembers(GUILD_ID())
+    res.json({ success: true, ...result })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

@@ -72,6 +72,18 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS silent_members (
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      username TEXT,
+      global_name TEXT,
+      nickname TEXT,
+      avatar TEXT,
+      joined_at TEXT,
+      scanned_at INTEGER DEFAULT (unixepoch()),
+      PRIMARY KEY (guild_id, user_id)
+    );
+
     CREATE TABLE IF NOT EXISTS member_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id TEXT NOT NULL,
@@ -319,6 +331,54 @@ function getInactiveMembers(guildId, days = 7, limit = 100) {
       LIMIT ?
     `)
     .all(guildId, threshold, limit)
+}
+
+// ============================================================
+// Silent Members (member trong server chua chat)
+// ============================================================
+function getSilentMembers(guildId, limit = 500) {
+  return getDb()
+    .prepare(`
+      SELECT * FROM silent_members
+      WHERE guild_id = ?
+      ORDER BY joined_at DESC NULLS LAST
+      LIMIT ?
+    `)
+    .all(guildId, limit)
+}
+
+function countSilentMembers(guildId) {
+  return (getDb()
+    .prepare('SELECT COUNT(*) as t FROM silent_members WHERE guild_id = ?')
+    .get(guildId) || {}).t || 0
+}
+
+function getSilentScannedAt(guildId) {
+  return (getDb()
+    .prepare('SELECT MAX(scanned_at) as t FROM silent_members WHERE guild_id = ?')
+    .get(guildId) || {}).t || null
+}
+
+// Replace toan bo silent list cho guild (sau khi quet)
+function replaceSilentMembers(guildId, members) {
+  const tx = getDb().transaction((rows) => {
+    getDb().prepare('DELETE FROM silent_members WHERE guild_id = ?').run(guildId)
+    const stmt = getDb().prepare(`
+      INSERT INTO silent_members (guild_id, user_id, username, global_name, nickname, avatar, joined_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `)
+    for (const m of rows) {
+      stmt.run(guildId, m.user_id || m.id, m.username || null, m.global_name || null, m.nickname || null, m.avatar || null, m.joined_at || null)
+    }
+  })
+  tx(members)
+}
+
+// Xoa 1 user khoi silent list (khi ho bat dau chat)
+function removeSilentMember(guildId, userId) {
+  return getDb()
+    .prepare('DELETE FROM silent_members WHERE guild_id = ? AND user_id = ?')
+    .run(guildId, userId)
 }
 
 function getAnalyticsSummary(guildId) {
@@ -620,4 +680,9 @@ module.exports = {
   getTopChannels,
   getInactiveMembers,
   getAnalyticsSummary,
+  getSilentMembers,
+  countSilentMembers,
+  getSilentScannedAt,
+  replaceSilentMembers,
+  removeSilentMember,
 }

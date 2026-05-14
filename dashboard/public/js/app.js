@@ -260,6 +260,7 @@ document.addEventListener('alpine:init', () => {
     inactive: [],
     silentMembers: [],
     silentTotal: 0,
+    silentScannedAt: null,
     growthDays: '30',
     inactiveDays: '7',
     loading: false,
@@ -274,18 +275,22 @@ document.addEventListener('alpine:init', () => {
 
     async load() {
       this.loading = true
-      const [summary, growth, heatmap, topChannels, inactive] = await Promise.all([
+      const [summary, growth, heatmap, topChannels, inactive, silent] = await Promise.all([
         api('GET', '/analytics/summary'),
         api('GET', `/analytics/growth?days=${this.growthDays}`),
         api('GET', '/analytics/heatmap'),
         api('GET', '/analytics/top-channels?limit=10'),
         api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=100`),
+        api('GET', '/analytics/silent-members?limit=500'),
       ])
       this.summary = summary || {}
       this.growth = growth || []
       this.heatmap = heatmap || []
       this.topChannels = topChannels || []
       this.inactive = inactive || []
+      this.silentMembers = silent?.members || []
+      this.silentTotal = silent?.total || 0
+      this.silentScannedAt = silent?.scanned_at || null
       this._heatmapMax = Math.max(1, ...this.heatmap.map(h => h.message_count))
       this.loading = false
       this.$nextTick(() => this.renderGrowthChart())
@@ -300,22 +305,29 @@ document.addEventListener('alpine:init', () => {
       this.inactive = await api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=100`) || []
     },
 
+    // Trigger scan: fetch Discord, luu DB, reload list
     async loadSilent() {
       this.loadingSilent = true
       try {
-        const data = await api('GET', '/analytics/silent-members?limit=500')
-        if (data?.error) {
-          this.silentMembers = []
-          this.silentTotal = 0
-        } else {
-          this.silentMembers = data?.members || []
-          this.silentTotal = data?.total || 0
+        const scanRes = await api('POST', '/analytics/silent-members/scan', {})
+        if (scanRes?.error) {
+          this.showToastTmp(scanRes.error, 'red')
         }
-      } catch (_) {
-        this.silentMembers = []
-        this.silentTotal = 0
+        // Reload tu DB sau khi scan
+        const data = await api('GET', '/analytics/silent-members?limit=500')
+        this.silentMembers = data?.members || []
+        this.silentTotal = data?.total || 0
+        this.silentScannedAt = data?.scanned_at || null
+      } catch (err) {
+        this.showToastTmp(err.message, 'red')
       }
       this.loadingSilent = false
+    },
+
+    showToastTmp(msg, color) {
+      // Reuse moderationSection toast pattern (analytics khong co toast nen alert)
+      console.error('[Analytics]', msg)
+      alert(msg)
     },
 
     joinedAgo(isoStr) {

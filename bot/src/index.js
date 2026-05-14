@@ -4,6 +4,8 @@ const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord
 const path = require('path')
 const fs = require('fs')
 const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction } = require('../../shared/db')
+const { scanSilentMembers } = require('../../shared/scan-silent-members')
+const { scheduleDaily } = require('./utils/daily-cron')
 
 initDb()
 console.log('[DB] Database initialized')
@@ -86,6 +88,18 @@ async function registerCommands() {
 client.once('ready', async () => {
   console.log(`[Bot] ✅ Ready! Logged in as ${client.user.tag}`)
   await registerCommands()
+
+  // Cron: 00:00 moi ngay → quet silent members cho tat ca guild bot dang join
+  scheduleDaily('scan-silent-members', async () => {
+    for (const [guildId] of client.guilds.cache) {
+      try {
+        const result = await scanSilentMembers(guildId)
+        console.log(`[Cron] Silent scan guild ${guildId}: ${result.total} members`)
+      } catch (err) {
+        console.error(`[Cron] Silent scan guild ${guildId} failed:`, err.message)
+      }
+    }
+  })
   // Watcher: check va auto-unban moi 60s
   setInterval(async () => {
     const nowSec = Math.floor(Date.now() / 1000)
