@@ -250,6 +250,115 @@ document.addEventListener('alpine:init', () => {
   }))
 
   // ============================================================
+  // Scheduled Messages Section
+  // ============================================================
+  Alpine.data('scheduledMessagesSection', () => ({
+    messages: [],
+    loading: false,
+    saving: false,
+    uploading: false,
+    sendingId: null,
+    modal: false,
+    editId: null,
+    form: {
+      name: '', channel_id: '', content: '', image_url: '',
+      interval_minutes: 180, enabled: true,
+    },
+    toast: null,
+
+    async init() {
+      if (!checkAuth()) return
+      await this.load()
+    },
+
+    async load() {
+      this.loading = true
+      this.messages = await api('GET', '/scheduled-messages') || []
+      // SQLite int → bool
+      this.messages = this.messages.map(m => ({ ...m, enabled: !!m.enabled }))
+      this.loading = false
+    },
+
+    openCreate() {
+      this.editId = null
+      this.form = { name: '', channel_id: '', content: '', image_url: '', interval_minutes: 180, enabled: true }
+      this.modal = true
+    },
+
+    openEdit(m) {
+      this.editId = m.id
+      this.form = {
+        name: m.name || '',
+        channel_id: m.channel_id,
+        content: m.content || '',
+        image_url: m.image_url || '',
+        interval_minutes: m.interval_minutes,
+        enabled: !!m.enabled,
+      }
+      this.modal = true
+    },
+
+    async uploadImage(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      this.uploading = true
+      const fd = new FormData()
+      fd.append('image', file)
+      const data = await api('POST', '/scheduled-messages/upload', fd)
+      if (data?.url) this.form.image_url = data.url
+      this.uploading = false
+    },
+
+    async save() {
+      if (!this.form.channel_id) return this.showToast('Thieu channel_id', 'red')
+      if (!this.form.content && !this.form.image_url) return this.showToast('Phai co content hoac anh', 'red')
+      if (!this.form.interval_minutes || this.form.interval_minutes < 1) return this.showToast('Interval phai >= 1', 'red')
+      this.saving = true
+      try {
+        const url = this.editId ? `/scheduled-messages/${this.editId}` : '/scheduled-messages'
+        const method = this.editId ? 'PUT' : 'POST'
+        const res = await api(method, url, this.form)
+        if (res?.error) this.showToast(res.error, 'red')
+        else {
+          this.showToast('Da luu ✓', 'green')
+          this.modal = false
+          await this.load()
+        }
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.saving = false
+    },
+
+    async remove(m) {
+      if (!confirm(`Xoa "${m.name || m.id}"?`)) return
+      await api('DELETE', `/scheduled-messages/${m.id}`)
+      this.showToast('Da xoa ✓', 'green')
+      await this.load()
+    },
+
+    async sendNow(m) {
+      this.sendingId = m.id
+      try {
+        const res = await api('POST', `/scheduled-messages/${m.id}/send-now`, {})
+        if (res?.success) this.showToast('Da gui ✓', 'green')
+        else this.showToast(res?.error || 'Loi', 'red')
+        await this.load()
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.sendingId = null
+    },
+
+    showToast(msg, color = 'green') {
+      this.toast = { msg, color }
+      setTimeout(() => { this.toast = null }, 3000)
+    },
+
+    timeAgo,
+  }))
+
+  // ============================================================
   // Analytics Section
   // ============================================================
   Alpine.data('analyticsSection', () => ({

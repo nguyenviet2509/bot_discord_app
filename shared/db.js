@@ -72,6 +72,19 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS scheduled_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      name TEXT,
+      content TEXT,
+      image_url TEXT,
+      interval_minutes INTEGER NOT NULL DEFAULT 180,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      last_sent_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+
     CREATE TABLE IF NOT EXISTS silent_members (
       guild_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
@@ -331,6 +344,75 @@ function getInactiveMembers(guildId, days = 7, limit = 100) {
       LIMIT ?
     `)
     .all(guildId, threshold, limit)
+}
+
+// ============================================================
+// Scheduled Messages (auto-send theo interval)
+// ============================================================
+function getScheduledMessages(guildId) {
+  return getDb()
+    .prepare('SELECT * FROM scheduled_messages WHERE guild_id = ? ORDER BY id ASC')
+    .all(guildId)
+}
+
+function getScheduledMessageById(id, guildId) {
+  return getDb()
+    .prepare('SELECT * FROM scheduled_messages WHERE id = ? AND guild_id = ?')
+    .get(id, guildId)
+}
+
+function createScheduledMessage({ guild_id, channel_id, name, content, image_url, interval_minutes, enabled }) {
+  return getDb()
+    .prepare(`
+      INSERT INTO scheduled_messages (guild_id, channel_id, name, content, image_url, interval_minutes, enabled)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `)
+    .run(guild_id, channel_id, name || null, content || null, image_url || null, interval_minutes || 180, enabled ? 1 : 0)
+}
+
+function updateScheduledMessage(id, { channel_id, name, content, image_url, interval_minutes, enabled }) {
+  return getDb()
+    .prepare(`
+      UPDATE scheduled_messages SET
+        channel_id = COALESCE(@channel_id, channel_id),
+        name = COALESCE(@name, name),
+        content = COALESCE(@content, content),
+        image_url = COALESCE(@image_url, image_url),
+        interval_minutes = COALESCE(@interval_minutes, interval_minutes),
+        enabled = COALESCE(@enabled, enabled)
+      WHERE id = @id
+    `)
+    .run({
+      id,
+      channel_id: channel_id ?? null,
+      name: name ?? null,
+      content: content ?? null,
+      image_url: image_url ?? null,
+      interval_minutes: interval_minutes ?? null,
+      enabled: enabled === undefined ? null : (enabled ? 1 : 0),
+    })
+}
+
+function deleteScheduledMessage(id, guildId) {
+  return getDb()
+    .prepare('DELETE FROM scheduled_messages WHERE id = ? AND guild_id = ?')
+    .run(id, guildId)
+}
+
+function markScheduledMessageSent(id) {
+  return getDb()
+    .prepare('UPDATE scheduled_messages SET last_sent_at = unixepoch() WHERE id = ?')
+    .run(id)
+}
+
+function getDueScheduledMessages(nowSec) {
+  return getDb()
+    .prepare(`
+      SELECT * FROM scheduled_messages
+      WHERE enabled = 1
+        AND (last_sent_at IS NULL OR (? - last_sent_at) >= interval_minutes * 60)
+    `)
+    .all(nowSec)
 }
 
 // ============================================================
@@ -685,4 +767,11 @@ module.exports = {
   getSilentScannedAt,
   replaceSilentMembers,
   removeSilentMember,
+  getScheduledMessages,
+  getScheduledMessageById,
+  createScheduledMessage,
+  updateScheduledMessage,
+  deleteScheduledMessage,
+  markScheduledMessageSent,
+  getDueScheduledMessages,
 }

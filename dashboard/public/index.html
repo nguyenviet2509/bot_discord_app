@@ -77,6 +77,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
         <span>Analytics</span>
       </div>
+      <div @click="tab='scheduled'" :class="tab==='scheduled' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Tin nhan dinh ky</span>
+      </div>
       <div @click="tab='commands'" :class="tab==='commands' ? 'active' : ''" class="nav-item">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
         <span>Commands</span>
@@ -363,6 +367,112 @@
       </div>
     </div>
 
+    <!-- SCHEDULED MESSAGES TAB -->
+    <div x-show="tab === 'scheduled'" x-data="scheduledMessagesSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">Tin nhan dinh ky</h1>
+          <p class="text-sm text-slate-400 mt-0.5">Bot tu dong gui message + anh theo chu ky</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button @click="load()" :disabled="loading" class="btn-refresh">
+            <svg :class="loading ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+            <span x-text="loading ? 'Dang tai...' : 'Lam moi'"></span>
+          </button>
+          <button @click="openCreate()" class="btn-primary">+ Tao tin nhan</button>
+        </div>
+      </div>
+      <div class="p-8">
+        <div x-show="toast" x-cloak
+          :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
+          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Dang tai...</div>
+        <div x-show="!loading && messages.length === 0" class="text-center py-24">
+          <p class="text-slate-600 font-semibold mb-1">Chua co tin nhan dinh ky nao</p>
+          <p class="text-slate-400 text-sm mb-6">Vd: bot gui meme moi 180 phut vao kenh chat</p>
+          <button @click="openCreate()" class="btn-primary">+ Tao tin nhan dau tien</button>
+        </div>
+        <div x-show="!loading && messages.length > 0" class="space-y-3">
+          <template x-for="m in messages" :key="m.id">
+            <div class="card p-5 flex items-start gap-4">
+              <img x-show="m.image_url" :src="m.image_url" class="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
+              <div x-show="!m.image_url" class="w-20 h-20 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <h3 class="font-bold text-slate-800" x-text="m.name || ('Tin nhan #' + m.id)"></h3>
+                  <span class="text-xs px-2 py-0.5 rounded-full" :class="m.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'" x-text="m.enabled ? 'Bat' : 'Tat'"></span>
+                </div>
+                <p class="text-sm text-slate-600 line-clamp-2 mb-2" x-text="m.content || '(Khong co text)'"></p>
+                <div class="text-xs text-slate-400 flex gap-4 flex-wrap">
+                  <span>📍 Channel: <span class="font-mono" x-text="m.channel_id"></span></span>
+                  <span>⏱ Moi <span x-text="m.interval_minutes"></span> phut</span>
+                  <span x-show="m.last_sent_at">📤 Gui lan cuoi: <span x-text="timeAgo(m.last_sent_at)"></span></span>
+                  <span x-show="!m.last_sent_at" class="text-amber-600">Chua gui lan nao</span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1">
+                <button @click="sendNow(m)" :disabled="sendingId===m.id" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100" title="Gui ngay">
+                  <span x-text="sendingId===m.id ? '...' : '▶ Gui ngay'"></span>
+                </button>
+                <button @click="openEdit(m)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Sua</button>
+                <button @click="remove(m)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100">Xoa</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- MODAL -->
+      <div x-show="modal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="modal=false"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-7 z-10 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-lg font-bold text-slate-800" x-text="editId ? 'Sua tin nhan' : 'Tao tin nhan'"></h2>
+            <button @click="modal=false" class="text-slate-400 hover:text-slate-700 text-2xl">&times;</button>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Ten <span class="text-slate-400 font-normal">(de ghi nho)</span></label>
+              <input x-model="form.name" type="text" placeholder="VD: Meme moi 3 tieng" class="input-field" />
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Channel ID</label>
+              <input x-model="form.channel_id" type="text" placeholder="Discord channel ID" class="input-field font-mono" />
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Noi dung text</label>
+              <textarea x-model="form.content" rows="3" placeholder="VD: Anh em on goi ne 🎉" class="input-field"></textarea>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Anh kem (tuy chon, max 5MB)</label>
+              <input type="file" accept="image/*" @change="uploadImage($event)"
+                class="w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold cursor-pointer" />
+              <p x-show="uploading" class="text-indigo-500 text-xs mt-1">Dang upload...</p>
+              <img x-show="form.image_url" :src="form.image_url" class="mt-2 max-h-32 rounded-lg border border-slate-200" />
+              <button x-show="form.image_url" @click="form.image_url=''" type="button" class="text-xs text-red-500 mt-1">Xoa anh</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-1.5">Chu ky (phut)</label>
+                <input x-model.number="form.interval_minutes" type="number" min="1" max="10080" class="input-field" />
+              </div>
+              <label class="flex items-center gap-2 px-4 py-3 border-2 rounded-xl cursor-pointer mt-6"
+                :class="form.enabled ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.enabled" type="checkbox" class="accent-emerald-600" />
+                <span class="text-sm font-medium">Bat tin nhan</span>
+              </label>
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
+            <button @click="modal=false" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">Huy</button>
+            <button @click="save()" :disabled="saving" class="btn-primary" x-text="saving ? 'Dang luu...' : 'Luu'"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ANALYTICS TAB -->
     <div x-show="tab === 'analytics'" x-data="analyticsSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
@@ -380,7 +490,8 @@
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Tong member</div>
-            <div class="text-2xl font-bold text-slate-800 mt-1" x-text="summary.total_members?.toLocaleString() || 0"></div>
+            <div class="text-2xl font-bold text-slate-800 mt-1" x-text="(summary.total_members_discord ?? summary.total_members ?? 0).toLocaleString()"></div>
+            <div class="text-xs text-slate-400 mt-1">Da chat: <span x-text="summary.total_members || 0"></span></div>
           </div>
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Tong message</div>

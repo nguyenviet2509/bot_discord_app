@@ -3,7 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../../.env') }
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js')
 const path = require('path')
 const fs = require('fs')
-const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction } = require('../../shared/db')
+const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction, getDueScheduledMessages, markScheduledMessageSent } = require('../../shared/db')
 const { scanSilentMembers } = require('../../shared/scan-silent-members')
 const { scheduleDaily } = require('./utils/daily-cron')
 
@@ -88,6 +88,33 @@ async function registerCommands() {
 client.once('ready', async () => {
   console.log(`[Bot] ✅ Ready! Logged in as ${client.user.tag}`)
   await registerCommands()
+
+  // Scheduled messages worker: check moi 60s, send neu da den han
+  setInterval(async () => {
+    const nowSec = Math.floor(Date.now() / 1000)
+    const due = getDueScheduledMessages(nowSec)
+    for (const msg of due) {
+      try {
+        const channel = client.channels.cache.get(msg.channel_id)
+          || await client.channels.fetch(msg.channel_id).catch(() => null)
+        if (!channel) {
+          console.warn(`[SchedMsg] Channel ${msg.channel_id} not found, skip msg id=${msg.id}`)
+          continue
+        }
+        const payload = { content: msg.content || '' }
+        if (msg.image_url) {
+          const base = process.env.BASE_URL || ''
+          const url = msg.image_url.startsWith('http') ? msg.image_url : `${base}${msg.image_url}`
+          if (url) payload.embeds = [{ image: { url } }]
+        }
+        await channel.send(payload)
+        markScheduledMessageSent(msg.id)
+        console.log(`[SchedMsg] Sent id=${msg.id} → channel ${msg.channel_id}`)
+      } catch (err) {
+        console.error(`[SchedMsg] Failed id=${msg.id}:`, err.message)
+      }
+    }
+  }, 60_000)
 
   // Cron: 00:00 moi ngay → quet silent members cho tat ca guild bot dang join
   scheduleDaily('scan-silent-members', async () => {

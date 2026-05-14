@@ -40,6 +40,7 @@ app.use('/api/links', auth, require('./routes/links'))
 app.use('/api/level-up-template', auth, require('./routes/level-up-template'))
 app.use('/api/moderation', auth, require('./routes/moderation'))
 app.use('/api/analytics', auth, require('./routes/analytics'))
+app.use('/api/scheduled-messages', auth, require('./routes/scheduled-messages'))
 
 // SPA fallback
 app.get('*', (req, res) => {

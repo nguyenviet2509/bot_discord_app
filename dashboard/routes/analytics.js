@@ -5,8 +5,21 @@ const { scanSilentMembers } = require('../../shared/scan-silent-members')
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
 
-router.get('/summary', (req, res) => {
-  res.json(db.getAnalyticsSummary(GUILD_ID()))
+router.get('/summary', async (req, res) => {
+  const summary = db.getAnalyticsSummary(GUILD_ID())
+  // Fetch tong member that tu Discord (approximate, fast)
+  try {
+    if (process.env.BOT_TOKEN) {
+      const r = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID()}?with_counts=true`, {
+        headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
+      })
+      if (r.ok) {
+        const g = await r.json()
+        summary.total_members_discord = g.approximate_member_count || null
+      }
+    }
+  } catch (_) { /* fallback: chi co total_members tu DB */ }
+  res.json(summary)
 })
 
 router.get('/growth', (req, res) => {
