@@ -105,8 +105,8 @@ function buildProgressBar(percent, length = 10) {
 async function handleLevelUp(client, guild, member, newLevel, settings) {
   const rewards = db.getRewards(guild.id)
 
-  // Assign all role rewards earned up to this level
-  const roleRewards = rewards.filter(r => r.type === 'role' && r.level_required <= newLevel)
+  // Assign roles: type='role' OR badge có kèm role_id
+  const roleRewards = rewards.filter(r => r.role_id && r.level_required <= newLevel)
   for (const reward of roleRewards) {
     try {
       if (!member.roles.cache.has(reward.role_id)) {
