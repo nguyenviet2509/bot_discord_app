@@ -408,16 +408,51 @@ document.addEventListener('alpine:init', () => {
   // Settings Section
   // ============================================================
   Alpine.data('settingsSection', () => ({
-    form: { xp_min: 15, xp_max: 25, cooldown_seconds: 60, level_up_channel_id: '' },
+    form: { xp_min: 15, xp_max: 25, cooldown_seconds: 60, level_up_channel_id: '', allowed_role_ids: [] },
+    roles: [],
+    newRoleId: '',
     loading: false,
     saving: false,
     toast: null,
 
     async init() {
       this.loading = true
-      const data = await api('GET', '/settings')
-      if (data) this.form = { ...data }
+      const [data, roles] = await Promise.all([
+        api('GET', '/settings'),
+        api('GET', '/discord/roles'),
+      ])
+      if (data) {
+        this.form = {
+          xp_min: data.xp_min,
+          xp_max: data.xp_max,
+          cooldown_seconds: data.cooldown_seconds,
+          level_up_channel_id: data.level_up_channel_id || '',
+          allowed_role_ids: Array.isArray(data.allowed_role_ids) ? data.allowed_role_ids : [],
+        }
+      }
+      this.roles = roles || []
       this.loading = false
+    },
+
+    get availableRoles() {
+      return this.roles.filter(r => !this.form.allowed_role_ids.includes(r.id))
+    },
+
+    roleName(roleId) {
+      const r = this.roles.find(x => x.id === roleId)
+      return r ? r.name : roleId
+    },
+
+    addAllowedRole() {
+      if (!this.newRoleId) return
+      if (!this.form.allowed_role_ids.includes(this.newRoleId)) {
+        this.form.allowed_role_ids.push(this.newRoleId)
+      }
+      this.newRoleId = ''
+    },
+
+    removeAllowedRole(roleId) {
+      this.form.allowed_role_ids = this.form.allowed_role_ids.filter(r => r !== roleId)
     },
 
     async save() {

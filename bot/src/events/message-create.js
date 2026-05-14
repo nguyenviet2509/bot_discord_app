@@ -24,6 +24,9 @@ module.exports = {
     const settings = db.getSettings(guildId) || DEFAULT_SETTINGS
     const cooldown = settings.cooldown_seconds || 60
 
+    // Chan member khong co quyen dung bot
+    if (!db.memberHasAccess(message.member, settings.allowed_role_ids)) return
+
     let user = db.getUser(userId, guildId)
     if (!user) {
       user = { id: userId, guild_id: guildId, xp: 0, level: 0, last_message_at: null }

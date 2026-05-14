@@ -88,6 +88,7 @@ function initDb() {
   try { database.exec(`ALTER TABLE users ADD COLUMN avatar TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN nickname TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN global_name TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN allowed_role_ids TEXT`) } catch (_) {}
   return database
 }
 
@@ -156,24 +157,38 @@ function deleteReward(id, guildId) {
 }
 
 function getSettings(guildId) {
-  return getDb()
+  const row = getDb()
     .prepare('SELECT * FROM guild_settings WHERE guild_id = ?')
     .get(guildId)
+  if (!row) return null
+  // Parse JSON array, fallback empty array
+  let allowed = []
+  try { allowed = row.allowed_role_ids ? JSON.parse(row.allowed_role_ids) : [] } catch (_) { allowed = [] }
+  return { ...row, allowed_role_ids: allowed }
 }
 
 function upsertSettings(settings) {
+  const allowedJson = JSON.stringify(Array.isArray(settings.allowed_role_ids) ? settings.allowed_role_ids : [])
   return getDb()
     .prepare(`
-      INSERT INTO guild_settings (guild_id, xp_min, xp_max, cooldown_seconds, level_up_channel_id, updated_at)
-      VALUES (@guild_id, @xp_min, @xp_max, @cooldown_seconds, @level_up_channel_id, unixepoch())
+      INSERT INTO guild_settings (guild_id, xp_min, xp_max, cooldown_seconds, level_up_channel_id, allowed_role_ids, updated_at)
+      VALUES (@guild_id, @xp_min, @xp_max, @cooldown_seconds, @level_up_channel_id, @allowed_role_ids, unixepoch())
       ON CONFLICT(guild_id) DO UPDATE SET
         xp_min = excluded.xp_min,
         xp_max = excluded.xp_max,
         cooldown_seconds = excluded.cooldown_seconds,
         level_up_channel_id = excluded.level_up_channel_id,
+        allowed_role_ids = excluded.allowed_role_ids,
         updated_at = unixepoch()
     `)
-    .run(settings)
+    .run({ ...settings, allowed_role_ids: allowedJson })
+}
+
+// Helper: check member co quyen su dung bot khong
+function memberHasAccess(member, allowedRoleIds) {
+  if (!allowedRoleIds || allowedRoleIds.length === 0) return true // open mode
+  if (!member || !member.roles) return false
+  return allowedRoleIds.some(rid => member.roles.cache.has(rid))
 }
 
 function getUserRank(userId, guildId) {
@@ -350,4 +365,5 @@ module.exports = {
   getChannelsWithLinks,
   getLevelUpTemplate,
   upsertLevelUpTemplate,
+  memberHasAccess,
 }
