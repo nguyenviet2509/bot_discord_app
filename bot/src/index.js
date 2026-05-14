@@ -5,6 +5,7 @@ const path = require('path')
 const fs = require('fs')
 const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction, getDueScheduledMessages, markScheduledMessageSent } = require('../../shared/db')
 const { scanSilentMembers } = require('../../shared/scan-silent-members')
+const { buildPayload } = require('../../shared/build-scheduled-payload')
 const { scheduleDaily } = require('./utils/daily-cron')
 
 initDb()
@@ -101,13 +102,7 @@ client.once('ready', async () => {
           console.warn(`[SchedMsg] Channel ${msg.channel_id} not found, skip msg id=${msg.id}`)
           continue
         }
-        const payload = { content: msg.content || '' }
-        if (msg.image_url) {
-          const base = process.env.BASE_URL || ''
-          const url = msg.image_url.startsWith('http') ? msg.image_url : `${base}${msg.image_url}`
-          if (url) payload.embeds = [{ image: { url } }]
-        }
-        await channel.send(payload)
+        await channel.send(buildPayload(msg))
         markScheduledMessageSent(msg.id)
         console.log(`[SchedMsg] Sent id=${msg.id} → channel ${msg.channel_id}`)
       } catch (err) {

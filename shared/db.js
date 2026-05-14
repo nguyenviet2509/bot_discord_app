@@ -169,6 +169,9 @@ function initDb() {
   try { database.exec(`ALTER TABLE users ADD COLUMN nickname TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN global_name TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN allowed_role_ids TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
+  try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
   return database
 }
 
@@ -361,16 +364,20 @@ function getScheduledMessageById(id, guildId) {
     .get(id, guildId)
 }
 
-function createScheduledMessage({ guild_id, channel_id, name, content, image_url, interval_minutes, enabled }) {
+function createScheduledMessage({ guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color }) {
   return getDb()
     .prepare(`
-      INSERT INTO scheduled_messages (guild_id, channel_id, name, content, image_url, interval_minutes, enabled)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO scheduled_messages (guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    .run(guild_id, channel_id, name || null, content || null, image_url || null, interval_minutes || 180, enabled ? 1 : 0)
+    .run(
+      guild_id, channel_id, name || null, content || null, image_url || null,
+      interval_minutes || 180, enabled ? 1 : 0,
+      use_embed ? 1 : 0, embed_title || null, embed_color || '#6366f1'
+    )
 }
 
-function updateScheduledMessage(id, { channel_id, name, content, image_url, interval_minutes, enabled }) {
+function updateScheduledMessage(id, { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color }) {
   return getDb()
     .prepare(`
       UPDATE scheduled_messages SET
@@ -379,7 +386,10 @@ function updateScheduledMessage(id, { channel_id, name, content, image_url, inte
         content = COALESCE(@content, content),
         image_url = COALESCE(@image_url, image_url),
         interval_minutes = COALESCE(@interval_minutes, interval_minutes),
-        enabled = COALESCE(@enabled, enabled)
+        enabled = COALESCE(@enabled, enabled),
+        use_embed = COALESCE(@use_embed, use_embed),
+        embed_title = COALESCE(@embed_title, embed_title),
+        embed_color = COALESCE(@embed_color, embed_color)
       WHERE id = @id
     `)
     .run({
@@ -390,6 +400,9 @@ function updateScheduledMessage(id, { channel_id, name, content, image_url, inte
       image_url: image_url ?? null,
       interval_minutes: interval_minutes ?? null,
       enabled: enabled === undefined ? null : (enabled ? 1 : 0),
+      use_embed: use_embed === undefined ? null : (use_embed ? 1 : 0),
+      embed_title: embed_title ?? null,
+      embed_color: embed_color ?? null,
     })
 }
 

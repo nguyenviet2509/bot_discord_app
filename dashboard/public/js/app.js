@@ -263,6 +263,7 @@ document.addEventListener('alpine:init', () => {
     form: {
       name: '', channel_id: '', content: '', image_url: '',
       interval_minutes: 180, enabled: true,
+      use_embed: false, embed_title: '', embed_color: '#6366f1',
     },
     toast: null,
 
@@ -281,7 +282,11 @@ document.addEventListener('alpine:init', () => {
 
     openCreate() {
       this.editId = null
-      this.form = { name: '', channel_id: '', content: '', image_url: '', interval_minutes: 180, enabled: true }
+      this.form = {
+        name: '', channel_id: '', content: '', image_url: '',
+        interval_minutes: 180, enabled: true,
+        use_embed: false, embed_title: '', embed_color: '#6366f1',
+      }
       this.modal = true
     },
 
@@ -294,6 +299,9 @@ document.addEventListener('alpine:init', () => {
         image_url: m.image_url || '',
         interval_minutes: m.interval_minutes,
         enabled: !!m.enabled,
+        use_embed: !!m.use_embed,
+        embed_title: m.embed_title || '',
+        embed_color: m.embed_color || '#6366f1',
       }
       this.modal = true
     },

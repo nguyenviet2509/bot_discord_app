@@ -443,7 +443,44 @@
             </div>
             <div>
               <label class="text-sm font-semibold text-slate-700 block mb-1.5">Noi dung text</label>
-              <textarea x-model="form.content" rows="3" placeholder="VD: Anh em on goi ne 🎉" class="input-field"></textarea>
+              <textarea x-model="form.content" rows="4" placeholder="VD: @everyone Anh em on goi ne 🎉" class="input-field"></textarea>
+              <details class="mt-1.5">
+                <summary class="text-xs text-indigo-600 cursor-pointer font-semibold">📝 Cach format (markdown + mention)</summary>
+                <div class="mt-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 leading-relaxed">
+                  <div><strong>Mention:</strong> <code class="bg-white px-1 rounded">@everyone</code> <code class="bg-white px-1 rounded">@here</code> <code class="bg-white px-1 rounded">&lt;@&amp;ROLE_ID&gt;</code> (role) <code class="bg-white px-1 rounded">&lt;@USER_ID&gt;</code> (user)</div>
+                  <div><strong>Format:</strong> <code class="bg-white px-1 rounded">**dam**</code> <code class="bg-white px-1 rounded">*nghieng*</code> <code class="bg-white px-1 rounded">__gach chan__</code> <code class="bg-white px-1 rounded">~~gach ngang~~</code> <code class="bg-white px-1 rounded">||spoiler||</code></div>
+                  <div><strong>Tieu de:</strong> <code class="bg-white px-1 rounded"># H1</code> <code class="bg-white px-1 rounded">## H2</code> <code class="bg-white px-1 rounded">### H3</code></div>
+                  <div><strong>List:</strong> <code class="bg-white px-1 rounded">- item</code> hoac <code class="bg-white px-1 rounded">1. item</code></div>
+                  <div><strong>Quote:</strong> <code class="bg-white px-1 rounded">&gt; trich dan</code></div>
+                  <div><strong>Code:</strong> <code class="bg-white px-1 rounded">`inline`</code> hoac block 3 backtick</div>
+                  <div><strong>Xuong dong:</strong> bam Enter trong text area de tao newline</div>
+                </div>
+              </details>
+            </div>
+
+            <!-- Embed mode -->
+            <div class="border-t border-slate-100 pt-4">
+              <label class="flex items-center gap-2 px-4 py-3 border-2 rounded-xl cursor-pointer mb-3"
+                :class="form.use_embed ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.use_embed" type="checkbox" class="accent-indigo-600" />
+                <div>
+                  <div class="text-sm font-semibold">Gui dang Embed (de nhin, co title + vien mau, tach biet voi tin nhan khac)</div>
+                  <div class="text-xs text-slate-500">Tat = gui text thuong</div>
+                </div>
+              </label>
+              <div x-show="form.use_embed" class="space-y-3 pl-2 border-l-4 border-indigo-200">
+                <div>
+                  <label class="text-sm font-semibold text-slate-700 block mb-1.5">Tieu de embed</label>
+                  <input x-model="form.embed_title" type="text" placeholder="VD: ⚔️ Boss sap xuat hien!" class="input-field" />
+                </div>
+                <div>
+                  <label class="text-sm font-semibold text-slate-700 block mb-1.5">Mau vien embed</label>
+                  <div class="flex gap-2">
+                    <input x-model="form.embed_color" type="color" class="w-12 h-10 rounded-lg border border-slate-200" />
+                    <input x-model="form.embed_color" type="text" class="input-field flex-1 font-mono" placeholder="#6366f1" />
+                  </div>
+                </div>
+              </div>
             </div>
             <div>
               <label class="text-sm font-semibold text-slate-700 block mb-1.5">Anh kem (tuy chon, max 5MB)</label>

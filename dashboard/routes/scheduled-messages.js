@@ -4,6 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const crypto = require('crypto')
 const db = require('../../shared/db')
+const { buildPayload } = require('../../shared/build-scheduled-payload')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
@@ -30,13 +31,15 @@ router.get('/', (req, res) => {
 })
 
 router.post('/', (req, res) => {
-  const { channel_id, name, content, image_url, interval_minutes, enabled } = req.body
+  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color } = req.body
   if (!channel_id) return res.status(400).json({ error: 'channel_id bat buoc' })
-  if (!content && !image_url) return res.status(400).json({ error: 'Phai co content hoac image' })
+  if (!content && !image_url && !embed_title) return res.status(400).json({ error: 'Phai co content, anh hoac embed title' })
   const mins = Number(interval_minutes)
   if (!Number.isFinite(mins) || mins < 1) return res.status(400).json({ error: 'interval_minutes phai >= 1' })
   const result = db.createScheduledMessage({
-    guild_id: GUILD_ID(), channel_id, name, content, image_url, interval_minutes: mins, enabled: !!enabled,
+    guild_id: GUILD_ID(), channel_id, name, content, image_url,
+    interval_minutes: mins, enabled: !!enabled,
+    use_embed: !!use_embed, embed_title, embed_color,
   })
   res.json({ id: result.lastInsertRowid })
 })
@@ -45,11 +48,11 @@ router.put('/:id', (req, res) => {
   const id = Number(req.params.id)
   const existing = db.getScheduledMessageById(id, GUILD_ID())
   if (!existing) return res.status(404).json({ error: 'Khong tim thay' })
-  const { channel_id, name, content, image_url, interval_minutes, enabled } = req.body
+  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color } = req.body
   db.updateScheduledMessage(id, {
     channel_id, name, content, image_url,
     interval_minutes: interval_minutes !== undefined ? Number(interval_minutes) : undefined,
-    enabled,
+    enabled, use_embed, embed_title, embed_color,
   })
   res.json({ success: true })
 })
@@ -72,15 +75,7 @@ router.post('/:id/send-now', async (req, res) => {
   if (!msg) return res.status(404).json({ error: 'Khong tim thay' })
   if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua co' })
   try {
-    let imageFullUrl = null
-    if (msg.image_url) {
-      const base = process.env.BASE_URL || ''
-      imageFullUrl = msg.image_url.startsWith('http') ? msg.image_url : `${base}${msg.image_url}`
-    }
-    const body = {
-      content: msg.content || '',
-      ...(imageFullUrl ? { embeds: [{ image: { url: imageFullUrl } }] } : {}),
-    }
+    const body = buildPayload(msg, { restAPI: true })
     const r = await fetch(`https://discord.com/api/v10/channels/${msg.channel_id}/messages`, {
       method: 'POST',
       headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}`, 'Content-Type': 'application/json' },
