@@ -278,20 +278,20 @@
             <div class="text-sm text-slate-500 mt-1">Level cao nhat</div>
           </div>
         </div>
-        <!-- Tier reference -->
+        <!-- Reward milestones (dynamic) -->
         <div class="card p-4 mb-6 overflow-x-auto">
-          <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Moc danh hieu</p>
-          <div class="flex gap-2 flex-wrap">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#f5f5f5;color:#455a64">⚫ Sat (Lv.10)</span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#fbe9e7;color:#bf360c">🟤 Dong (Lv.20)</span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#eceff1;color:#546e7a">⚪ Bac (Lv.30)</span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#fffde7;color:#f9a825">🟡 Vang (Lv.40)</span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#e0f7fa;color:#00838f">🩵 Bach Kim (Lv.50)</span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#e8f5e9;color:#2e7d32">🟢 Luc Bao (Lv.60)</span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#e3f2fd;color:#0277bd">🔵 Kim Cuong (Lv.70)</span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#f3e5f5;color:#7b1fa2">🟣 Cao Thu (Lv.80)</span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#fff3e0;color:#e65100">🟠 Dai Cao Thu (Lv.90)</span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#fff0f0;color:#ff4655">🔴 Thach Dau (Lv.100)</span>
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Moc phan thuong</p>
+          <div x-show="rewardMilestones.length === 0" class="text-sm text-slate-400 italic">
+            Chua co reward nao. Vao tab Rewards de tao moc phan thuong.
+          </div>
+          <div x-show="rewardMilestones.length > 0" class="flex gap-2 flex-wrap">
+            <template x-for="m in rewardMilestones" :key="m.id">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                <img x-show="m.type==='badge' && m.badge_url" :src="m.badge_url" class="w-4 h-4 rounded object-cover" />
+                <svg x-show="m.type==='role'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                <span x-text="m.name + ' (Lv.' + m.level + ')'"></span>
+              </span>
+            </template>
           </div>
         </div>
         <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Dang tai...</div>

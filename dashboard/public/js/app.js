@@ -170,6 +170,8 @@ document.addEventListener('alpine:init', () => {
   // ============================================================
   Alpine.data('membersSection', () => ({
     members: [],
+    rewards: [],
+    roles: [],
     search: '',
     loading: false,
     toast: null,
@@ -180,8 +182,29 @@ document.addEventListener('alpine:init', () => {
 
     async load() {
       this.loading = true
-      this.members = await api('GET', '/members') || []
+      const [members, rewards, roles] = await Promise.all([
+        api('GET', '/members'),
+        api('GET', '/rewards'),
+        api('GET', '/discord/roles'),
+      ])
+      this.members = members || []
+      this.rewards = rewards || []
+      this.roles = roles || []
       this.loading = false
+    },
+
+    // Moc reward (sort theo level asc) cho hien "Moc phan thuong"
+    get rewardMilestones() {
+      const sorted = [...this.rewards].sort((a, b) => a.level_required - b.level_required)
+      return sorted.map(r => {
+        let name = ''
+        if (r.type === 'badge') name = r.badge_name || 'Badge'
+        else if (r.type === 'role') {
+          const role = this.roles.find(x => x.id === r.role_id)
+          name = role ? role.name : 'Role'
+        }
+        return { id: r.id, level: r.level_required, name, type: r.type, badge_url: r.badge_url }
+      })
     },
 
     get filtered() {
