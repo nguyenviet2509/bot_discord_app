@@ -258,9 +258,12 @@ document.addEventListener('alpine:init', () => {
     heatmap: [],
     topChannels: [],
     inactive: [],
+    silentMembers: [],
+    silentTotal: 0,
     growthDays: '30',
     inactiveDays: '7',
     loading: false,
+    loadingSilent: false,
     _chart: null,
     _heatmapMax: 0,
 
@@ -295,6 +298,35 @@ document.addEventListener('alpine:init', () => {
 
     async loadInactive() {
       this.inactive = await api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=100`) || []
+    },
+
+    async loadSilent() {
+      this.loadingSilent = true
+      try {
+        const data = await api('GET', '/analytics/silent-members?limit=500')
+        if (data?.error) {
+          this.silentMembers = []
+          this.silentTotal = 0
+        } else {
+          this.silentMembers = data?.members || []
+          this.silentTotal = data?.total || 0
+        }
+      } catch (_) {
+        this.silentMembers = []
+        this.silentTotal = 0
+      }
+      this.loadingSilent = false
+    },
+
+    joinedAgo(isoStr) {
+      if (!isoStr) return '?'
+      const sec = Math.floor((Date.now() - new Date(isoStr).getTime()) / 1000)
+      if (sec < 86400) return 'hom nay'
+      const days = Math.floor(sec / 86400)
+      if (days < 30) return days + ' ngay truoc'
+      const months = Math.floor(days / 30)
+      if (months < 12) return months + ' thang truoc'
+      return Math.floor(months / 12) + ' nam truoc'
     },
 
     renderGrowthChart() {
@@ -343,6 +375,8 @@ document.addEventListener('alpine:init', () => {
 
     timeAgo,
     getAvatarUrl,
+    getInitials,
+    avatarBgColor,
   }))
 
   // ============================================================

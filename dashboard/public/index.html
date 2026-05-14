@@ -445,6 +445,38 @@
           </div>
         </div>
 
+        <!-- Silent members (chua chat lan nao) -->
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="font-bold text-slate-800">Member chua chat lan nao</h2>
+              <p class="text-xs text-slate-400 mt-0.5">Co trong server nhung chua gui bat ky message nao</p>
+            </div>
+            <button @click="loadSilent()" :disabled="loadingSilent" class="btn-refresh">
+              <svg :class="loadingSilent ? 'spin' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+              <span x-text="loadingSilent ? 'Dang quet...' : 'Quet lai'"></span>
+            </button>
+          </div>
+          <div x-show="silentTotal > 0" class="mb-3 inline-flex px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-semibold">
+            <span x-text="silentTotal + ' member chua chat'"></span>
+          </div>
+          <div x-show="!loadingSilent && silentMembers.length === 0" class="text-sm text-slate-400 italic py-8 text-center">
+            Khong co member nao chua chat (hoac chua quet)
+          </div>
+          <div x-show="silentMembers.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-96 overflow-y-auto">
+            <template x-for="m in silentMembers" :key="m.id">
+              <div class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
+                <img x-show="m.avatar" :src="getAvatarUrl(m.id, m.avatar)" class="w-8 h-8 rounded-full flex-shrink-0" />
+                <div x-show="!m.avatar" class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" :style="`background:${avatarBgColor(m.id)}`" x-text="getInitials(m.nickname || m.global_name || m.username)"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-semibold text-slate-800 truncate" x-text="m.nickname || m.global_name || m.username"></div>
+                  <div class="text-xs text-slate-400" x-text="'Join ' + joinedAgo(m.joined_at)"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
         <!-- Top channels + Inactive members 2 col -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="card p-6">
