@@ -268,6 +268,10 @@ document.addEventListener('alpine:init', () => {
     loading: false,
 
     async init() {
+      await this.load()
+    },
+
+    async load() {
       this.loading = true
       this.commands = await api('GET', '/commands') || []
       this.loading = false
@@ -288,6 +292,10 @@ document.addEventListener('alpine:init', () => {
     loading: false,
 
     async init() {
+      await this.load()
+    },
+
+    async load() {
       this.loading = true
       this.servers = await api('GET', '/servers') || []
       this.loading = false
