@@ -250,6 +250,102 @@ document.addEventListener('alpine:init', () => {
   }))
 
   // ============================================================
+  // Analytics Section
+  // ============================================================
+  Alpine.data('analyticsSection', () => ({
+    summary: {},
+    growth: [],
+    heatmap: [],
+    topChannels: [],
+    inactive: [],
+    growthDays: '30',
+    inactiveDays: '7',
+    loading: false,
+    _chart: null,
+    _heatmapMax: 0,
+
+    async init() {
+      if (!checkAuth()) return
+      await this.load()
+    },
+
+    async load() {
+      this.loading = true
+      const [summary, growth, heatmap, topChannels, inactive] = await Promise.all([
+        api('GET', '/analytics/summary'),
+        api('GET', `/analytics/growth?days=${this.growthDays}`),
+        api('GET', '/analytics/heatmap'),
+        api('GET', '/analytics/top-channels?limit=10'),
+        api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=100`),
+      ])
+      this.summary = summary || {}
+      this.growth = growth || []
+      this.heatmap = heatmap || []
+      this.topChannels = topChannels || []
+      this.inactive = inactive || []
+      this._heatmapMax = Math.max(1, ...this.heatmap.map(h => h.message_count))
+      this.loading = false
+      this.$nextTick(() => this.renderGrowthChart())
+    },
+
+    async loadGrowth() {
+      this.growth = await api('GET', `/analytics/growth?days=${this.growthDays}`) || []
+      this.renderGrowthChart()
+    },
+
+    async loadInactive() {
+      this.inactive = await api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=100`) || []
+    },
+
+    renderGrowthChart() {
+      const canvas = document.getElementById('growthChart')
+      if (!canvas || typeof Chart === 'undefined') return
+      if (this._chart) this._chart.destroy()
+      const labels = this.growth.map(g => g.day)
+      const joins = this.growth.map(g => g.joins)
+      const leaves = this.growth.map(g => -g.leaves)
+      this._chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Join', data: joins, backgroundColor: '#10b981' },
+            { label: 'Leave', data: leaves, backgroundColor: '#ef4444' },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: { stacked: true, ticks: { callback: v => Math.abs(v) } },
+          },
+          plugins: { legend: { position: 'top', align: 'end' } },
+        },
+      })
+    },
+
+    heatmapCellStyle(weekday, hour) {
+      const cell = this.heatmap.find(h => h.weekday === weekday && h.hour === hour)
+      const count = cell ? cell.message_count : 0
+      if (count === 0) return 'background:#f1f5f9'
+      const intensity = Math.min(count / this._heatmapMax, 1)
+      const alpha = 0.15 + intensity * 0.85
+      return `background:rgba(99,102,241,${alpha.toFixed(2)})`
+    },
+
+    heatmapCellLabel(weekday, hour) {
+      const cell = this.heatmap.find(h => h.weekday === weekday && h.hour === hour)
+      const count = cell ? cell.message_count : 0
+      const days = ['CN','T2','T3','T4','T5','T6','T7']
+      return `${days[weekday]} ${hour}h: ${count} message`
+    },
+
+    timeAgo,
+    getAvatarUrl,
+  }))
+
+  // ============================================================
   // Moderation Section
   // ============================================================
   Alpine.data('moderationSection', () => ({

@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
   <script src="/js/app.js"></script>
   <style>
@@ -71,6 +72,10 @@
       <div @click="tab='moderation'" :class="tab==='moderation' ? 'active' : ''" class="nav-item">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         <span>Quan ly mod</span>
+      </div>
+      <div @click="tab='analytics'" :class="tab==='analytics' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+        <span>Analytics</span>
       </div>
       <div @click="tab='commands'" :class="tab==='commands' ? 'active' : ''" class="nav-item">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
@@ -354,6 +359,138 @@
               </template>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS TAB -->
+    <div x-show="tab === 'analytics'" x-data="analyticsSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">Analytics</h1>
+          <p class="text-sm text-slate-400 mt-0.5">Tang truong, hoat dong, top channel, inactive member</p>
+        </div>
+        <button @click="load()" :disabled="loading" class="btn-refresh">
+          <svg :class="loading ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+          <span x-text="loading ? 'Dang tai...' : 'Lam moi'"></span>
+        </button>
+      </div>
+      <div class="p-8 space-y-6">
+        <!-- Summary stats -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div class="card p-5">
+            <div class="text-xs font-bold text-slate-400 uppercase">Tong member</div>
+            <div class="text-2xl font-bold text-slate-800 mt-1" x-text="summary.total_members?.toLocaleString() || 0"></div>
+          </div>
+          <div class="card p-5">
+            <div class="text-xs font-bold text-slate-400 uppercase">Tong message</div>
+            <div class="text-2xl font-bold text-indigo-600 mt-1" x-text="summary.total_messages?.toLocaleString() || 0"></div>
+          </div>
+          <div class="card p-5">
+            <div class="text-xs font-bold text-slate-400 uppercase">Channel hoat dong</div>
+            <div class="text-2xl font-bold text-slate-800 mt-1" x-text="summary.total_channels || 0"></div>
+          </div>
+          <div class="card p-5">
+            <div class="text-xs font-bold text-slate-400 uppercase">Join (30d)</div>
+            <div class="text-2xl font-bold text-emerald-600 mt-1" x-text="'+' + (summary.joins_30d || 0)"></div>
+          </div>
+          <div class="card p-5">
+            <div class="text-xs font-bold text-slate-400 uppercase">Leave (30d)</div>
+            <div class="text-2xl font-bold text-rose-600 mt-1" x-text="'-' + (summary.leaves_30d || 0)"></div>
+          </div>
+        </div>
+
+        <!-- Member growth chart -->
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-slate-800">Tang truong member</h2>
+            <select x-model="growthDays" @change="loadGrowth()" class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
+              <option value="7">7 ngay</option>
+              <option value="30">30 ngay</option>
+              <option value="90">90 ngay</option>
+            </select>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="growthChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Activity heatmap -->
+        <div class="card p-6">
+          <h2 class="font-bold text-slate-800 mb-4">Hoat dong theo gio trong tuan</h2>
+          <p class="text-xs text-slate-400 mb-3">Mau dam = nhieu message hon</p>
+          <div class="overflow-x-auto">
+            <table class="text-xs">
+              <thead>
+                <tr>
+                  <th class="w-10"></th>
+                  <template x-for="h in 24" :key="h">
+                    <th class="px-1 py-1 text-slate-400 font-mono" x-text="(h-1).toString().padStart(2,'0')"></th>
+                  </template>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(dayLabel, dayIdx) in ['CN','T2','T3','T4','T5','T6','T7']" :key="dayIdx">
+                  <tr>
+                    <td class="text-slate-500 font-semibold pr-2" x-text="dayLabel"></td>
+                    <template x-for="h in 24" :key="h">
+                      <td class="p-0.5">
+                        <div class="w-7 h-7 rounded" :style="heatmapCellStyle(dayIdx, h-1)" :title="heatmapCellLabel(dayIdx, h-1)"></div>
+                      </td>
+                    </template>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Top channels + Inactive members 2 col -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="card p-6">
+            <h2 class="font-bold text-slate-800 mb-4">Top channels</h2>
+            <div x-show="topChannels.length === 0" class="text-sm text-slate-400 italic">Chua co du lieu</div>
+            <div class="space-y-2">
+              <template x-for="(c, idx) in topChannels" :key="c.channel_id">
+                <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                  <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center" x-text="idx + 1"></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-slate-800 text-sm" x-text="'#' + (c.channel_name || c.channel_id)"></div>
+                    <div class="text-xs text-slate-400 font-mono truncate" x-text="c.channel_id"></div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-bold text-slate-800" x-text="c.message_count.toLocaleString()"></div>
+                    <div class="text-xs text-slate-400">message</div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold text-slate-800">Inactive members</h2>
+              <select x-model="inactiveDays" @change="loadInactive()" class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
+                <option value="3">3+ ngay</option>
+                <option value="7">7+ ngay</option>
+                <option value="14">14+ ngay</option>
+                <option value="30">30+ ngay</option>
+              </select>
+            </div>
+            <div x-show="inactive.length === 0" class="text-sm text-slate-400 italic">Khong co member nao inactive</div>
+            <div class="space-y-2 max-h-96 overflow-y-auto">
+              <template x-for="m in inactive" :key="m.id">
+                <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                  <img x-show="m.avatar" :src="getAvatarUrl(m.id, m.avatar)" class="w-8 h-8 rounded-full" />
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-slate-800 text-sm truncate" x-text="m.nickname || m.global_name || m.username || m.id"></div>
+                    <div class="text-xs text-slate-400">Lv.<span x-text="m.level"></span> • <span x-text="m.xp"></span> XP</div>
+                  </div>
+                  <div class="text-xs text-slate-500" x-text="timeAgo(m.last_message_at)"></div>
+                </div>
+              </template>
+            </div>
+          </div>
         </div>
       </div>
     </div>

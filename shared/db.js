@@ -72,6 +72,34 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS member_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      event_type TEXT NOT NULL CHECK(event_type IN ('join','leave')),
+      occurred_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_member_events_guild_time ON member_events(guild_id, occurred_at DESC);
+
+    -- Counter theo gio (0-23) va weekday (0=CN, 1=T2, ..., 6=T7)
+    CREATE TABLE IF NOT EXISTS activity_buckets (
+      guild_id TEXT NOT NULL,
+      weekday INTEGER NOT NULL,
+      hour INTEGER NOT NULL,
+      message_count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (guild_id, weekday, hour)
+    );
+
+    -- Counter theo channel
+    CREATE TABLE IF NOT EXISTS channel_stats (
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      channel_name TEXT,
+      message_count INTEGER NOT NULL DEFAULT 0,
+      last_message_at INTEGER,
+      PRIMARY KEY (guild_id, channel_id)
+    );
+
     CREATE TABLE IF NOT EXISTS mod_actions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id TEXT NOT NULL,
@@ -209,6 +237,99 @@ function upsertSettings(settings) {
         updated_at = unixepoch()
     `)
     .run({ ...settings, allowed_role_ids: allowedJson })
+}
+
+// ============================================================
+// Analytics
+// ============================================================
+function logMemberEvent(guildId, userId, eventType) {
+  return getDb()
+    .prepare('INSERT INTO member_events (guild_id, user_id, event_type) VALUES (?, ?, ?)')
+    .run(guildId, userId, eventType)
+}
+
+function incrementActivity(guildId, weekday, hour) {
+  return getDb()
+    .prepare(`
+      INSERT INTO activity_buckets (guild_id, weekday, hour, message_count)
+      VALUES (?, ?, ?, 1)
+      ON CONFLICT(guild_id, weekday, hour) DO UPDATE SET message_count = message_count + 1
+    `)
+    .run(guildId, weekday, hour)
+}
+
+function incrementChannelStat(guildId, channelId, channelName) {
+  const nowSec = Math.floor(Date.now() / 1000)
+  return getDb()
+    .prepare(`
+      INSERT INTO channel_stats (guild_id, channel_id, channel_name, message_count, last_message_at)
+      VALUES (?, ?, ?, 1, ?)
+      ON CONFLICT(guild_id, channel_id) DO UPDATE SET
+        message_count = message_count + 1,
+        channel_name = COALESCE(excluded.channel_name, channel_name),
+        last_message_at = excluded.last_message_at
+    `)
+    .run(guildId, channelId, channelName || null, nowSec)
+}
+
+// Member growth: join/leave count moi ngay trong N ngay vua qua
+function getMemberGrowth(guildId, days = 30) {
+  const since = Math.floor(Date.now() / 1000) - days * 86400
+  return getDb()
+    .prepare(`
+      SELECT
+        date(occurred_at, 'unixepoch') AS day,
+        SUM(CASE WHEN event_type = 'join' THEN 1 ELSE 0 END) AS joins,
+        SUM(CASE WHEN event_type = 'leave' THEN 1 ELSE 0 END) AS leaves
+      FROM member_events
+      WHERE guild_id = ? AND occurred_at >= ?
+      GROUP BY day
+      ORDER BY day ASC
+    `)
+    .all(guildId, since)
+}
+
+// Heatmap: 7 weekday x 24 hour
+function getActivityHeatmap(guildId) {
+  return getDb()
+    .prepare('SELECT weekday, hour, message_count FROM activity_buckets WHERE guild_id = ?')
+    .all(guildId)
+}
+
+// Top channels theo message_count
+function getTopChannels(guildId, limit = 10) {
+  return getDb()
+    .prepare(`
+      SELECT channel_id, channel_name, message_count, last_message_at
+      FROM channel_stats WHERE guild_id = ?
+      ORDER BY message_count DESC LIMIT ?
+    `)
+    .all(guildId, limit)
+}
+
+// Inactive members: user co last_message_at < (now - days)
+function getInactiveMembers(guildId, days = 7, limit = 100) {
+  const threshold = Math.floor(Date.now() / 1000) - days * 86400
+  return getDb()
+    .prepare(`
+      SELECT id, username, global_name, nickname, avatar, xp, level, last_message_at
+      FROM users
+      WHERE guild_id = ? AND last_message_at IS NOT NULL AND last_message_at < ?
+      ORDER BY last_message_at ASC
+      LIMIT ?
+    `)
+    .all(guildId, threshold, limit)
+}
+
+function getAnalyticsSummary(guildId) {
+  const db = getDb()
+  return {
+    total_messages: (db.prepare('SELECT SUM(message_count) as t FROM activity_buckets WHERE guild_id = ?').get(guildId) || {}).t || 0,
+    total_channels: (db.prepare('SELECT COUNT(*) as t FROM channel_stats WHERE guild_id = ?').get(guildId) || {}).t || 0,
+    total_members: (db.prepare('SELECT COUNT(*) as t FROM users WHERE guild_id = ?').get(guildId) || {}).t || 0,
+    joins_30d: (db.prepare(`SELECT COUNT(*) as t FROM member_events WHERE guild_id = ? AND event_type = 'join' AND occurred_at >= ?`).get(guildId, Math.floor(Date.now() / 1000) - 30 * 86400) || {}).t || 0,
+    leaves_30d: (db.prepare(`SELECT COUNT(*) as t FROM member_events WHERE guild_id = ? AND event_type = 'leave' AND occurred_at >= ?`).get(guildId, Math.floor(Date.now() / 1000) - 30 * 86400) || {}).t || 0,
+  }
 }
 
 // ============================================================
@@ -491,4 +612,12 @@ module.exports = {
   getModActions,
   countModActions,
   getActiveBans,
+  logMemberEvent,
+  incrementActivity,
+  incrementChannelStat,
+  getMemberGrowth,
+  getActivityHeatmap,
+  getTopChannels,
+  getInactiveMembers,
+  getAnalyticsSummary,
 }

@@ -15,6 +15,16 @@ module.exports = {
   async execute(message, client) {
     if (message.author.bot) return
     if (!message.guild) return
+
+    // Analytics counters (chay cho moi message khong filter length)
+    try {
+      const now = new Date()
+      db.incrementActivity(message.guild.id, now.getDay(), now.getHours())
+      db.incrementChannelStat(message.guild.id, message.channel.id, message.channel?.name || null)
+    } catch (err) {
+      console.error('[Analytics] increment fail:', err.message)
+    }
+
     if (message.content.length < 5) return
 
     const nowSec = Math.floor(Date.now() / 1000)
