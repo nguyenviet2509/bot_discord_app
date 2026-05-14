@@ -72,6 +72,15 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS temp_bans (
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      unban_at INTEGER NOT NULL,
+      reason TEXT,
+      created_at INTEGER DEFAULT (unixepoch()),
+      PRIMARY KEY (guild_id, user_id)
+    );
+
     CREATE TABLE IF NOT EXISTS links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id TEXT NOT NULL,
@@ -182,6 +191,31 @@ function upsertSettings(settings) {
         updated_at = unixepoch()
     `)
     .run({ ...settings, allowed_role_ids: allowedJson })
+}
+
+// ============================================================
+// Temp Bans (ban co thoi han)
+// ============================================================
+function addTempBan(guildId, userId, unbanAt, reason) {
+  return getDb()
+    .prepare(`
+      INSERT INTO temp_bans (guild_id, user_id, unban_at, reason)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(guild_id, user_id) DO UPDATE SET unban_at = excluded.unban_at, reason = excluded.reason
+    `)
+    .run(guildId, userId, unbanAt, reason || null)
+}
+
+function removeTempBan(guildId, userId) {
+  return getDb()
+    .prepare('DELETE FROM temp_bans WHERE guild_id = ? AND user_id = ?')
+    .run(guildId, userId)
+}
+
+function getExpiredBans(nowSec) {
+  return getDb()
+    .prepare('SELECT * FROM temp_bans WHERE unban_at <= ?')
+    .all(nowSec)
 }
 
 // Helper: check member co quyen su dung bot khong
@@ -366,4 +400,7 @@ module.exports = {
   getLevelUpTemplate,
   upsertLevelUpTemplate,
   memberHasAccess,
+  addTempBan,
+  removeTempBan,
+  getExpiredBans,
 }

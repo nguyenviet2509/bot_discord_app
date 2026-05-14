@@ -3,7 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../../.env') }
 const { Client, GatewayIntentBits, Collection } = require('discord.js')
 const path = require('path')
 const fs = require('fs')
-const { initDb, getSettings, memberHasAccess } = require('../../shared/db')
+const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan } = require('../../shared/db')
 
 initDb()
 console.log('[DB] Database initialized')
@@ -65,6 +65,22 @@ client.on('interactionCreate', async interaction => {
 
 client.once('ready', () => {
   console.log(`[Bot] ✅ Ready! Logged in as ${client.user.tag}`)
+  // Watcher: check va auto-unban moi 60s
+  setInterval(async () => {
+    const nowSec = Math.floor(Date.now() / 1000)
+    const expired = getExpiredBans(nowSec)
+    for (const row of expired) {
+      try {
+        const guild = client.guilds.cache.get(row.guild_id)
+        if (!guild) { removeTempBan(row.guild_id, row.user_id); continue }
+        await guild.members.unban(row.user_id, 'Tự động unban (hết hạn)').catch(() => {})
+        removeTempBan(row.guild_id, row.user_id)
+        console.log(`[TempBan] Da auto-unban user ${row.user_id} trong guild ${row.guild_id}`)
+      } catch (err) {
+        console.error('[TempBan] Loi auto-unban:', err.message)
+      }
+    }
+  }, 60_000)
 })
 
 client.login(process.env.BOT_TOKEN)
