@@ -127,28 +127,35 @@ async function handleLevelUp(client, guild, member, newLevel, settings) {
   const user = db.getUser(member.id, guild.id)
   const { percent } = getXpProgress(user.xp, newLevel)
   const bar = buildProgressBar(percent)
-  const tier = getTierForLevel(newLevel)
-  const isMilestone = LEVEL_TIERS.some(t => t.minLevel === newLevel)
   const tpl = db.getLevelUpTemplate(guild.id)
 
   // Reward tại đúng level vừa lên (role | badge | cả 2)
   const rewardAtLevel = rewards.filter(r => r.level_required === newLevel)
   const roleRewardAtLevel = rewardAtLevel.find(r => r.type === 'role')
   const badgeReward = rewardAtLevel.find(r => r.type === 'badge')
-  // Role kèm trong badge (feature mới)
+  // Role kèm trong badge
   const badgeRoleId = badgeReward?.role_id
+  const isMilestone = rewardAtLevel.length > 0
 
-  // Thay placeholder
-  const fill = (str) => str
+  // Ten reward de chen vao placeholder {reward}
+  let rewardName = ''
+  if (badgeReward?.badge_name) rewardName = badgeReward.badge_name
+  else if (roleRewardAtLevel) {
+    const role = guild.roles.cache.get(roleRewardAtLevel.role_id)
+    rewardName = role ? role.name : ''
+  }
+
+  const fill = (str) => (str || '')
     .replace(/\{user\}/g, member.user.username)
     .replace(/\{level\}/g, String(newLevel))
-    .replace(/\{tier\}/g, tier.name)
-    .replace(/\{tier_badge\}/g, tier.badge)
     .replace(/\{xp\}/g, user.xp.toLocaleString())
+    .replace(/\{reward\}/g, rewardName)
+    // Strip legacy tier placeholders
+    .replace(/\{tier(_badge)?\}/g, '')
 
   const color = tpl.color_mode === 'custom'
     ? parseInt((tpl.custom_color || '#6366f1').replace('#', ''), 16)
-    : tier.color
+    : 0x6366f1
 
   const embed = new EmbedBuilder()
     .setColor(color)
@@ -161,13 +168,15 @@ async function handleLevelUp(client, guild, member, newLevel, settings) {
   }
 
   const fields = []
-  if (tpl.show_tier_field) fields.push({ name: 'Danh hiệu', value: `${tier.badge} ${tier.name}`, inline: true })
+  // "Field Phan thuong" (tpl.show_tier_field repurposed)
+  if (tpl.show_tier_field && rewardName) {
+    fields.push({ name: 'Phần thưởng', value: rewardName, inline: true })
+  }
   if (tpl.show_xp_field) fields.push({ name: 'Tổng XP', value: `${user.xp.toLocaleString()} XP`, inline: true })
   if (tpl.show_progress_field) fields.push({ name: 'Tiến độ', value: `[${bar}] ${percent}%`, inline: true })
   if (fields.length) embed.addFields(...fields)
 
   if (tpl.show_role_reward) {
-    // Role chính (type=role) HOẶC role kèm trong badge
     const roleIdToShow = roleRewardAtLevel?.role_id || badgeRoleId
     if (roleIdToShow) {
       const role = guild.roles.cache.get(roleIdToShow)

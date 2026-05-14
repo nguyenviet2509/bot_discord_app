@@ -58,7 +58,7 @@ function initDb() {
       guild_id TEXT PRIMARY KEY,
       title TEXT NOT NULL DEFAULT '🎉 Level Up!',
       description TEXT NOT NULL DEFAULT 'Chúc mừng **{user}** đã đạt **Level {level}**!',
-      milestone_description TEXT NOT NULL DEFAULT 'Chúc mừng **{user}** đã đạt **Level {level}**!\n{tier_badge} Đạt danh hiệu **{tier}**!',
+      milestone_description TEXT NOT NULL DEFAULT '🎊 Chúc mừng **{user}** đã đạt **Level {level}** và nhận được **{reward}**!',
       show_tier_field INTEGER NOT NULL DEFAULT 1,
       show_xp_field INTEGER NOT NULL DEFAULT 1,
       show_progress_field INTEGER NOT NULL DEFAULT 1,
@@ -268,7 +268,7 @@ function deleteLink(id, guildId) {
 const TEMPLATE_DEFAULTS = {
   title: '🎉 Level Up!',
   description: 'Chúc mừng **{user}** đã đạt **Level {level}**!',
-  milestone_description: 'Chúc mừng **{user}** đã đạt **Level {level}**!\n{tier_badge} Đạt danh hiệu **{tier}**!',
+  milestone_description: '🎊 Chúc mừng **{user}** đã đạt **Level {level}** và nhận được **{reward}**!',
   show_tier_field: 1,
   show_xp_field: 1,
   show_progress_field: 1,

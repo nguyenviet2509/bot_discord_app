@@ -319,11 +319,6 @@
                       <div class="flex-shrink-0">
                         <img x-show="getAvatarUrl(m.id, m.avatar)" :src="getAvatarUrl(m.id, m.avatar)"
                           class="w-9 h-9 rounded-full object-cover ring-2 ring-white shadow-sm" />
-                        <div x-show="!getAvatarUrl(m.id, m.avatar)"
-                          class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-white shadow-sm"
-                          :style="'background:' + avatarBgColor(m.id)">
-                          <span x-text="getInitials(m.nickname || m.global_name || m.username)"></span>
-                        </div>
                       </div>
                       <div>
                         <div class="font-semibold text-slate-800 text-sm leading-tight" x-text="m.nickname || m.global_name || m.username || 'Unknown'"></div>
@@ -409,9 +404,11 @@
               <div class="font-bold text-slate-700 mb-1.5">Placeholder co the dung:</div>
               <code class="text-indigo-600">{user}</code> ten member &nbsp;
               <code class="text-indigo-600">{level}</code> level &nbsp;
-              <code class="text-indigo-600">{tier}</code> ten tier &nbsp;
-              <code class="text-indigo-600">{tier_badge}</code> emoji tier &nbsp;
-              <code class="text-indigo-600">{xp}</code> tong XP
+              <code class="text-indigo-600">{xp}</code> tong XP &nbsp;
+              <code class="text-indigo-600">{reward}</code> ten reward (badge/role) tai level do
+            </div>
+            <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
+              💡 <strong>Mo ta milestone</strong> chi hien thi khi co reward dat level. Cac level khong co reward dung mo ta thuong.
             </div>
 
             <h2 class="text-base font-bold text-slate-800 pt-3 pb-1 border-t border-slate-100">Hien thi</h2>
@@ -429,7 +426,7 @@
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.show_tier_field ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.show_tier_field" type="checkbox" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Field Danh hieu</span>
+                <span class="text-sm font-medium">Field Phan thuong</span>
               </label>
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.show_xp_field ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
@@ -458,20 +455,8 @@
               </label>
             </div>
 
-            <h2 class="text-base font-bold text-slate-800 pt-3 pb-1 border-t border-slate-100">Mau vien</h2>
-            <div class="grid grid-cols-2 gap-3">
-              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer"
-                :class="form.color_mode==='tier' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
-                <input x-model="form.color_mode" type="radio" value="tier" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Theo tier</span>
-              </label>
-              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer"
-                :class="form.color_mode==='custom' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
-                <input x-model="form.color_mode" type="radio" value="custom" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Mau tu chon</span>
-              </label>
-            </div>
-            <div x-show="form.color_mode==='custom'" class="flex items-center gap-3">
+            <h2 class="text-base font-bold text-slate-800 pt-3 pb-1 border-t border-slate-100">Mau vien embed</h2>
+            <div class="flex items-center gap-3">
               <input x-model="form.custom_color" type="color" class="w-14 h-11 rounded-lg border border-slate-200 cursor-pointer" />
               <input x-model="form.custom_color" type="text" placeholder="#6366f1" class="input-field flex-1" />
             </div>
@@ -482,13 +467,11 @@
             <div class="sticky top-24">
               <h2 class="text-base font-bold text-slate-800 mb-3">Xem truoc</h2>
               <div class="flex items-center gap-3 mb-4">
-                <label class="text-xs font-semibold text-slate-600">Loai preview:</label>
+                <label class="text-xs font-semibold text-slate-600">Preview level:</label>
                 <select x-model="previewLevel" class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
-                  <option value="5">Level 5 (thuong)</option>
-                  <option value="10">Level 10 (milestone Sat)</option>
-                  <option value="20">Level 20 (milestone Dong)</option>
-                  <option value="50">Level 50 (milestone Bach Kim)</option>
-                  <option value="100">Level 100 (milestone Thach Dau)</option>
+                  <template x-for="opt in previewLevelOptions" :key="opt.value">
+                    <option :value="opt.value" x-text="opt.label"></option>
+                  </template>
                 </select>
               </div>
               <!-- Discord-like preview -->
@@ -503,10 +486,10 @@
                       <div class="flex-1 min-w-0">
                         <div class="text-white font-semibold text-base mb-2" x-text="renderTpl(form.title)"></div>
                         <div class="text-[#dbdee1] text-sm whitespace-pre-line" x-text="renderTpl(previewIsMilestone ? form.milestone_description : form.description)"></div>
-                        <div x-show="form.show_tier_field || form.show_xp_field || form.show_progress_field" class="flex gap-4 mt-3 flex-wrap">
-                          <div x-show="form.show_tier_field" class="min-w-0">
-                            <div class="text-white text-xs font-semibold mb-0.5">Danh hieu</div>
-                            <div class="text-[#dbdee1] text-sm" x-text="previewTier.badge + ' ' + previewTier.name"></div>
+                        <div x-show="(form.show_tier_field && previewRewardName) || form.show_xp_field || form.show_progress_field" class="flex gap-4 mt-3 flex-wrap">
+                          <div x-show="form.show_tier_field && previewRewardName" class="min-w-0">
+                            <div class="text-white text-xs font-semibold mb-0.5">Phan thuong</div>
+                            <div class="text-[#dbdee1] text-sm" x-text="previewRewardName"></div>
                           </div>
                           <div x-show="form.show_xp_field" class="min-w-0">
                             <div class="text-white text-xs font-semibold mb-0.5">Tong XP</div>

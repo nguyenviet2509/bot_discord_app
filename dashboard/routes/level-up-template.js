@@ -61,33 +61,22 @@ router.post('/test', async (req, res) => {
   const rewardAtLevel = rewards.filter(r => r.level_required === lvl)
   const roleReward = rewardAtLevel.find(r => r.type === 'role')
   const badgeReward = rewardAtLevel.find(r => r.type === 'badge')
-
-  const tiers = [
-    { min: 100, name: 'Thach Dau', badge: '🔴', color: 0xff4655 },
-    { min: 90, name: 'Dai Cao Thu', badge: '🟠', color: 0xff6d00 },
-    { min: 80, name: 'Cao Thu', badge: '🟣', color: 0x9b27af },
-    { min: 70, name: 'Kim Cuong', badge: '🔵', color: 0x0288d1 },
-    { min: 60, name: 'Luc Bao', badge: '🟢', color: 0x2e7d32 },
-    { min: 50, name: 'Bach Kim', badge: '🩵', color: 0x00838f },
-    { min: 40, name: 'Vang', badge: '🟡', color: 0xf9a825 },
-    { min: 30, name: 'Bac', badge: '⚪', color: 0x78909c },
-    { min: 20, name: 'Dong', badge: '🟤', color: 0xbf360c },
-    { min: 10, name: 'Sat', badge: '⚫', color: 0x546e7a },
-  ]
-  const tier = tiers.find(t => lvl >= t.min) || { name: 'Chua xep hang', badge: '▫️', color: 0x6b7280 }
-  const isMilestone = tiers.some(t => t.min === lvl)
+  const isMilestone = rewardAtLevel.length > 0
   const fakeXp = lvl * 1000
+
+  // Ten reward de chen vao {reward}
+  const rewardName = badgeReward?.badge_name || (roleReward ? `Role ${roleReward.role_id}` : '')
 
   const fill = (str) => (str || '')
     .replace(/\{user\}/g, 'TestUser')
     .replace(/\{level\}/g, String(lvl))
-    .replace(/\{tier\}/g, tier.name)
-    .replace(/\{tier_badge\}/g, tier.badge)
     .replace(/\{xp\}/g, fakeXp.toLocaleString())
+    .replace(/\{reward\}/g, rewardName)
+    .replace(/\{tier(_badge)?\}/g, '')
 
   const color = tpl.color_mode === 'custom'
     ? parseInt((tpl.custom_color || '#6366f1').replace('#', ''), 16)
-    : tier.color
+    : 0x6366f1
 
   const embed = {
     title: fill(tpl.title),
@@ -102,7 +91,7 @@ router.post('/test', async (req, res) => {
   }
 
   const fields = []
-  if (tpl.show_tier_field) fields.push({ name: 'Danh hieu', value: `${tier.badge} ${tier.name}`, inline: true })
+  if (tpl.show_tier_field && rewardName) fields.push({ name: 'Phan thuong', value: rewardName, inline: true })
   if (tpl.show_xp_field) fields.push({ name: 'Tong XP', value: `${fakeXp.toLocaleString()} XP`, inline: true })
   if (tpl.show_progress_field) fields.push({ name: 'Tien do', value: '[█████░░░░░] 50%', inline: true })
 
