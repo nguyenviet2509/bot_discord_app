@@ -39,6 +39,7 @@ app.use('/api/servers', auth, require('./routes/servers'))
 app.use('/api/links', auth, require('./routes/links'))
 app.use('/api/level-up-template', auth, require('./routes/level-up-template'))
 app.use('/api/moderation', auth, require('./routes/moderation'))
+app.use('/api/reaction-roles', auth, require('./routes/reaction-roles'))
 
 // SPA fallback
 app.get('*', (req, res) => {
