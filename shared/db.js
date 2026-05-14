@@ -72,6 +72,14 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS scheduled_message_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+
     CREATE TABLE IF NOT EXISTS scheduled_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id TEXT NOT NULL,
@@ -82,6 +90,7 @@ function initDb() {
       interval_minutes INTEGER NOT NULL DEFAULT 180,
       enabled INTEGER NOT NULL DEFAULT 1,
       last_sent_at INTEGER,
+      group_id INTEGER,
       created_at INTEGER DEFAULT (unixepoch())
     );
 
@@ -172,6 +181,7 @@ function initDb() {
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
+  try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN group_id INTEGER`) } catch (_) {}
   return database
 }
 
@@ -364,20 +374,22 @@ function getScheduledMessageById(id, guildId) {
     .get(id, guildId)
 }
 
-function createScheduledMessage({ guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color }) {
+function createScheduledMessage({ guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id }) {
   return getDb()
     .prepare(`
-      INSERT INTO scheduled_messages (guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO scheduled_messages (guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       guild_id, channel_id, name || null, content || null, image_url || null,
       interval_minutes || 180, enabled ? 1 : 0,
-      use_embed ? 1 : 0, embed_title || null, embed_color || '#6366f1'
+      use_embed ? 1 : 0, embed_title || null, embed_color || '#6366f1',
+      group_id || null
     )
 }
 
-function updateScheduledMessage(id, { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color }) {
+function updateScheduledMessage(id, { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id }) {
+  // group_id: explicit null = ungroup; undefined = keep current
   return getDb()
     .prepare(`
       UPDATE scheduled_messages SET
@@ -389,7 +401,8 @@ function updateScheduledMessage(id, { channel_id, name, content, image_url, inte
         enabled = COALESCE(@enabled, enabled),
         use_embed = COALESCE(@use_embed, use_embed),
         embed_title = COALESCE(@embed_title, embed_title),
-        embed_color = COALESCE(@embed_color, embed_color)
+        embed_color = COALESCE(@embed_color, embed_color),
+        group_id = CASE WHEN @group_id_set = 1 THEN @group_id ELSE group_id END
       WHERE id = @id
     `)
     .run({
@@ -403,7 +416,40 @@ function updateScheduledMessage(id, { channel_id, name, content, image_url, inte
       use_embed: use_embed === undefined ? null : (use_embed ? 1 : 0),
       embed_title: embed_title ?? null,
       embed_color: embed_color ?? null,
+      group_id_set: group_id === undefined ? 0 : 1,
+      group_id: group_id || null,
     })
+}
+
+// ---- Scheduled Message Groups ----
+function getScheduledMessageGroups(guildId) {
+  return getDb()
+    .prepare('SELECT * FROM scheduled_message_groups WHERE guild_id = ? ORDER BY sort_order ASC, id ASC')
+    .all(guildId)
+}
+
+function createScheduledMessageGroup({ guild_id, name, sort_order }) {
+  return getDb()
+    .prepare('INSERT INTO scheduled_message_groups (guild_id, name, sort_order) VALUES (?, ?, ?)')
+    .run(guild_id, name, sort_order || 0)
+}
+
+function updateScheduledMessageGroup(id, guildId, { name, sort_order }) {
+  return getDb()
+    .prepare(`
+      UPDATE scheduled_message_groups SET
+        name = COALESCE(@name, name),
+        sort_order = COALESCE(@sort_order, sort_order)
+      WHERE id = @id AND guild_id = @guild_id
+    `)
+    .run({ id, guild_id: guildId, name: name ?? null, sort_order: sort_order ?? null })
+}
+
+function deleteScheduledMessageGroup(id, guildId) {
+  const db = getDb()
+  // Detach messages instead of deleting them
+  db.prepare('UPDATE scheduled_messages SET group_id = NULL WHERE group_id = ? AND guild_id = ?').run(id, guildId)
+  return db.prepare('DELETE FROM scheduled_message_groups WHERE id = ? AND guild_id = ?').run(id, guildId)
 }
 
 function deleteScheduledMessage(id, guildId) {
@@ -787,4 +833,8 @@ module.exports = {
   deleteScheduledMessage,
   markScheduledMessageSent,
   getDueScheduledMessages,
+  getScheduledMessageGroups,
+  createScheduledMessageGroup,
+  updateScheduledMessageGroup,
+  deleteScheduledMessageGroup,
 }

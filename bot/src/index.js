@@ -102,7 +102,8 @@ client.once('ready', async () => {
           console.warn(`[SchedMsg] Channel ${msg.channel_id} not found, skip msg id=${msg.id}`)
           continue
         }
-        await channel.send(buildPayload(msg))
+        const { payload, files } = buildPayload(msg)
+        await channel.send({ ...payload, files: files.map(f => ({ attachment: f.path, name: f.name })) })
         markScheduledMessageSent(msg.id)
         console.log(`[SchedMsg] Sent id=${msg.id} → channel ${msg.channel_id}`)
       } catch (err) {

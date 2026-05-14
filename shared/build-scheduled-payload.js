@@ -1,42 +1,60 @@
 // Build payload Discord (content + embed/image) tu scheduled_messages row.
 // Dung chung cho bot worker va dashboard /send-now.
-// Co camelCase (Discord.js) va snake_case (REST API) variant.
+// Ho tro:
+//  - image_url tuyet doi (http/https) → embed.image.url
+//  - image_url tuong doi (/uploads/...) → dinh kem file qua attachment://
+// Tra ve { payload, files } voi files = [{ path, name }] de caller xu ly:
+//  - discord.js: channel.send({ ...payload, files })
+//  - REST API: multipart/form-data (payload_json + files)
 
-function imageFullUrl(imageUrl) {
-  if (!imageUrl) return null
-  if (imageUrl.startsWith('http')) return imageUrl
-  const base = process.env.BASE_URL || ''
-  return base ? `${base}${imageUrl}` : null
+const path = require('path')
+const fs = require('fs')
+
+function resolveImage(imageUrl) {
+  if (!imageUrl) return { url: null, filePath: null, filename: null }
+  if (/^https?:\/\//i.test(imageUrl)) return { url: imageUrl, filePath: null, filename: null }
+  // Local upload: /uploads/<name>
+  const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..')
+  const clean = imageUrl.replace(/^\/+/, '')
+  const filePath = path.join(DATA_DIR, clean)
+  if (!fs.existsSync(filePath)) {
+    // Fallback: thu BASE_URL neu file local khong ton tai
+    const base = process.env.BASE_URL || ''
+    return { url: base ? `${base}${imageUrl}` : null, filePath: null, filename: null }
+  }
+  const filename = path.basename(filePath)
+  return { url: `attachment://${filename}`, filePath, filename }
 }
 
 function buildPayload(msg, { restAPI = false } = {}) {
   const useEmbed = !!msg.use_embed
-  const img = imageFullUrl(msg.image_url)
+  const { url: imgUrl, filePath, filename } = resolveImage(msg.image_url)
   const allowedKey = restAPI ? 'allowed_mentions' : 'allowedMentions'
 
+  let payload
   if (useEmbed) {
-    // Mode embed: title + description + color + image inline
     const color = parseInt((msg.embed_color || '#6366f1').replace('#', ''), 16)
     const embed = {
       ...(msg.embed_title ? { title: msg.embed_title } : {}),
       ...(msg.content ? { description: msg.content } : {}),
       color,
-      ...(img ? { image: { url: img } } : {}),
+      ...(imgUrl ? { image: { url: imgUrl } } : {}),
     }
-    return {
+    payload = {
       content: '',
       embeds: [embed],
       [allowedKey]: { parse: ['everyone', 'roles', 'users'] },
     }
+  } else {
+    payload = {
+      content: msg.content || '',
+      [allowedKey]: { parse: ['everyone', 'roles', 'users'] },
+    }
+    if (imgUrl) payload.embeds = [{ image: { url: imgUrl } }]
   }
 
-  // Mode plain content (co the kem anh duoi dang embed-only-image)
-  const payload = {
-    content: msg.content || '',
-    [allowedKey]: { parse: ['everyone', 'roles', 'users'] },
-  }
-  if (img) payload.embeds = [{ image: { url: img } }]
-  return payload
+  const files = filePath ? [{ path: filePath, name: filename }] : []
+  return { payload, files }
 }
 
 module.exports = { buildPayload }

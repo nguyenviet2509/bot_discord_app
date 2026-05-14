@@ -30,8 +30,40 @@ router.get('/', (req, res) => {
   res.json(db.getScheduledMessages(GUILD_ID()))
 })
 
+// ---- Groups CRUD (must be before /:id routes) ----
+router.get('/groups', (req, res) => {
+  res.json(db.getScheduledMessageGroups(GUILD_ID()))
+})
+
+router.post('/groups', (req, res) => {
+  const { name, sort_order } = req.body
+  if (!name || !String(name).trim()) return res.status(400).json({ error: 'name bat buoc' })
+  const result = db.createScheduledMessageGroup({
+    guild_id: GUILD_ID(),
+    name: String(name).trim(),
+    sort_order: Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0,
+  })
+  res.json({ id: result.lastInsertRowid })
+})
+
+router.put('/groups/:id', (req, res) => {
+  const id = Number(req.params.id)
+  const { name, sort_order } = req.body
+  db.updateScheduledMessageGroup(id, GUILD_ID(), {
+    name: name !== undefined ? String(name).trim() : undefined,
+    sort_order: sort_order !== undefined ? Number(sort_order) : undefined,
+  })
+  res.json({ success: true })
+})
+
+router.delete('/groups/:id', (req, res) => {
+  const id = Number(req.params.id)
+  db.deleteScheduledMessageGroup(id, GUILD_ID())
+  res.json({ success: true })
+})
+
 router.post('/', (req, res) => {
-  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color } = req.body
+  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id } = req.body
   if (!channel_id) return res.status(400).json({ error: 'channel_id bat buoc' })
   if (!content && !image_url && !embed_title) return res.status(400).json({ error: 'Phai co content, anh hoac embed title' })
   const mins = Number(interval_minutes)
@@ -40,6 +72,7 @@ router.post('/', (req, res) => {
     guild_id: GUILD_ID(), channel_id, name, content, image_url,
     interval_minutes: mins, enabled: !!enabled,
     use_embed: !!use_embed, embed_title, embed_color,
+    group_id: group_id ? Number(group_id) : null,
   })
   res.json({ id: result.lastInsertRowid })
 })
@@ -48,11 +81,12 @@ router.put('/:id', (req, res) => {
   const id = Number(req.params.id)
   const existing = db.getScheduledMessageById(id, GUILD_ID())
   if (!existing) return res.status(404).json({ error: 'Khong tim thay' })
-  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color } = req.body
+  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id } = req.body
   db.updateScheduledMessage(id, {
     channel_id, name, content, image_url,
     interval_minutes: interval_minutes !== undefined ? Number(interval_minutes) : undefined,
     enabled, use_embed, embed_title, embed_color,
+    group_id: group_id === undefined ? undefined : (group_id ? Number(group_id) : null),
   })
   res.json({ success: true })
 })
@@ -75,12 +109,28 @@ router.post('/:id/send-now', async (req, res) => {
   if (!msg) return res.status(404).json({ error: 'Khong tim thay' })
   if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua co' })
   try {
-    const body = buildPayload(msg, { restAPI: true })
-    const r = await fetch(`https://discord.com/api/v10/channels/${msg.channel_id}/messages`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
+    const { payload, files } = buildPayload(msg, { restAPI: true })
+    const url = `https://discord.com/api/v10/channels/${msg.channel_id}/messages`
+    let r
+    if (files.length > 0) {
+      const form = new FormData()
+      form.append('payload_json', JSON.stringify(payload))
+      files.forEach((f, i) => {
+        const buf = fs.readFileSync(f.path)
+        form.append(`files[${i}]`, new Blob([buf]), f.name)
+      })
+      r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
+        body: form,
+      })
+    } else {
+      r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    }
     if (!r.ok) {
       const errText = await r.text()
       return res.status(r.status).json({ error: `Discord ${r.status}: ${errText.slice(0, 200)}` })

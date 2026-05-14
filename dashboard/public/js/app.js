@@ -220,20 +220,20 @@ document.addEventListener('alpine:init', () => {
 
     async resetXp(member) {
       const name = member.nickname || member.global_name || member.username || member.id
-      if (!confirm(`Reset XP cua ${name}?`)) return
+      if (!confirm(`Reset XP của ${name}?`)) return
       await api('DELETE', `/members/${member.id}/xp`)
       member.xp = 0
       member.level = 0
-      this.showToast('Da reset XP', 'green')
+      this.showToast('Đã reset XP', 'green')
     },
 
     async deleteMember(member) {
       const name = member.nickname || member.global_name || member.username || member.id
-      if (!confirm(`Xoa han record cua ${name} (${member.id})?\nHanh dong nay khong the hoan tac.`)) return
+      if (!confirm(`Xóa hẳn record của ${name} (${member.id})?\nHành động này không thể hoàn tác.`)) return
       const res = await api('DELETE', `/members/${member.id}`)
       if (res && res.success) {
         this.members = this.members.filter((m) => m.id !== member.id)
-        this.showToast('Da xoa record', 'green')
+        this.showToast('Đã xóa record', 'green')
       }
     },
 
@@ -254,16 +254,20 @@ document.addEventListener('alpine:init', () => {
   // ============================================================
   Alpine.data('scheduledMessagesSection', () => ({
     messages: [],
+    groups: [],
     loading: false,
     saving: false,
     uploading: false,
     sendingId: null,
     modal: false,
     editId: null,
+    draggedId: null,
+    dragOverGroup: undefined, // undefined = none, null = ungrouped zone, number = group id
     form: {
       name: '', channel_id: '', content: '', image_url: '',
       interval_minutes: 180, enabled: true,
       use_embed: false, embed_title: '', embed_color: '#6366f1',
+      group_id: '',
     },
     toast: null,
 
@@ -274,18 +278,110 @@ document.addEventListener('alpine:init', () => {
 
     async load() {
       this.loading = true
-      this.messages = await api('GET', '/scheduled-messages') || []
-      // SQLite int → bool
-      this.messages = this.messages.map(m => ({ ...m, enabled: !!m.enabled }))
+      const [msgs, grps] = await Promise.all([
+        api('GET', '/scheduled-messages'),
+        api('GET', '/scheduled-messages/groups'),
+      ])
+      this.messages = (msgs || []).map(m => ({ ...m, enabled: !!m.enabled }))
+      this.groups = grps || []
       this.loading = false
     },
 
-    openCreate() {
+    // Returns: [{ id, name, items }, ...] then { id: null, name: 'Chưa phân nhóm', items } if any
+    get groupedMessages() {
+      const byGroup = new Map()
+      this.groups.forEach(g => byGroup.set(g.id, { id: g.id, name: g.name, items: [] }))
+      const ungrouped = { id: null, name: 'Chưa phân nhóm', items: [] }
+      this.messages.forEach(m => {
+        const gid = m.group_id
+        if (gid && byGroup.has(gid)) byGroup.get(gid).items.push(m)
+        else ungrouped.items.push(m)
+      })
+      const out = Array.from(byGroup.values())
+      if (ungrouped.items.length > 0) out.push(ungrouped)
+      return out
+    },
+
+    async createGroup() {
+      const name = prompt('Tên nhóm mới (vd: Thông báo Boss):')
+      if (!name || !name.trim()) return
+      const res = await api('POST', '/scheduled-messages/groups', { name: name.trim() })
+      if (res?.error) return this.showToast(res.error, 'red')
+      this.showToast('Đã tạo nhóm ✓', 'green')
+      await this.load()
+    },
+
+    async renameGroup(g) {
+      const name = prompt('Tên nhóm:', g.name)
+      if (!name || !name.trim() || name.trim() === g.name) return
+      await api('PUT', `/scheduled-messages/groups/${g.id}`, { name: name.trim() })
+      this.showToast('Đã đổi tên ✓', 'green')
+      await this.load()
+    },
+
+    async deleteGroup(g) {
+      if (!confirm(`Xóa nhóm "${g.name}"? Các tin nhắn trong nhóm sẽ chuyển sang "Chưa phân nhóm".`)) return
+      await api('DELETE', `/scheduled-messages/groups/${g.id}`)
+      this.showToast('Đã xóa nhóm ✓', 'green')
+      await this.load()
+    },
+
+    // ---- Drag & drop tin nhắn giữa các nhóm ----
+    onDragStart(ev, m) {
+      this.draggedId = m.id
+      if (ev.dataTransfer) {
+        ev.dataTransfer.effectAllowed = 'move'
+        ev.dataTransfer.setData('text/plain', String(m.id)) // Firefox cần payload
+      }
+    },
+    onDragEnd() {
+      this.draggedId = null
+      this.dragOverGroup = undefined
+    },
+    onDragOver(ev, groupId) {
+      if (this.draggedId == null) return
+      ev.preventDefault()
+      if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move'
+      // groupId: number | null
+      if (this.dragOverGroup !== groupId) this.dragOverGroup = groupId
+    },
+    onDragLeave(groupId) {
+      if (this.dragOverGroup === groupId) this.dragOverGroup = undefined
+    },
+    async onDrop(ev, groupId) {
+      ev.preventDefault()
+      const id = this.draggedId
+      this.draggedId = null
+      this.dragOverGroup = undefined
+      if (!id) return
+      const msg = this.messages.find(x => x.id === id)
+      if (!msg) return
+      const currentGid = msg.group_id || null
+      const targetGid = groupId || null
+      if (currentGid === targetGid) return
+      // Optimistic update
+      msg.group_id = targetGid
+      try {
+        const res = await api('PUT', `/scheduled-messages/${id}`, { group_id: targetGid })
+        if (res?.error) {
+          msg.group_id = currentGid
+          this.showToast(res.error, 'red')
+        } else {
+          this.showToast('Đã chuyển nhóm ✓', 'green')
+        }
+      } catch (err) {
+        msg.group_id = currentGid
+        this.showToast(err.message, 'red')
+      }
+    },
+
+    openCreate(presetGroupId = '') {
       this.editId = null
       this.form = {
         name: '', channel_id: '', content: '', image_url: '',
         interval_minutes: 180, enabled: true,
         use_embed: false, embed_title: '', embed_color: '#6366f1',
+        group_id: presetGroupId || '',
       }
       this.modal = true
     },
@@ -302,6 +398,7 @@ document.addEventListener('alpine:init', () => {
         use_embed: !!m.use_embed,
         embed_title: m.embed_title || '',
         embed_color: m.embed_color || '#6366f1',
+        group_id: m.group_id || '',
       }
       this.modal = true
     },
@@ -318,9 +415,9 @@ document.addEventListener('alpine:init', () => {
     },
 
     async save() {
-      if (!this.form.channel_id) return this.showToast('Thieu channel_id', 'red')
-      if (!this.form.content && !this.form.image_url) return this.showToast('Phai co content hoac anh', 'red')
-      if (!this.form.interval_minutes || this.form.interval_minutes < 1) return this.showToast('Interval phai >= 1', 'red')
+      if (!this.form.channel_id) return this.showToast('Thiếu channel_id', 'red')
+      if (!this.form.content && !this.form.image_url) return this.showToast('Phải có content hoặc ảnh', 'red')
+      if (!this.form.interval_minutes || this.form.interval_minutes < 1) return this.showToast('Interval phải >= 1', 'red')
       this.saving = true
       try {
         const url = this.editId ? `/scheduled-messages/${this.editId}` : '/scheduled-messages'
@@ -328,7 +425,7 @@ document.addEventListener('alpine:init', () => {
         const res = await api(method, url, this.form)
         if (res?.error) this.showToast(res.error, 'red')
         else {
-          this.showToast('Da luu ✓', 'green')
+          this.showToast('Đã lưu ✓', 'green')
           this.modal = false
           await this.load()
         }
@@ -339,9 +436,9 @@ document.addEventListener('alpine:init', () => {
     },
 
     async remove(m) {
-      if (!confirm(`Xoa "${m.name || m.id}"?`)) return
+      if (!confirm(`Xóa "${m.name || m.id}"?`)) return
       await api('DELETE', `/scheduled-messages/${m.id}`)
-      this.showToast('Da xoa ✓', 'green')
+      this.showToast('Đã xóa ✓', 'green')
       await this.load()
     },
 
@@ -349,8 +446,8 @@ document.addEventListener('alpine:init', () => {
       this.sendingId = m.id
       try {
         const res = await api('POST', `/scheduled-messages/${m.id}/send-now`, {})
-        if (res?.success) this.showToast('Da gui ✓', 'green')
-        else this.showToast(res?.error || 'Loi', 'red')
+        if (res?.success) this.showToast('Đã gửi ✓', 'green')
+        else this.showToast(res?.error || 'Lỗi', 'red')
         await this.load()
       } catch (err) {
         this.showToast(err.message, 'red')
@@ -450,12 +547,12 @@ document.addEventListener('alpine:init', () => {
     joinedAgo(isoStr) {
       if (!isoStr) return '?'
       const sec = Math.floor((Date.now() - new Date(isoStr).getTime()) / 1000)
-      if (sec < 86400) return 'hom nay'
+      if (sec < 86400) return 'hôm nay'
       const days = Math.floor(sec / 86400)
-      if (days < 30) return days + ' ngay truoc'
+      if (days < 30) return days + ' ngày trước'
       const months = Math.floor(days / 30)
-      if (months < 12) return months + ' thang truoc'
-      return Math.floor(months / 12) + ' nam truoc'
+      if (months < 12) return months + ' tháng trước'
+      return Math.floor(months / 12) + ' năm trước'
     },
 
     renderGrowthChart() {
@@ -560,15 +657,15 @@ document.addEventListener('alpine:init', () => {
     nextPage() { if (this.page < this.totalPages) { this.page++; this.load() } },
 
     async unban(ban) {
-      if (!confirm(`Go ban ${ban.user_tag || ban.user_id}?`)) return
+      if (!confirm(`Gỡ ban ${ban.user_tag || ban.user_id}?`)) return
       this.unbanning = ban.user_id
       try {
-        const res = await api('POST', '/moderation/unban', { user_id: ban.user_id, reason: 'Unban tu dashboard' })
+        const res = await api('POST', '/moderation/unban', { user_id: ban.user_id, reason: 'Unban từ dashboard' })
         if (res?.success) {
-          this.showToast('Da go ban ✓', 'green')
+          this.showToast('Đã gỡ ban ✓', 'green')
           await this.load()
         } else {
-          this.showToast(res?.error || 'Loi', 'red')
+          this.showToast(res?.error || 'Lỗi', 'red')
         }
       } catch (err) {
         this.showToast(err.message, 'red')
@@ -705,10 +802,10 @@ document.addEventListener('alpine:init', () => {
     // Cac level co reward → option preview
     get previewLevelOptions() {
       const levels = [...new Set(this.rewards.map(r => r.level_required))].sort((a, b) => a - b)
-      const opts = levels.map(lv => ({ value: String(lv), label: `Level ${lv} (co reward)` }))
-      // Them 1 level "thuong" khong reward de preview
+      const opts = levels.map(lv => ({ value: String(lv), label: `Level ${lv} (có reward)` }))
+      // Thêm 1 level "thường" không reward để preview
       const firstNoReward = [1, 5, 15, 25].find(lv => !levels.includes(lv)) || 1
-      opts.unshift({ value: String(firstNoReward), label: `Level ${firstNoReward} (khong reward)` })
+      opts.unshift({ value: String(firstNoReward), label: `Level ${firstNoReward} (không reward)` })
       return opts
     },
 
@@ -955,12 +1052,12 @@ document.addEventListener('alpine:init', () => {
     },
 
     async deleteLink(link) {
-      if (!confirm(`Xoá link này?\n${link.url}`)) return
+      if (!confirm(`Xóa link này?\n${link.url}`)) return
       const res = await api('DELETE', `/links/${link.id}`)
       if (res?.success) {
         this.links = this.links.filter((l) => l.id !== link.id)
         this.total--
-        this.showToast('Đã xoá link', 'green')
+        this.showToast('Đã xóa link', 'green')
       }
     },
 
