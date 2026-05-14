@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js')
+const logModAction = require('../utils/log-mod-action')
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -22,6 +23,7 @@ module.exports = {
 
     try {
       await target.timeout(null, reason)
+      logModAction(interaction, { action_type: 'unmute', user, reason })
       await interaction.reply(`🔊 Đã gỡ mute **${user.tag}**.\n📝 Lý do: ${reason}`)
     } catch (err) {
       console.error('[unmute]', err)

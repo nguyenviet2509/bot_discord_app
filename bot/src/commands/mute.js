@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js')
 const { parseDuration, formatDuration } = require('../utils/parse-duration')
+const logModAction = require('../utils/log-mod-action')
 
 const MAX_TIMEOUT_MS = 28 * 86_400_000 // Discord giới hạn timeout tối đa 28 ngày
 
@@ -42,6 +43,10 @@ module.exports = {
     try {
       await target.timeout(durationMs, reason)
       const until = Math.floor((Date.now() + durationMs) / 1000)
+      logModAction(interaction, {
+        action_type: 'mute', user, reason,
+        duration_ms: durationMs, expires_at: until,
+      })
       await interaction.reply(
         `🔇 Đã mute **${user.tag}** trong **${formatDuration(durationMs)}**.\n📝 Lý do: ${reason}\n⏰ Hết hạn: <t:${until}:R>`
       )

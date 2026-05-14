@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js')
 const db = require('../../../shared/db')
+const logModAction = require('../utils/log-mod-action')
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -18,8 +19,13 @@ module.exports = {
     }
 
     try {
-      await interaction.guild.members.unban(userId, reason)
+      const bannedUser = await interaction.guild.members.unban(userId, reason)
       db.removeTempBan(interaction.guild.id, userId)
+      logModAction(interaction, {
+        action_type: 'unban',
+        user: bannedUser || { id: userId, tag: userId, username: userId, displayAvatarURL: () => null },
+        reason,
+      })
       await interaction.reply(`✅ Đã gỡ ban user ID **${userId}**.\n📝 Lý do: ${reason}`)
     } catch (err) {
       console.error('[unban]', err)

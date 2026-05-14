@@ -72,6 +72,24 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS mod_actions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      action_type TEXT NOT NULL CHECK(action_type IN ('kick','ban','unban','mute','unmute')),
+      user_id TEXT NOT NULL,
+      user_tag TEXT,
+      user_avatar TEXT,
+      moderator_id TEXT,
+      moderator_tag TEXT,
+      reason TEXT,
+      duration_ms INTEGER,
+      expires_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_mod_guild_created ON mod_actions(guild_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mod_user ON mod_actions(guild_id, user_id, action_type);
+
     CREATE TABLE IF NOT EXISTS temp_bans (
       guild_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
@@ -191,6 +209,72 @@ function upsertSettings(settings) {
         updated_at = unixepoch()
     `)
     .run({ ...settings, allowed_role_ids: allowedJson })
+}
+
+// ============================================================
+// Moderation Actions (log kick/ban/unban/mute/unmute)
+// ============================================================
+function logModAction(action) {
+  return getDb()
+    .prepare(`
+      INSERT INTO mod_actions (
+        guild_id, action_type, user_id, user_tag, user_avatar,
+        moderator_id, moderator_tag, reason, duration_ms, expires_at
+      ) VALUES (
+        @guild_id, @action_type, @user_id, @user_tag, @user_avatar,
+        @moderator_id, @moderator_tag, @reason, @duration_ms, @expires_at
+      )
+    `)
+    .run({
+      user_tag: null, user_avatar: null,
+      moderator_id: null, moderator_tag: null,
+      reason: null, duration_ms: null, expires_at: null,
+      ...action,
+    })
+}
+
+function getModActions(guildId, { action_type, search, limit = 100, offset = 0 } = {}) {
+  let query = 'SELECT * FROM mod_actions WHERE guild_id = @guild_id'
+  const params = { guild_id: guildId, limit, offset }
+  if (action_type) {
+    query += ' AND action_type = @action_type'
+    params.action_type = action_type
+  }
+  if (search) {
+    query += ' AND (user_tag LIKE @search OR user_id LIKE @search OR reason LIKE @search)'
+    params.search = `%${search}%`
+  }
+  query += ' ORDER BY created_at DESC LIMIT @limit OFFSET @offset'
+  return getDb().prepare(query).all(params)
+}
+
+function countModActions(guildId, { action_type, search } = {}) {
+  let query = 'SELECT COUNT(*) as total FROM mod_actions WHERE guild_id = @guild_id'
+  const params = { guild_id: guildId }
+  if (action_type) { query += ' AND action_type = @action_type'; params.action_type = action_type }
+  if (search) {
+    query += ' AND (user_tag LIKE @search OR user_id LIKE @search OR reason LIKE @search)'
+    params.search = `%${search}%`
+  }
+  return (getDb().prepare(query).get(params) || {}).total || 0
+}
+
+// Tinh user dang BAN (co ban, chua co unban sau do)
+function getActiveBans(guildId) {
+  return getDb()
+    .prepare(`
+      SELECT b.* FROM mod_actions b
+      WHERE b.guild_id = ? AND b.action_type = 'ban'
+        AND NOT EXISTS (
+          SELECT 1 FROM mod_actions u
+          WHERE u.guild_id = b.guild_id
+            AND u.user_id = b.user_id
+            AND u.action_type = 'unban'
+            AND u.id > b.id
+        )
+      ORDER BY b.created_at DESC
+    `)
+    .all(guildId)
 }
 
 // ============================================================
@@ -403,4 +487,8 @@ module.exports = {
   addTempBan,
   removeTempBan,
   getExpiredBans,
+  logModAction,
+  getModActions,
+  countModActions,
+  getActiveBans,
 }

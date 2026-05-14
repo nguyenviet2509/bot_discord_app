@@ -38,6 +38,7 @@ app.use('/api/commands', auth, require('./routes/commands'))
 app.use('/api/servers', auth, require('./routes/servers'))
 app.use('/api/links', auth, require('./routes/links'))
 app.use('/api/level-up-template', auth, require('./routes/level-up-template'))
+app.use('/api/moderation', auth, require('./routes/moderation'))
 
 // SPA fallback
 app.get('*', (req, res) => {

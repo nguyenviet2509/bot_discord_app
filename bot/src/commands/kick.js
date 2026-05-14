@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js')
+const logModAction = require('../utils/log-mod-action')
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -22,6 +23,7 @@ module.exports = {
 
     try {
       await target.kick(reason)
+      logModAction(interaction, { action_type: 'kick', user, reason })
       await interaction.reply(`👢 Đã kick **${user.tag}**.\n📝 Lý do: ${reason}`)
     } catch (err) {
       console.error('[kick]', err)

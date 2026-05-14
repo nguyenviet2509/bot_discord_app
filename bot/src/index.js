@@ -3,7 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../../.env') }
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js')
 const path = require('path')
 const fs = require('fs')
-const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan } = require('../../shared/db')
+const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction } = require('../../shared/db')
 
 initDb()
 console.log('[DB] Database initialized')
@@ -96,6 +96,15 @@ client.once('ready', async () => {
         if (!guild) { removeTempBan(row.guild_id, row.user_id); continue }
         await guild.members.unban(row.user_id, 'Tự động unban (hết hạn)').catch(() => {})
         removeTempBan(row.guild_id, row.user_id)
+        logModAction({
+          guild_id: row.guild_id,
+          action_type: 'unban',
+          user_id: row.user_id,
+          user_tag: null, user_avatar: null,
+          moderator_id: client.user?.id || null,
+          moderator_tag: 'Bot (auto-unban)',
+          reason: 'Hết hạn ban',
+        })
         console.log(`[TempBan] Da auto-unban user ${row.user_id} trong guild ${row.guild_id}`)
       } catch (err) {
         console.error('[TempBan] Loi auto-unban:', err.message)

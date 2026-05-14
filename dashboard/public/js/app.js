@@ -250,6 +250,111 @@ document.addEventListener('alpine:init', () => {
   }))
 
   // ============================================================
+  // Moderation Section
+  // ============================================================
+  Alpine.data('moderationSection', () => ({
+    actions: [],
+    activeBans: [],
+    total: 0,
+    page: 1,
+    limit: 50,
+    filterType: '',
+    search: '',
+    loading: false,
+    unbanning: null,
+    toast: null,
+    _searchTimer: null,
+
+    async init() {
+      if (!checkAuth()) return
+      await this.load()
+    },
+
+    async load() {
+      this.loading = true
+      const params = new URLSearchParams({
+        action_type: this.filterType,
+        search: this.search,
+        page: this.page,
+        limit: this.limit,
+      })
+      const data = await api('GET', `/moderation?${params}`)
+      if (data) {
+        this.actions = data.actions || []
+        this.total = data.total || 0
+        this.activeBans = data.active_bans || []
+      }
+      this.loading = false
+    },
+
+    get totalPages() {
+      return Math.max(1, Math.ceil(this.total / this.limit))
+    },
+
+    onSearchInput() {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = setTimeout(() => { this.page = 1; this.load() }, 350)
+    },
+
+    onFilterChange() { this.page = 1; this.load() },
+    prevPage() { if (this.page > 1) { this.page--; this.load() } },
+    nextPage() { if (this.page < this.totalPages) { this.page++; this.load() } },
+
+    async unban(ban) {
+      if (!confirm(`Go ban ${ban.user_tag || ban.user_id}?`)) return
+      this.unbanning = ban.user_id
+      try {
+        const res = await api('POST', '/moderation/unban', { user_id: ban.user_id, reason: 'Unban tu dashboard' })
+        if (res?.success) {
+          this.showToast('Da go ban ✓', 'green')
+          await this.load()
+        } else {
+          this.showToast(res?.error || 'Loi', 'red')
+        }
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.unbanning = null
+    },
+
+    actionEmoji(t) {
+      return { kick: '👢', ban: '🔨', unban: '✅', mute: '🔇', unmute: '🔊' }[t] || '•'
+    },
+
+    actionBadgeStyle(t) {
+      const map = {
+        kick:   { background: '#fef3c7', color: '#92400e' },
+        ban:    { background: '#fee2e2', color: '#991b1b' },
+        unban:  { background: '#d1fae5', color: '#065f46' },
+        mute:   { background: '#e0e7ff', color: '#3730a3' },
+        unmute: { background: '#dbeafe', color: '#1e40af' },
+      }
+      const s = map[t] || { background: '#f1f5f9', color: '#475569' }
+      return `background:${s.background};color:${s.color}`
+    },
+
+    formatMs(ms) {
+      if (!ms) return ''
+      if (ms < 60000) return Math.floor(ms / 1000) + 's'
+      if (ms < 3600000) return Math.floor(ms / 60000) + 'p'
+      if (ms < 86400000) return Math.floor(ms / 3600000) + 'h'
+      return Math.floor(ms / 86400000) + 'd'
+    },
+
+    formatTimestamp(unixSec) {
+      if (!unixSec) return '—'
+      return new Date(unixSec * 1000).toLocaleString('vi-VN')
+    },
+
+    showToast(msg, color = 'green') {
+      this.toast = { msg, color }
+      setTimeout(() => { this.toast = null }, 3000)
+    },
+
+    timeAgo,
+  }))
+
+  // ============================================================
   // Level Up Template Section
   // ============================================================
   Alpine.data('levelUpTemplateSection', () => ({

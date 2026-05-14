@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js')
 const db = require('../../../shared/db')
 const { parseDuration, formatDuration } = require('../utils/parse-duration')
+const logModAction = require('../utils/log-mod-action')
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -29,11 +30,15 @@ module.exports = {
 
     try {
       await interaction.guild.members.ban(user.id, { reason })
+      const expiresAt = durationMs ? Math.floor((Date.now() + durationMs) / 1000) : null
+      if (durationMs) db.addTempBan(interaction.guild.id, user.id, expiresAt, reason)
+      logModAction(interaction, {
+        action_type: 'ban', user, reason,
+        duration_ms: durationMs, expires_at: expiresAt,
+      })
       if (durationMs) {
-        const unbanAt = Math.floor((Date.now() + durationMs) / 1000)
-        db.addTempBan(interaction.guild.id, user.id, unbanAt, reason)
         await interaction.reply(
-          `🔨 Đã ban **${user.tag}** trong **${formatDuration(durationMs)}**.\n📝 Lý do: ${reason}\n⏰ Tự unban: <t:${unbanAt}:R>`
+          `🔨 Đã ban **${user.tag}** trong **${formatDuration(durationMs)}**.\n📝 Lý do: ${reason}\n⏰ Tự unban: <t:${expiresAt}:R>`
         )
       } else {
         await interaction.reply(`🔨 Đã ban vĩnh viễn **${user.tag}**.\n📝 Lý do: ${reason}`)
