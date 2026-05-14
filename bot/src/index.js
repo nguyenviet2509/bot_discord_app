@@ -1,6 +1,6 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') })
 
-const { Client, GatewayIntentBits, Collection } = require('discord.js')
+const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js')
 const path = require('path')
 const fs = require('fs')
 const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan } = require('../../shared/db')
@@ -63,8 +63,29 @@ client.on('interactionCreate', async interaction => {
   }
 })
 
-client.once('ready', () => {
+// Auto-register slash commands voi Discord khi bot start
+async function registerCommands() {
+  const commandsData = []
+  for (const [, cmd] of client.commands) commandsData.push(cmd.data.toJSON())
+  if (!process.env.CLIENT_ID || !process.env.GUILD_ID) {
+    console.warn('[Commands] CLIENT_ID hoac GUILD_ID chua duoc set → bo qua auto-register')
+    return
+  }
+  try {
+    const rest = new REST().setToken(process.env.BOT_TOKEN)
+    const data = await rest.put(
+      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+      { body: commandsData }
+    )
+    console.log(`[Commands] ✅ Da register ${data.length} slash command(s) voi Discord`)
+  } catch (err) {
+    console.error('[Commands] ❌ Loi register:', err.message)
+  }
+}
+
+client.once('ready', async () => {
   console.log(`[Bot] ✅ Ready! Logged in as ${client.user.tag}`)
+  await registerCommands()
   // Watcher: check va auto-unban moi 60s
   setInterval(async () => {
     const nowSec = Math.floor(Date.now() / 1000)
