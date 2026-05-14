@@ -3,7 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../../.env') }
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js')
 const path = require('path')
 const fs = require('fs')
-const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction, getReactionRoleGroupById } = require('../../shared/db')
+const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction } = require('../../shared/db')
 
 initDb()
 console.log('[DB] Database initialized')
@@ -31,55 +31,6 @@ for (const file of fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'))) {
   const event = require(path.join(eventsPath, file))
   client.on(event.name, (...args) => event.execute(...args, client))
 }
-
-// Reaction role button handler (customId = "rr:{group_id}:{role_id}")
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isButton()) return
-  if (!interaction.customId.startsWith('rr:')) return
-
-  const [, groupIdStr, roleId] = interaction.customId.split(':')
-  const groupId = Number(groupIdStr)
-  const group = getReactionRoleGroupById(groupId, interaction.guild.id)
-  if (!group) {
-    return interaction.reply({ content: '❌ Group không còn tồn tại.', ephemeral: true }).catch(() => {})
-  }
-
-  const item = group.items.find(i => i.role_id === roleId)
-  if (!item) {
-    return interaction.reply({ content: '❌ Role không còn trong group.', ephemeral: true }).catch(() => {})
-  }
-
-  const member = interaction.member
-  const role = interaction.guild.roles.cache.get(roleId)
-  if (!role) {
-    return interaction.reply({ content: '❌ Role đã bị xoá khỏi server.', ephemeral: true }).catch(() => {})
-  }
-
-  try {
-    const hasRole = member.roles.cache.has(roleId)
-    if (hasRole) {
-      await member.roles.remove(roleId, 'Reaction role toggle')
-      return interaction.reply({ content: `✅ Đã gỡ role **${role.name}**.`, ephemeral: true })
-    }
-    // Exclusive: gỡ các role khác trong group trước
-    if (group.exclusive) {
-      const otherRoleIds = group.items.filter(i => i.role_id !== roleId).map(i => i.role_id)
-      for (const rid of otherRoleIds) {
-        if (member.roles.cache.has(rid)) {
-          await member.roles.remove(rid, 'Reaction role exclusive').catch(() => {})
-        }
-      }
-    }
-    await member.roles.add(roleId, 'Reaction role toggle')
-    return interaction.reply({ content: `✅ Đã thêm role **${role.name}**.`, ephemeral: true })
-  } catch (err) {
-    console.error('[ReactionRole]', err)
-    return interaction.reply({
-      content: `❌ Lỗi: ${err.message}\n(Có thể role cao hơn role bot.)`,
-      ephemeral: true,
-    }).catch(() => {})
-  }
-})
 
 // Slash command handler
 client.on('interactionCreate', async interaction => {

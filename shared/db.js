@@ -72,32 +72,6 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
-    CREATE TABLE IF NOT EXISTS reaction_role_groups (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guild_id TEXT NOT NULL,
-      channel_id TEXT NOT NULL,
-      message_id TEXT,
-      title TEXT NOT NULL,
-      description TEXT,
-      color TEXT DEFAULT '#6366f1',
-      exclusive INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER DEFAULT (unixepoch()),
-      updated_at INTEGER DEFAULT (unixepoch())
-    );
-
-    CREATE TABLE IF NOT EXISTS reaction_role_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      group_id INTEGER NOT NULL,
-      role_id TEXT NOT NULL,
-      label TEXT NOT NULL,
-      emoji TEXT,
-      style TEXT NOT NULL DEFAULT 'primary' CHECK(style IN ('primary','secondary','success','danger')),
-      position INTEGER NOT NULL DEFAULT 0,
-      FOREIGN KEY (group_id) REFERENCES reaction_role_groups(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_rr_items_group ON reaction_role_items(group_id, position);
-
     CREATE TABLE IF NOT EXISTS mod_actions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id TEXT NOT NULL,
@@ -235,87 +209,6 @@ function upsertSettings(settings) {
         updated_at = unixepoch()
     `)
     .run({ ...settings, allowed_role_ids: allowedJson })
-}
-
-// ============================================================
-// Reaction Roles
-// ============================================================
-function getReactionRoleGroups(guildId) {
-  const groups = getDb()
-    .prepare('SELECT * FROM reaction_role_groups WHERE guild_id = ? ORDER BY created_at DESC')
-    .all(guildId)
-  for (const g of groups) {
-    g.items = getDb()
-      .prepare('SELECT * FROM reaction_role_items WHERE group_id = ? ORDER BY position ASC, id ASC')
-      .all(g.id)
-    g.exclusive = !!g.exclusive
-  }
-  return groups
-}
-
-function getReactionRoleGroupById(id, guildId) {
-  const g = getDb()
-    .prepare('SELECT * FROM reaction_role_groups WHERE id = ? AND guild_id = ?')
-    .get(id, guildId)
-  if (!g) return null
-  g.items = getDb()
-    .prepare('SELECT * FROM reaction_role_items WHERE group_id = ? ORDER BY position ASC, id ASC')
-    .all(g.id)
-  g.exclusive = !!g.exclusive
-  return g
-}
-
-function createReactionRoleGroup({ guild_id, channel_id, title, description, color, exclusive }) {
-  return getDb()
-    .prepare(`
-      INSERT INTO reaction_role_groups (guild_id, channel_id, title, description, color, exclusive)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `)
-    .run(guild_id, channel_id, title, description || null, color || '#6366f1', exclusive ? 1 : 0)
-}
-
-function updateReactionRoleGroup(id, { channel_id, title, description, color, exclusive, message_id }) {
-  return getDb()
-    .prepare(`
-      UPDATE reaction_role_groups SET
-        channel_id = COALESCE(@channel_id, channel_id),
-        title = COALESCE(@title, title),
-        description = COALESCE(@description, description),
-        color = COALESCE(@color, color),
-        exclusive = COALESCE(@exclusive, exclusive),
-        message_id = COALESCE(@message_id, message_id),
-        updated_at = unixepoch()
-      WHERE id = @id
-    `)
-    .run({
-      id,
-      channel_id: channel_id ?? null,
-      title: title ?? null,
-      description: description ?? null,
-      color: color ?? null,
-      exclusive: exclusive === undefined ? null : (exclusive ? 1 : 0),
-      message_id: message_id ?? null,
-    })
-}
-
-function deleteReactionRoleGroup(id, guildId) {
-  return getDb()
-    .prepare('DELETE FROM reaction_role_groups WHERE id = ? AND guild_id = ?')
-    .run(id, guildId)
-}
-
-function replaceReactionRoleItems(groupId, items) {
-  const tx = getDb().transaction((items) => {
-    getDb().prepare('DELETE FROM reaction_role_items WHERE group_id = ?').run(groupId)
-    const stmt = getDb().prepare(`
-      INSERT INTO reaction_role_items (group_id, role_id, label, emoji, style, position)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `)
-    items.forEach((it, idx) => {
-      stmt.run(groupId, it.role_id, it.label, it.emoji || null, it.style || 'primary', idx)
-    })
-  })
-  tx(items)
 }
 
 // ============================================================
@@ -598,10 +491,4 @@ module.exports = {
   getModActions,
   countModActions,
   getActiveBans,
-  getReactionRoleGroups,
-  getReactionRoleGroupById,
-  createReactionRoleGroup,
-  updateReactionRoleGroup,
-  deleteReactionRoleGroup,
-  replaceReactionRoleItems,
 }
