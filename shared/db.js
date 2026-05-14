@@ -54,6 +54,24 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS level_up_template (
+      guild_id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '🎉 Level Up!',
+      description TEXT NOT NULL DEFAULT 'Chúc mừng **{user}** đã đạt **Level {level}**!',
+      milestone_description TEXT NOT NULL DEFAULT 'Chúc mừng **{user}** đã đạt **Level {level}**!\n{tier_badge} Đạt danh hiệu **{tier}**!',
+      show_tier_field INTEGER NOT NULL DEFAULT 1,
+      show_xp_field INTEGER NOT NULL DEFAULT 1,
+      show_progress_field INTEGER NOT NULL DEFAULT 1,
+      show_role_reward INTEGER NOT NULL DEFAULT 1,
+      show_badge_reward INTEGER NOT NULL DEFAULT 1,
+      show_badge_image INTEGER NOT NULL DEFAULT 1,
+      show_avatar INTEGER NOT NULL DEFAULT 1,
+      mention_user INTEGER NOT NULL DEFAULT 1,
+      color_mode TEXT NOT NULL DEFAULT 'tier' CHECK(color_mode IN ('tier','custom')),
+      custom_color TEXT NOT NULL DEFAULT '#6366f1',
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+
     CREATE TABLE IF NOT EXISTS links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id TEXT NOT NULL,
@@ -244,6 +262,66 @@ function deleteLink(id, guildId) {
     .run(id, guildId)
 }
 
+// ============================================================
+// Level Up Template
+// ============================================================
+const TEMPLATE_DEFAULTS = {
+  title: '🎉 Level Up!',
+  description: 'Chúc mừng **{user}** đã đạt **Level {level}**!',
+  milestone_description: 'Chúc mừng **{user}** đã đạt **Level {level}**!\n{tier_badge} Đạt danh hiệu **{tier}**!',
+  show_tier_field: 1,
+  show_xp_field: 1,
+  show_progress_field: 1,
+  show_role_reward: 1,
+  show_badge_reward: 1,
+  show_badge_image: 1,
+  show_avatar: 1,
+  mention_user: 1,
+  color_mode: 'tier',
+  custom_color: '#6366f1',
+}
+
+function getLevelUpTemplate(guildId) {
+  const row = getDb()
+    .prepare('SELECT * FROM level_up_template WHERE guild_id = ?')
+    .get(guildId)
+  return row || { guild_id: guildId, ...TEMPLATE_DEFAULTS }
+}
+
+function upsertLevelUpTemplate(template) {
+  const merged = { ...TEMPLATE_DEFAULTS, ...template }
+  return getDb()
+    .prepare(`
+      INSERT INTO level_up_template (
+        guild_id, title, description, milestone_description,
+        show_tier_field, show_xp_field, show_progress_field,
+        show_role_reward, show_badge_reward, show_badge_image,
+        show_avatar, mention_user, color_mode, custom_color, updated_at
+      ) VALUES (
+        @guild_id, @title, @description, @milestone_description,
+        @show_tier_field, @show_xp_field, @show_progress_field,
+        @show_role_reward, @show_badge_reward, @show_badge_image,
+        @show_avatar, @mention_user, @color_mode, @custom_color, unixepoch()
+      )
+      ON CONFLICT(guild_id) DO UPDATE SET
+        title = excluded.title,
+        description = excluded.description,
+        milestone_description = excluded.milestone_description,
+        show_tier_field = excluded.show_tier_field,
+        show_xp_field = excluded.show_xp_field,
+        show_progress_field = excluded.show_progress_field,
+        show_role_reward = excluded.show_role_reward,
+        show_badge_reward = excluded.show_badge_reward,
+        show_badge_image = excluded.show_badge_image,
+        show_avatar = excluded.show_avatar,
+        mention_user = excluded.mention_user,
+        color_mode = excluded.color_mode,
+        custom_color = excluded.custom_color,
+        updated_at = unixepoch()
+    `)
+    .run(merged)
+}
+
 function getChannelsWithLinks(guildId) {
   return getDb()
     .prepare('SELECT DISTINCT channel_id, channel_name FROM links WHERE guild_id = ? ORDER BY channel_name ASC')
@@ -270,4 +348,6 @@ module.exports = {
   countLinks,
   deleteLink,
   getChannelsWithLinks,
+  getLevelUpTemplate,
+  upsertLevelUpTemplate,
 }

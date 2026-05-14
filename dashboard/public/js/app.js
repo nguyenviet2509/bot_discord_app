@@ -227,6 +227,159 @@ document.addEventListener('alpine:init', () => {
   }))
 
   // ============================================================
+  // Level Up Template Section
+  // ============================================================
+  Alpine.data('levelUpTemplateSection', () => ({
+    form: {
+      title: '🎉 Level Up!',
+      description: 'Chúc mừng **{user}** đã đạt **Level {level}**!',
+      milestone_description: 'Chúc mừng **{user}** đã đạt **Level {level}**!\n{tier_badge} Đạt danh hiệu **{tier}**!',
+      show_tier_field: true, show_xp_field: true, show_progress_field: true,
+      show_role_reward: true, show_badge_reward: true, show_badge_image: true,
+      show_avatar: true, mention_user: true,
+      color_mode: 'tier', custom_color: '#6366f1',
+    },
+    rewards: [],
+    roles: [],
+    previewLevel: '10',
+    testChannelId: '1503985277683761232',
+    loading: false,
+    saving: false,
+    sending: false,
+    toast: null,
+
+    async init() {
+      if (!checkAuth()) return
+      await this.load()
+    },
+
+    async load() {
+      this.loading = true
+      const [tpl, rewards, roles] = await Promise.all([
+        api('GET', '/level-up-template'),
+        api('GET', '/rewards'),
+        api('GET', '/discord/roles'),
+      ])
+      if (tpl) {
+        // SQLite trả 0/1 cho boolean → convert
+        this.form = {
+          title: tpl.title,
+          description: tpl.description,
+          milestone_description: tpl.milestone_description,
+          show_tier_field: !!tpl.show_tier_field,
+          show_xp_field: !!tpl.show_xp_field,
+          show_progress_field: !!tpl.show_progress_field,
+          show_role_reward: !!tpl.show_role_reward,
+          show_badge_reward: !!tpl.show_badge_reward,
+          show_badge_image: !!tpl.show_badge_image,
+          show_avatar: !!tpl.show_avatar,
+          mention_user: !!tpl.mention_user,
+          color_mode: tpl.color_mode || 'tier',
+          custom_color: tpl.custom_color || '#6366f1',
+        }
+      }
+      this.rewards = rewards || []
+      this.roles = roles || []
+      this.loading = false
+    },
+
+    async save() {
+      this.saving = true
+      try {
+        const res = await api('PUT', '/level-up-template', this.form)
+        if (res?.success) this.showToast('Đã lưu ✓', 'green')
+        else this.showToast(res?.error || 'Lỗi', 'red')
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.saving = false
+    },
+
+    async sendTest() {
+      if (!this.testChannelId.trim()) {
+        this.showToast('Vui lòng nhập Channel ID', 'red')
+        return
+      }
+      this.sending = true
+      try {
+        const res = await api('POST', '/level-up-template/test', {
+          channel_id: this.testChannelId.trim(),
+          level: Number(this.previewLevel),
+          template: this.form,
+        })
+        if (res?.success) this.showToast('Đã gửi test ✓ — kiểm tra channel Discord', 'green')
+        else this.showToast(res?.error || 'Gửi thất bại', 'red')
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.sending = false
+    },
+
+    get previewIsMilestone() {
+      return [10, 20, 30, 40, 50, 60, 70, 80, 90, 100].includes(Number(this.previewLevel))
+    },
+
+    get previewTier() {
+      const tiers = [
+        { min: 100, name: 'Thách Đấu', badge: '🔴', color: '#ff4655' },
+        { min: 90, name: 'Đại Cao Thủ', badge: '🟠', color: '#ff6d00' },
+        { min: 80, name: 'Cao Thủ', badge: '🟣', color: '#9b27af' },
+        { min: 70, name: 'Kim Cương', badge: '🔵', color: '#0288d1' },
+        { min: 60, name: 'Lục Bảo', badge: '🟢', color: '#2e7d32' },
+        { min: 50, name: 'Bạch Kim', badge: '🩵', color: '#00838f' },
+        { min: 40, name: 'Vàng', badge: '🟡', color: '#f9a825' },
+        { min: 30, name: 'Bạc', badge: '⚪', color: '#78909c' },
+        { min: 20, name: 'Đồng', badge: '🟤', color: '#bf360c' },
+        { min: 10, name: 'Sắt', badge: '⚫', color: '#546e7a' },
+      ]
+      const lv = Number(this.previewLevel)
+      return tiers.find(t => lv >= t.min) || { name: 'Chưa xếp hạng', badge: '▫️', color: '#6b7280' }
+    },
+
+    get previewColor() {
+      return this.form.color_mode === 'custom' ? this.form.custom_color : this.previewTier.color
+    },
+
+    get previewXp() {
+      // Rough XP cho preview (msgs/level avg * 20 XP)
+      return Number(this.previewLevel) * 1000
+    },
+
+    get previewRewardAtLevel() {
+      return this.rewards.find(r => r.level_required === Number(this.previewLevel))
+    },
+
+    get previewRoleName() {
+      const r = this.previewRewardAtLevel
+      if (!r) return null
+      const roleId = r.role_id
+      if (!roleId) return null
+      const role = this.roles.find(x => x.id === roleId)
+      return role ? role.name : null
+    },
+
+    get previewBadge() {
+      const r = this.previewRewardAtLevel
+      return r && r.type === 'badge' ? r : null
+    },
+
+    renderTpl(str) {
+      if (!str) return ''
+      return str
+        .replace(/\{user\}/g, 'User_ABC')
+        .replace(/\{level\}/g, this.previewLevel)
+        .replace(/\{tier\}/g, this.previewTier.name)
+        .replace(/\{tier_badge\}/g, this.previewTier.badge)
+        .replace(/\{xp\}/g, this.previewXp.toLocaleString())
+    },
+
+    showToast(msg, color = 'green') {
+      this.toast = { msg, color }
+      setTimeout(() => { this.toast = null }, 3000)
+    },
+  }))
+
+  // ============================================================
   // Settings Section
   // ============================================================
   Alpine.data('settingsSection', () => ({

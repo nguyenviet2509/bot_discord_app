@@ -76,6 +76,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         <span>Links</span>
       </div>
+      <div @click="tab='levelup'" :class="tab==='levelup' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Tin nhan Level Up</span>
+      </div>
       <div @click="tab='settings'" :class="tab==='settings' ? 'active' : ''" class="nav-item">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M19.07 4.93 4.93 19.07"/><path d="M12 2v2M12 20v2M4.93 4.93 6.34 6.34M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07 6.34 17.66M17.66 6.34l1.41-1.41"/></svg>
         <span>Settings</span>
@@ -351,6 +355,190 @@
               </template>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVEL UP TEMPLATE TAB -->
+    <div x-show="tab === 'levelup'" x-data="levelUpTemplateSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">Tin nhan Level Up</h1>
+          <p class="text-sm text-slate-400 mt-0.5">Tuy chinh embed thong bao khi member dat level moi</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button @click="load()" :disabled="loading" class="btn-refresh">
+            <svg :class="loading ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+            <span x-text="loading ? 'Dang tai...' : 'Lam moi'"></span>
+          </button>
+          <button @click="sendTest()" :disabled="sending" class="btn-refresh" style="border-color:#fbbf24;color:#b45309;background:#fffbeb">
+            <svg :class="sending ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <span x-text="sending ? 'Dang gui...' : 'Gui thu'"></span>
+          </button>
+          <button @click="save()" :disabled="saving" class="btn-primary" x-text="saving ? 'Dang luu...' : 'Luu thay doi'"></button>
+        </div>
+      </div>
+      <div class="p-8">
+        <div class="mb-5 flex items-center gap-3 flex-wrap">
+          <label class="text-sm font-semibold text-slate-600">Channel test:</label>
+          <input x-model="testChannelId" type="text" placeholder="Discord channel ID"
+            class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white w-72 font-mono" />
+          <p class="text-xs text-slate-400">Bam "Gui thu" de gui embed test (theo level dang preview) toi channel nay.</p>
+        </div>
+        <div x-show="toast" x-cloak
+          :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
+          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- FORM -->
+          <div class="card p-7 space-y-5">
+            <h2 class="text-base font-bold text-slate-800 pb-1">Noi dung</h2>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Tieu de embed</label>
+              <input x-model="form.title" type="text" class="input-field" />
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Mo ta (level thuong)</label>
+              <textarea x-model="form.description" rows="2" class="input-field"></textarea>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Mo ta (milestone: 10, 20, ..., 100)</label>
+              <textarea x-model="form.milestone_description" rows="3" class="input-field"></textarea>
+            </div>
+            <div class="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-xs text-slate-600 leading-relaxed">
+              <div class="font-bold text-slate-700 mb-1.5">Placeholder co the dung:</div>
+              <code class="text-indigo-600">{user}</code> ten member &nbsp;
+              <code class="text-indigo-600">{level}</code> level &nbsp;
+              <code class="text-indigo-600">{tier}</code> ten tier &nbsp;
+              <code class="text-indigo-600">{tier_badge}</code> emoji tier &nbsp;
+              <code class="text-indigo-600">{xp}</code> tong XP
+            </div>
+
+            <h2 class="text-base font-bold text-slate-800 pt-3 pb-1 border-t border-slate-100">Hien thi</h2>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
+                :class="form.show_avatar ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.show_avatar" type="checkbox" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Avatar member</span>
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
+                :class="form.mention_user ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.mention_user" type="checkbox" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Tag @member</span>
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
+                :class="form.show_tier_field ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.show_tier_field" type="checkbox" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Field Danh hieu</span>
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
+                :class="form.show_xp_field ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.show_xp_field" type="checkbox" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Field Tong XP</span>
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
+                :class="form.show_progress_field ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.show_progress_field" type="checkbox" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Field Tien do</span>
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
+                :class="form.show_role_reward ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.show_role_reward" type="checkbox" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Hien role reward</span>
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
+                :class="form.show_badge_reward ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.show_badge_reward" type="checkbox" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Hien badge reward</span>
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
+                :class="form.show_badge_image ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.show_badge_image" type="checkbox" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Hien anh badge</span>
+              </label>
+            </div>
+
+            <h2 class="text-base font-bold text-slate-800 pt-3 pb-1 border-t border-slate-100">Mau vien</h2>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer"
+                :class="form.color_mode==='tier' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.color_mode" type="radio" value="tier" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Theo tier</span>
+              </label>
+              <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer"
+                :class="form.color_mode==='custom' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
+                <input x-model="form.color_mode" type="radio" value="custom" class="accent-indigo-600" />
+                <span class="text-sm font-medium">Mau tu chon</span>
+              </label>
+            </div>
+            <div x-show="form.color_mode==='custom'" class="flex items-center gap-3">
+              <input x-model="form.custom_color" type="color" class="w-14 h-11 rounded-lg border border-slate-200 cursor-pointer" />
+              <input x-model="form.custom_color" type="text" placeholder="#6366f1" class="input-field flex-1" />
+            </div>
+          </div>
+
+          <!-- LIVE PREVIEW -->
+          <div>
+            <div class="sticky top-24">
+              <h2 class="text-base font-bold text-slate-800 mb-3">Xem truoc</h2>
+              <div class="flex items-center gap-3 mb-4">
+                <label class="text-xs font-semibold text-slate-600">Loai preview:</label>
+                <select x-model="previewLevel" class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
+                  <option value="5">Level 5 (thuong)</option>
+                  <option value="10">Level 10 (milestone Sat)</option>
+                  <option value="20">Level 20 (milestone Dong)</option>
+                  <option value="50">Level 50 (milestone Bach Kim)</option>
+                  <option value="100">Level 100 (milestone Thach Dau)</option>
+                </select>
+              </div>
+              <!-- Discord-like preview -->
+              <div class="rounded-xl bg-[#313338] p-5 shadow-xl">
+                <div x-show="form.mention_user" class="mb-1.5">
+                  <span class="text-indigo-300 bg-indigo-500/15 rounded px-1.5 py-0.5 text-sm font-medium">@User_ABC</span>
+                </div>
+                <div class="flex">
+                  <div class="w-1 rounded-l-md flex-shrink-0" :style="`background:${previewColor}`"></div>
+                  <div class="flex-1 bg-[#2b2d31] rounded-r-md p-4">
+                    <div class="flex gap-4">
+                      <div class="flex-1 min-w-0">
+                        <div class="text-white font-semibold text-base mb-2" x-text="renderTpl(form.title)"></div>
+                        <div class="text-[#dbdee1] text-sm whitespace-pre-line" x-text="renderTpl(previewIsMilestone ? form.milestone_description : form.description)"></div>
+                        <div x-show="form.show_tier_field || form.show_xp_field || form.show_progress_field" class="flex gap-4 mt-3 flex-wrap">
+                          <div x-show="form.show_tier_field" class="min-w-0">
+                            <div class="text-white text-xs font-semibold mb-0.5">Danh hieu</div>
+                            <div class="text-[#dbdee1] text-sm" x-text="previewTier.badge + ' ' + previewTier.name"></div>
+                          </div>
+                          <div x-show="form.show_xp_field" class="min-w-0">
+                            <div class="text-white text-xs font-semibold mb-0.5">Tong XP</div>
+                            <div class="text-[#dbdee1] text-sm" x-text="previewXp.toLocaleString() + ' XP'"></div>
+                          </div>
+                          <div x-show="form.show_progress_field" class="min-w-0">
+                            <div class="text-white text-xs font-semibold mb-0.5">Tien do</div>
+                            <div class="text-[#dbdee1] text-sm font-mono">[█████░░░░░] 50%</div>
+                          </div>
+                        </div>
+                        <div x-show="form.show_role_reward && previewRoleName" class="mt-3">
+                          <div class="text-white text-xs font-semibold mb-0.5">🏅 Nhan duoc role</div>
+                          <div class="inline-block bg-indigo-500/30 text-indigo-200 text-sm rounded px-2 py-0.5" x-text="'@' + previewRoleName"></div>
+                        </div>
+                        <div x-show="form.show_badge_reward && previewBadge" class="mt-3">
+                          <div class="text-white text-xs font-semibold mb-0.5">🖼️ Huy hieu moi</div>
+                          <div class="text-[#dbdee1] text-sm" x-text="previewBadge?.badge_name || 'Badge'"></div>
+                          <img x-show="form.show_badge_image && previewBadge?.badge_url" :src="previewBadge?.badge_url"
+                            class="mt-2 max-w-full rounded-md max-h-48 object-contain" />
+                        </div>
+                      </div>
+                      <div x-show="form.show_avatar" class="flex-shrink-0">
+                        <div class="w-20 h-20 rounded-md bg-indigo-600 flex items-center justify-center text-white font-bold text-2xl">U</div>
+                      </div>
+                    </div>
+                    <div class="text-[#80848e] text-xs mt-3" x-text="new Date().toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'}) + ' hom nay'"></div>
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs text-slate-400 mt-3 leading-relaxed">Preview dung du lieu mau (User_ABC, reward gia lap). Tren Discord that, badge/role/anh se lay tu reward dung level cua member.</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

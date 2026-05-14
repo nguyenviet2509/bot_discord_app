@@ -129,50 +129,68 @@ async function handleLevelUp(client, guild, member, newLevel, settings) {
   const bar = buildProgressBar(percent)
   const tier = getTierForLevel(newLevel)
   const isMilestone = LEVEL_TIERS.some(t => t.minLevel === newLevel)
+  const tpl = db.getLevelUpTemplate(guild.id)
 
-  const roleRewardAtLevel = rewards.find(r => r.type === 'role' && r.level_required === newLevel)
-  const badgeReward = rewards.find(r => r.type === 'badge' && r.level_required === newLevel)
+  // Reward tại đúng level vừa lên (role | badge | cả 2)
+  const rewardAtLevel = rewards.filter(r => r.level_required === newLevel)
+  const roleRewardAtLevel = rewardAtLevel.find(r => r.type === 'role')
+  const badgeReward = rewardAtLevel.find(r => r.type === 'badge')
+  // Role kèm trong badge (feature mới)
+  const badgeRoleId = badgeReward?.role_id
+
+  // Thay placeholder
+  const fill = (str) => str
+    .replace(/\{user\}/g, member.user.username)
+    .replace(/\{level\}/g, String(newLevel))
+    .replace(/\{tier\}/g, tier.name)
+    .replace(/\{tier_badge\}/g, tier.badge)
+    .replace(/\{xp\}/g, user.xp.toLocaleString())
+
+  const color = tpl.color_mode === 'custom'
+    ? parseInt((tpl.custom_color || '#6366f1').replace('#', ''), 16)
+    : tier.color
 
   const embed = new EmbedBuilder()
-    .setColor(tier.color)
-    .setTitle('🎉 Level Up!')
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-    .setDescription(
-      isMilestone
-        ? `Chúc mừng **${member.user.username}** đã đạt **Level ${newLevel}**!\n${tier.badge} Đạt danh hiệu **${tier.name}**!`
-        : `Chúc mừng **${member.user.username}** đã đạt **Level ${newLevel}**!`
-    )
-    .addFields(
-      { name: 'Danh hiệu', value: `${tier.badge} ${tier.name}`, inline: true },
-      { name: 'Tổng XP', value: `${user.xp.toLocaleString()} XP`, inline: true },
-      { name: 'Tiến độ', value: `[${bar}] ${percent}%`, inline: true },
-    )
+    .setColor(color)
+    .setTitle(fill(tpl.title))
+    .setDescription(fill(isMilestone ? tpl.milestone_description : tpl.description))
     .setTimestamp()
 
-  if (roleRewardAtLevel) {
-    const role = guild.roles.cache.get(roleRewardAtLevel.role_id)
-    if (role) {
-      embed.addFields({ name: '🏅 Nhận được role', value: role.toString(), inline: false })
+  if (tpl.show_avatar) {
+    embed.setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+  }
+
+  const fields = []
+  if (tpl.show_tier_field) fields.push({ name: 'Danh hiệu', value: `${tier.badge} ${tier.name}`, inline: true })
+  if (tpl.show_xp_field) fields.push({ name: 'Tổng XP', value: `${user.xp.toLocaleString()} XP`, inline: true })
+  if (tpl.show_progress_field) fields.push({ name: 'Tiến độ', value: `[${bar}] ${percent}%`, inline: true })
+  if (fields.length) embed.addFields(...fields)
+
+  if (tpl.show_role_reward) {
+    // Role chính (type=role) HOẶC role kèm trong badge
+    const roleIdToShow = roleRewardAtLevel?.role_id || badgeRoleId
+    if (roleIdToShow) {
+      const role = guild.roles.cache.get(roleIdToShow)
+      if (role) embed.addFields({ name: '🏅 Nhận được role', value: role.toString(), inline: false })
     }
   }
 
-  if (badgeReward) {
+  if (tpl.show_badge_reward && badgeReward) {
     embed.addFields({
       name: '🖼️ Huy hiệu mới',
       value: badgeReward.badge_name || 'Badge',
       inline: false,
     })
 
-    if (badgeReward.badge_url) {
+    if (tpl.show_badge_image && badgeReward.badge_url) {
       const base = process.env.BASE_URL || ''
-      if (base) {
-        embed.setImage(`${base}${badgeReward.badge_url}`)
-      }
+      if (base) embed.setImage(`${base}${badgeReward.badge_url}`)
     }
   }
 
   try {
-    await channel.send({ content: `<@${member.id}>`, embeds: [embed] })
+    const content = tpl.mention_user ? `<@${member.id}>` : ''
+    await channel.send({ content, embeds: [embed] })
   } catch (err) {
     console.error('[LevelService] Failed to send level-up message:', err.message)
   }
