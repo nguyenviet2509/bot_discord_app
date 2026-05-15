@@ -952,6 +952,34 @@ document.addEventListener('alpine:init', () => {
       this.loading = false
     },
 
+    // Group commands by prefix (text before the first dash).
+    // Groups with only 1 command fall into "Khác".
+    // Returns: [{ name, items }, ...] then { name: 'Khác', items } if any
+    get groupedCommands() {
+      const byPrefix = new Map()
+      this.commands.forEach(c => {
+        const prefix = (c.name.split('-')[0] || c.name).toLowerCase()
+        if (!byPrefix.has(prefix)) byPrefix.set(prefix, [])
+        byPrefix.get(prefix).push(c)
+      })
+      const groups = []
+      const others = []
+      for (const [prefix, items] of byPrefix.entries()) {
+        if (items.length > 1) {
+          items.sort((a, b) => a.name.length - b.name.length || a.name.localeCompare(b.name))
+          groups.push({ name: prefix, items })
+        } else {
+          others.push(items[0])
+        }
+      }
+      groups.sort((a, b) => a.name.localeCompare(b.name))
+      if (others.length > 0) {
+        others.sort((a, b) => a.name.localeCompare(b.name))
+        groups.push({ name: 'Khác', items: others })
+      }
+      return groups
+    },
+
     optionTypeName(type) {
       const types = { 3: 'text', 4: 'integer', 5: 'boolean', 6: 'user', 7: 'channel',
         8: 'role', 9: 'mentionable', 10: 'number', 11: 'attachment' }

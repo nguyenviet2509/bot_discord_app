@@ -172,6 +172,30 @@ function initDb() {
       message_id TEXT,
       created_at INTEGER DEFAULT (unixepoch())
     );
+
+    -- Bai dang cho duyet (post approval flow)
+    CREATE TABLE IF NOT EXISTS posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      author_id TEXT NOT NULL,
+      author_tag TEXT,
+      author_avatar TEXT,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      price TEXT,
+      contact TEXT,
+      status TEXT NOT NULL CHECK(status IN ('pending','approved','rejected','deleted')),
+      review_message_id TEXT,
+      public_thread_id TEXT,
+      approver_id TEXT,
+      approver_tag TEXT,
+      reject_reason TEXT,
+      created_at INTEGER NOT NULL,
+      reviewed_at INTEGER,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_posts_guild_status ON posts(guild_id, status);
+    CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(guild_id, author_id);
   `)
   // Safe migration for existing databases
   try { database.exec(`ALTER TABLE users ADD COLUMN username TEXT`) } catch (_) {}
@@ -184,6 +208,12 @@ function initDb() {
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN group_id INTEGER`) } catch (_) {}
+  // Post approval flow settings
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN post_entry_channel_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN review_channel_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN public_forum_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN post_admin_role_ids TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE posts ADD COLUMN image_url TEXT`) } catch (_) {}
   return database
 }
 
@@ -259,7 +289,28 @@ function getSettings(guildId) {
   // Parse JSON array, fallback empty array
   let allowed = []
   try { allowed = row.allowed_role_ids ? JSON.parse(row.allowed_role_ids) : [] } catch (_) { allowed = [] }
-  return { ...row, allowed_role_ids: allowed }
+  let postAdminRoles = []
+  try { postAdminRoles = row.post_admin_role_ids ? JSON.parse(row.post_admin_role_ids) : [] } catch (_) { postAdminRoles = [] }
+  return { ...row, allowed_role_ids: allowed, post_admin_role_ids: postAdminRoles }
+}
+
+// Update post-related settings (KISS: dedicated function, khong dung upsertSettings de tranh dung cham fields cu)
+function updatePostSettings(guildId, fields) {
+  const db = getDb()
+  // Ensure row exists
+  db.prepare(`INSERT OR IGNORE INTO guild_settings (guild_id) VALUES (?)`).run(guildId)
+  const sets = []
+  const params = { guild_id: guildId }
+  if (fields.post_entry_channel_id !== undefined) { sets.push('post_entry_channel_id = @post_entry_channel_id'); params.post_entry_channel_id = fields.post_entry_channel_id }
+  if (fields.review_channel_id !== undefined)     { sets.push('review_channel_id = @review_channel_id'); params.review_channel_id = fields.review_channel_id }
+  if (fields.public_forum_id !== undefined)       { sets.push('public_forum_id = @public_forum_id'); params.public_forum_id = fields.public_forum_id }
+  if (fields.post_admin_role_ids !== undefined) {
+    sets.push('post_admin_role_ids = @post_admin_role_ids')
+    params.post_admin_role_ids = JSON.stringify(Array.isArray(fields.post_admin_role_ids) ? fields.post_admin_role_ids : [])
+  }
+  if (sets.length === 0) return
+  sets.push('updated_at = unixepoch()')
+  db.prepare(`UPDATE guild_settings SET ${sets.join(', ')} WHERE guild_id = @guild_id`).run(params)
 }
 
 function upsertSettings(settings) {
@@ -796,6 +847,7 @@ module.exports = {
   deleteReward,
   getSettings,
   upsertSettings,
+  updatePostSettings,
   getUserRank,
   getLeaderboard,
   getAllUsers,

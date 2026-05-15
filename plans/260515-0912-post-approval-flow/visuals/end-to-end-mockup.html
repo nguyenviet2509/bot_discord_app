@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Post Approval Flow — E2E Mockup</title>
+<style>
+  :root {
+    --bg: #313338; --bg-2: #2b2d31; --bg-3: #1e1f22;
+    --text: #dbdee1; --muted: #949ba4; --link: #00a8fc;
+    --green: #248046; --green-hover: #1a6334;
+    --red: #da373c; --red-hover: #b8252a;
+    --blurple: #5865f2; --blurple-hover: #4752c4;
+    --border: #3f4147;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { background: #0f0f10; color: var(--text); min-height: 100vh; padding: 16px; }
+  header { text-align: center; margin-bottom: 16px; }
+  header h1 { font-size: 18px; color: #fff; }
+  header p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .controls { display: flex; gap: 8px; justify-content: center; margin: 12px 0 20px; flex-wrap: wrap; }
+  .controls button { background: var(--bg-2); color: var(--text); border: 1px solid var(--border); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .controls button.active, .controls button:hover { background: var(--blurple); border-color: var(--blurple); }
+  .stage { max-width: 900px; margin: 0 auto; background: var(--bg); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+  .frame { display: none; }
+  .frame.active { display: block; }
+  .step-title { background: var(--bg-3); padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: #fff; }
+  .step-title small { color: var(--muted); margin-left: 8px; font-weight: normal; }
+  .channel-bar { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .channel-bar .hash { color: var(--muted); margin-right: 8px; font-weight: bold; }
+  .channel-bar .name { color: #fff; font-weight: 600; font-size: 15px; }
+  .channel-bar .topic { color: var(--muted); font-size: 12px; margin-left: 16px; padding-left: 16px; border-left: 1px solid var(--border); }
+  .messages { padding: 16px; min-height: 280px; }
+  .msg { display: flex; gap: 12px; padding: 6px 0; }
+  .msg .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--blurple); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; }
+  .msg .avatar.bot { background: #5865f2; }
+  .msg .avatar.member { background: #f47fff; }
+  .msg .avatar.admin { background: #f0b232; }
+  .msg .body { flex: 1; min-width: 0; }
+  .msg .head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+  .msg .head .name { font-weight: 600; color: #fff; }
+  .msg .head .bot-tag { background: var(--blurple); color: #fff; font-size: 10px; padding: 1px 4px; border-radius: 3px; font-weight: bold; }
+  .msg .head .time { color: var(--muted); font-size: 11px; }
+  .msg .text { color: var(--text); font-size: 14px; line-height: 1.4; }
+  .embed { border-left: 4px solid var(--blurple); background: var(--bg-2); border-radius: 4px; padding: 10px 14px; margin-top: 6px; max-width: 520px; }
+  .embed.pending { border-color: var(--blurple); }
+  .embed.approved { border-color: var(--green); }
+  .embed.rejected { border-color: var(--red); }
+  .embed-author { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .embed-author .av { width: 24px; height: 24px; border-radius: 50%; background: #f47fff; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; }
+  .embed-author .name { font-size: 13px; color: #fff; font-weight: 600; }
+  .embed-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .embed-desc { font-size: 14px; color: var(--text); margin-bottom: 8px; white-space: pre-wrap; }
+  .embed-fields { display: flex; gap: 16px; flex-wrap: wrap; }
+  .embed-field { min-width: 120px; }
+  .embed-field .k { font-size: 12px; font-weight: 700; color: #fff; }
+  .embed-field .v { font-size: 13px; color: var(--text); }
+  .embed-footer { font-size: 11px; color: var(--muted); margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+  .buttons { display: flex; gap: 8px; margin-top: 8px; }
+  .btn { padding: 6px 14px; border-radius: 3px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; color: #fff; }
+  .btn-success { background: var(--green); }
+  .btn-success:hover { background: var(--green-hover); }
+  .btn-danger { background: var(--red); }
+  .btn-danger:hover { background: var(--red-hover); }
+  .btn-primary { background: var(--blurple); }
+  .btn-secondary { background: #4e5058; }
+  .slash-popup { position: relative; margin-top: 8px; background: var(--bg-3); border-radius: 6px; padding: 8px; max-width: 520px; }
+  .slash-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--bg-2); border-radius: 4px; }
+  .slash-item .cmd { color: #fff; font-weight: 600; }
+  .slash-item .desc { color: var(--muted); font-size: 12px; }
+  .input-box { background: var(--bg-2); border-radius: 8px; padding: 10px 14px; color: var(--muted); margin-top: 12px; }
+  .input-box .typing { color: #fff; }
+  .modal-overlay { background: rgba(0,0,0,.85); padding: 40px 16px; min-height: 280px; }
+  .modal { max-width: 440px; margin: 0 auto; background: var(--bg-2); border-radius: 8px; overflow: hidden; }
+  .modal-head { padding: 16px; border-bottom: 1px solid var(--border); }
+  .modal-head h3 { color: #fff; font-size: 18px; }
+  .modal-body { padding: 16px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; color: #b5bac1; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+  .field label .req { color: var(--red); }
+  .field input, .field textarea { width: 100%; background: var(--bg-3); border: 1px solid var(--border); border-radius: 3px; padding: 8px 10px; color: var(--text); font-size: 14px; font-family: inherit; }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .modal-foot { padding: 12px 16px; background: var(--bg-3); display: flex; justify-content: flex-end; gap: 8px; }
+  .ephemeral { background: rgba(88,101,242,.1); border-left: 3px solid var(--blurple); padding: 8px 12px; border-radius: 4px; font-size: 13px; color: var(--muted); margin-top: 8px; max-width: 520px; }
+  .ephemeral .eye { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .forum-post { background: var(--bg-2); border-radius: 8px; padding: 14px; margin-bottom: 8px; max-width: 600px; cursor: pointer; border: 1px solid transparent; }
+  .forum-post:hover { border-color: var(--border); }
+  .forum-post .title { color: #fff; font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .forum-post .meta { color: var(--muted); font-size: 12px; }
+  .arrow { text-align: center; padding: 12px; color: var(--muted); font-size: 24px; }
+  .note { background: rgba(240,178,50,.1); border-left: 3px solid #f0b232; padding: 8px 12px; font-size: 12px; color: #f0b232; margin: 12px; border-radius: 4px; }
+  .dm-header { background: linear-gradient(180deg, #5865f2 0%, transparent 100%); padding: 14px 16px; color: #fff; font-weight: 700; }
+  .autocomplete { background: var(--bg-3); border-radius: 6px; padding: 6px; margin-top: 6px; max-width: 520px; }
+  .autocomplete-item { padding: 8px 10px; border-radius: 4px; color: var(--text); font-size: 13px; }
+  .autocomplete-item:hover, .autocomplete-item.sel { background: var(--blurple); color: #fff; }
+  .autocomplete-item .id { color: var(--muted); margin-right: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📨 Post Approval Flow — End-to-End Mockup</h1>
+  <p>Mô phỏng workflow Discord-style. Click các nút bên dưới để xem từng bước.</p>
+</header>
+
+<div class="controls">
+  <button data-step="1" class="active">1. Member /post</button>
+  <button data-step="2">2. Modal</button>
+  <button data-step="3">3. Submitted</button>
+  <button data-step="4">4. #review (Admin view)</button>
+  <button data-step="5a">5a. Approve</button>
+  <button data-step="5b">5b. Reject Modal</button>
+  <button data-step="6">6. Forum #public</button>
+  <button data-step="7">7. DM Member</button>
+  <button data-step="8">8. /post-edit</button>
+  <button data-step="9">9. /post-delete</button>
+  <button data-step="10">10. /post-setup</button>
+</div>
+
+<div class="stage">
+
+<!-- STEP 1: Member types /post -->
+<div class="frame active" data-frame="1">
+  <div class="step-title">Step 1 — Member gõ slash command <small>Channel: bất kỳ channel nào bot có quyền</small></div>
+  <div class="channel-bar"><span class="hash">#</span><span class="name">trò-chuyện-ở-đây</span><span class="topic">Kênh chat chung</span></div>
+  <div class="messages">
+    <div class="msg">
+      <div class="avatar member">N</div>
+      <div class="body">
+        <div class="head"><span class="name" style="color:#f47fff">Nguyễn Văn A</span><span class="time">Hôm nay 09:20</span></div>
+        <div class="text">Để tôi đăng cái này lên...</div>
+      </div>
+    </div>
+    <div class="input-box">
+      <span class="typing">/post</span><span style="color:var(--muted)"> — Tạo bài đăng mới</span>
+      <div class="slash-popup">
+        <div class="slash-item">
+          <div>
+            <div class="cmd">/post</div>
+            <div class="desc">Gửi bài đăng để admin duyệt</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 2: Modal -->
+<div class="frame" data-frame="2">
+  <div class="step-title">Step 2 — Modal nhập nội dung <small>Discord ModalBuilder, max 5 TextInput</small></div>
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head"><h3>Tạo bài đăng mới</h3></div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Tiêu đề <span class="req">*</span></label>
+          <input value="Bán acc Pristontale max cấp" />
+        </div>
+        <div class="field">
+          <label>Nội dung <span class="req">*</span></label>
+          <textarea>Acc Knight max cấp 200, full đồ +9, có thú cưng huyền thoại. Acc sạch, lập từ năm 2023. Có thể giao dịch trực tiếp tại Sài Gòn hoặc remote qua bank.</textarea>
+        </div>
+        <div class="field">
+          <label>Giá</label>
+          <input value="5.000.000đ — fix nhẹ" />
+        </div>
+        <div class="field">
+          <label>Liên hệ</label>
+          <input value="Zalo: 0901xxxxxx" />
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary">Hủy</button>
+        <button class="btn btn-primary">Gửi</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3: Submitted ephemeral -->
+<div class="frame" data-frame="3">
+  <div class="step-title">Step 3 — Bot confirm ephemeral (chỉ member thấy)</div>
+  <div class="messages">
+    <div class="ephemeral">
+      <div class="eye">👁 Chỉ bạn thấy tin này • <a href="#" style="color:var(--link)">Đóng</a></div>
+      ✅ <strong>Bài đăng đã được gửi duyệt</strong> (ID: <code>#42</code>)<br>
+      Bot đã chuyển bài vào kênh duyệt. Bạn sẽ nhận DM khi admin xử lý.
+    </div>
+    <div class="note">Đồng thời: row INSERT vào bảng <code>posts</code> với status=pending, message tạo trong <code>#review</code> (xem step 4).</div>
+  </div>
+</div>
+
+<!-- STEP 4: #review admin view -->
+<div class="frame" data-frame="4">
+  <div class="step-title">Step 4 — #review channel (chỉ admin nhìn thấy)</div>
+  <div class="channel-bar"><span class="hash">#</span><span class="name">review</span><span class="topic">Queue chờ duyệt bài đăng</span></div>
+  <div class="messages">
+    <div class="msg">
+      <div class="avatar bot">B</div>
+      <div class="body">
+        <div class="head"><span class="name" style="color:var(--link)">PristonBot</span><span class="bot-tag">BOT</span><span class="time">Hôm nay 09:21</span></div>
+        <div class="embed pending">
+          <div class="embed-author">
+            <div class="av">N</div>
+            <div class="name">Nguyễn Văn A</div>
+          </div>
+          <div class="embed-title">Bán acc Pristontale max cấp</div>
+          <div class="embed-desc">Acc Knight max cấp 200, full đồ +9, có thú cưng huyền thoại. Acc sạch, lập từ năm 2023. Có thể giao dịch trực tiếp tại Sài Gòn hoặc remote qua bank.</div>
+          <div class="embed-fields">
+            <div class="embed-field"><div class="k">💰 Giá</div><div class="v">5.000.000đ — fix nhẹ</div></div>
+            <div class="embed-field"><div class="k">📞 Liên hệ</div><div class="v">Zalo: 0901xxxxxx</div></div>
+          </div>
+          <div class="embed-footer">⏳ Chờ duyệt · Post #42 · 09:21 15/05/2026</div>
+          <div class="buttons">
+            <button class="btn btn-success">✅ Duyệt</button>
+            <button class="btn btn-danger">❌ Từ chối</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 5a: After approve -->
+<div class="frame" data-frame="5a">
+  <div class="step-title">Step 5a — Admin click ✅ Duyệt <small>Idempotent: lần 2 reply "đã xử lý"</small></div>
+  <div class="channel-bar"><span class="hash">#</span><span class="name">review</span></div>
+  <div class="messages">
+    <div class="msg">
+      <div class="avatar bot">B</div>
+      <div class="body">
+        <div class="head"><span class="name" style="color:var(--link)">PristonBot</span><span class="bot-tag">BOT</span><span class="time">Hôm nay 09:21</span></div>
+        <div class="embed approved">
+          <div class="embed-author">
+            <div class="av">N</div>
+            <div class="name">Nguyễn Văn A</div>
+          </div>
+          <div class="embed-title">Bán acc Pristontale max cấp</div>
+          <div class="embed-desc">Acc Knight max cấp 200, full đồ +9, có thú cưng huyền thoại...</div>
+          <div class="embed-footer">✅ Đã duyệt bởi @AdminQuân · Post #42 · Thread: <a href="#" style="color:var(--link)">forum/123456</a></div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow">↓ Bot đồng thời tạo thread trong forum #public (xem step 6) ↓</div>
+  </div>
+</div>
+
+<!-- STEP 5b: Reject modal -->
+<div class="frame" data-frame="5b">
+  <div class="step-title">Step 5b — Admin click ❌ Từ chối → Modal nhập lý do</div>
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head"><h3>Từ chối bài đăng #42</h3></div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Lý do từ chối <span class="req">*</span></label>
+          <textarea>Bài không ghi rõ tình trạng nhân vật và lịch sử giao dịch. Vui lòng bổ sung thông tin chi tiết hơn rồi đăng lại.</textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary">Hủy</button>
+        <button class="btn btn-danger">Gửi từ chối</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 6: Forum public -->
+<div class="frame" data-frame="6">
+  <div class="step-title">Step 6 — Forum #mua-bán (public) — thread mới tạo bởi bot</div>
+  <div class="channel-bar"><span style="margin-right:8px">📢</span><span class="name">mua-bán</span><span class="topic">Forum channel</span></div>
+  <div class="messages">
+    <div class="forum-post">
+      <div class="title">Bán acc Pristontale max cấp</div>
+      <div class="meta">PristonBot 🤖 · 09:21 · 0 phản hồi</div>
+    </div>
+    <div class="forum-post" style="opacity:.5">
+      <div class="title">[Mua] cần knight 150+</div>
+      <div class="meta">Trần B · Hôm qua · 3 phản hồi</div>
+    </div>
+    <div class="arrow">↓ Click vào thread top ↓</div>
+    <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border)">
+      <div class="msg">
+        <div class="avatar bot">B</div>
+        <div class="body">
+          <div class="head"><span class="name" style="color:var(--link)">PristonBot</span><span class="bot-tag">BOT</span><span class="time">09:21</span></div>
+          <div class="embed approved">
+            <div class="embed-author">
+              <div class="av">N</div>
+              <div class="name">Nguyễn Văn A</div>
+            </div>
+            <div class="embed-title">Bán acc Pristontale max cấp</div>
+            <div class="embed-desc">Acc Knight max cấp 200, full đồ +9, có thú cưng huyền thoại...</div>
+            <div class="embed-fields">
+              <div class="embed-field"><div class="k">💰 Giá</div><div class="v">5.000.000đ — fix nhẹ</div></div>
+              <div class="embed-field"><div class="k">📞 Liên hệ</div><div class="v">Zalo: 0901xxxxxx</div></div>
+            </div>
+            <div class="embed-footer">✅ Approved · Post #42</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 7: DM -->
+<div class="frame" data-frame="7">
+  <div class="step-title">Step 7 — Bot DM kết quả cho member</div>
+  <div class="dm-header">💬 Direct Message với PristonBot</div>
+  <div class="messages">
+    <div class="msg">
+      <div class="avatar bot">B</div>
+      <div class="body">
+        <div class="head"><span class="name" style="color:var(--link)">PristonBot</span><span class="bot-tag">BOT</span><span class="time">09:21</span></div>
+        <div class="embed approved" style="max-width:420px">
+          <div class="embed-title">✅ Bài đăng #42 đã được duyệt</div>
+          <div class="embed-desc">Bài của bạn đã hiện trên <strong>#mua-bán</strong>.</div>
+          <div class="embed-footer">Duyệt bởi @AdminQuân · 09:21 15/05</div>
+          <div class="buttons">
+            <a href="#" class="btn btn-primary" style="text-decoration:none">Xem bài</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px; padding-top:16px; border-top:1px dashed var(--border)">
+      <p style="color:var(--muted); font-size:12px; margin-bottom:8px">Trường hợp bị từ chối:</p>
+      <div class="msg">
+        <div class="avatar bot">B</div>
+        <div class="body">
+          <div class="head"><span class="name" style="color:var(--link)">PristonBot</span><span class="bot-tag">BOT</span></div>
+          <div class="embed rejected" style="max-width:420px">
+            <div class="embed-title">❌ Bài đăng #42 bị từ chối</div>
+            <div class="embed-desc"><strong>Lý do:</strong><br>Bài không ghi rõ tình trạng nhân vật và lịch sử giao dịch. Vui lòng bổ sung thông tin chi tiết hơn rồi đăng lại.</div>
+            <div class="embed-footer">Bởi @AdminQuân</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 8: post-edit -->
+<div class="frame" data-frame="8">
+  <div class="step-title">Step 8 — /post-edit với autocomplete</div>
+  <div class="messages">
+    <div class="input-box">
+      <span class="typing">/post-edit</span> <span style="color:var(--muted)">post_id:</span> <span class="typing">#42</span>
+      <div class="autocomplete">
+        <div class="autocomplete-item sel"><span class="id">#42</span> Bán acc Pristontale max cấp <span style="color:#9bd97a">[approved]</span></div>
+        <div class="autocomplete-item"><span class="id">#38</span> [Mua] item +9 huyền thoại <span style="color:#a3a6aa">[pending]</span></div>
+      </div>
+      <p style="color:var(--muted); font-size:11px; margin-top:6px">↑ Chỉ hiện bài của chính user đang gõ lệnh</p>
+    </div>
+    <div class="arrow">↓ Chọn #42 → Modal pre-filled mở ra ↓</div>
+    <div class="modal-overlay" style="padding:16px">
+      <div class="modal">
+        <div class="modal-head"><h3>Sửa bài đăng #42</h3></div>
+        <div class="modal-body">
+          <div class="field"><label>Tiêu đề</label><input value="Bán acc Pristontale max cấp" /></div>
+          <div class="field"><label>Nội dung</label><textarea>Acc Knight max cấp 200, full đồ +9... (đã pre-fill)</textarea></div>
+        </div>
+      </div>
+    </div>
+    <div class="note">⚠ Edit nội dung → bài về <strong>pending</strong>. Bot xóa thread cũ trong forum + tạo lại message trong #review để admin duyệt lại.</div>
+  </div>
+</div>
+
+<!-- STEP 9: post-delete -->
+<div class="frame" data-frame="9">
+  <div class="step-title">Step 9 — /post-delete với confirm</div>
+  <div class="messages">
+    <div class="ephemeral">
+      <div class="eye">👁 Chỉ bạn thấy tin này</div>
+      <strong>Xác nhận xóa bài #42</strong>: "Bán acc Pristontale max cấp"<br>
+      <span style="color:var(--muted)">Thread trong #mua-bán và message trong #review sẽ bị xóa vĩnh viễn.</span>
+      <div class="buttons" style="margin-top:10px">
+        <button class="btn btn-danger">Xóa</button>
+        <button class="btn btn-secondary">Hủy</button>
+      </div>
+    </div>
+    <div class="arrow">↓ Click Xóa ↓</div>
+    <div class="ephemeral">
+      ✅ Đã xóa bài #42. Thread + review message đã được dọn sạch.
+    </div>
+    <div class="note">DB row vẫn còn với status='deleted' để giữ audit log. Ownership: chỉ author hoặc admin xóa được.</div>
+  </div>
+</div>
+
+<!-- STEP 10: post-setup -->
+<div class="frame" data-frame="10">
+  <div class="step-title">Step 10 — Admin /post-setup (chạy 1 lần ban đầu)</div>
+  <div class="messages">
+    <div class="input-box">
+      <span class="typing">/post-setup channels</span>
+      <span style="color:var(--muted)"> review:</span><span class="typing">#review</span>
+      <span style="color:var(--muted)"> public:</span><span class="typing">#mua-bán</span>
+    </div>
+    <div style="margin-top:14px">
+      <div class="msg">
+        <div class="avatar bot">B</div>
+        <div class="body">
+          <div class="head"><span class="name" style="color:var(--link)">PristonBot</span><span class="bot-tag">BOT</span></div>
+          <div class="ephemeral" style="margin:0">
+            ✅ <strong>Đã lưu cấu hình</strong><br>
+            • Channel duyệt: <code>#review</code><br>
+            • Forum public: <code>#mua-bán</code><br>
+            • Bot permissions: ManageThreads ✅, SendMessages ✅, CreatePublicThreads ✅
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="input-box" style="margin-top:14px">
+      <span class="typing">/post-setup admin-role</span>
+      <span style="color:var(--muted)"> role:</span><span class="typing">@Admin</span>
+      <span style="color:var(--muted)"> action:</span><span class="typing">add</span>
+    </div>
+    <div class="note">Chỉ user có quyền <code>ManageGuild</code> mới chạy được /post-setup (Discord enforces via defaultMemberPermissions).</div>
+  </div>
+</div>
+
+</div>
+
+<footer style="text-align:center; color:var(--muted); font-size:11px; margin:20px 0 8px">
+  Mockup chỉ để preview workflow. Không phải UI thật của Discord.
+</footer>
+
+<script>
+  const buttons = document.querySelectorAll('.controls button');
+  const frames = document.querySelectorAll('.frame');
+  buttons.forEach(btn => btn.addEventListener('click', () => {
+    const step = btn.dataset.step;
+    buttons.forEach(b => b.classList.toggle('active', b === btn));
+    frames.forEach(f => f.classList.toggle('active', f.dataset.frame === step));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }));
+  // keyboard nav
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const active = document.querySelector('.controls button.active');
+    const idx = [...buttons].indexOf(active);
+    const next = e.key === 'ArrowRight' ? Math.min(idx + 1, buttons.length - 1) : Math.max(idx - 1, 0);
+    buttons[next].click();
+  });
+</script>
+</body>
+</html>

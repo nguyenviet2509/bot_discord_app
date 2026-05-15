@@ -1175,32 +1175,42 @@
           </div>
           <p class="text-slate-500 font-semibold">Không tìm thấy command nào</p>
         </div>
-        <div x-show="!loading && commands.length > 0" class="space-y-4">
-          <template x-for="cmd in commands" :key="cmd.name">
-            <div class="card p-6">
-              <div class="flex items-start gap-4">
-                <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-3 mb-1">
-                    <span class="font-bold text-slate-800 text-base font-mono">/<span x-text="cmd.name"></span></span>
-                  </div>
-                  <p class="text-sm text-slate-500 mb-3" x-text="cmd.description"></p>
-                  <div x-show="cmd.options && cmd.options.length > 0" class="space-y-1.5">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Tham số</p>
-                    <template x-for="opt in cmd.options" :key="opt.name">
-                      <div class="flex items-center gap-2 text-sm">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-semibold" x-text="opt.name"></span>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
-                          :class="opt.required ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'"
-                          x-text="opt.required ? 'bắt buộc' : 'tùy chọn'"></span>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-xs font-medium" x-text="optionTypeName(opt.type)"></span>
-                        <span class="text-slate-500 text-xs" x-text="opt.description"></span>
+        <div x-show="!loading && commands.length > 0" class="space-y-8">
+          <template x-for="grp in groupedCommands" :key="grp.name">
+            <div class="p-1">
+              <div class="flex items-center gap-3 mb-3 pb-2 border-b border-slate-200">
+                <h2 class="font-bold text-slate-800 text-lg capitalize" x-text="grp.name"></h2>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600" x-text="grp.items.length + ' lệnh'"></span>
+              </div>
+              <div class="space-y-3">
+                <template x-for="cmd in grp.items" :key="cmd.name">
+                  <div class="card p-6">
+                    <div class="flex items-start gap-4">
+                      <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                       </div>
-                    </template>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-3 mb-1">
+                          <span class="font-bold text-slate-800 text-base font-mono">/<span x-text="cmd.name"></span></span>
+                        </div>
+                        <p class="text-sm text-slate-500 mb-3" x-text="cmd.description"></p>
+                        <div x-show="cmd.options && cmd.options.length > 0" class="space-y-1.5">
+                          <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Tham số</p>
+                          <template x-for="opt in cmd.options" :key="opt.name">
+                            <div class="flex items-center gap-2 text-sm">
+                              <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-semibold" x-text="opt.name"></span>
+                              <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                                :class="opt.required ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'"
+                                x-text="opt.required ? 'bắt buộc' : 'tùy chọn'"></span>
+                              <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-xs font-medium" x-text="optionTypeName(opt.type)"></span>
+                              <span class="text-slate-500 text-xs" x-text="opt.description"></span>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </template>
               </div>
             </div>
           </template>

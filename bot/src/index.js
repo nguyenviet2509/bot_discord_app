@@ -35,43 +35,12 @@ for (const file of fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'))) {
   client.on(event.name, (...args) => event.execute(...args, client))
 }
 
-// Slash command handler
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return
-  const command = client.commands.get(interaction.commandName)
-  if (!command) return
-
-  // Check quyen su dung bot
-  if (interaction.guild) {
-    const settings = getSettings(interaction.guild.id)
-    const allowed = settings?.allowed_role_ids || []
-    if (!memberHasAccess(interaction.member, allowed)) {
-      return interaction.reply({
-        content: '🚫 Bạn không có quyền sử dụng bot này. Liên hệ admin để được cấp role.',
-        ephemeral: true,
-      }).catch(() => {})
-    }
-  }
-
-  try {
-    await command.execute(interaction)
-  } catch (err) {
-    console.error(`[Command Error] /${interaction.commandName}:`, err)
-    const msg = { content: '❌ Có lỗi xảy ra khi thực hiện lệnh này.', ephemeral: true }
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(msg).catch(() => {})
-    } else {
-      await interaction.reply(msg).catch(() => {})
-    }
-  }
-})
-
 // Auto-register slash commands voi Discord khi bot start
 async function registerCommands() {
   const commandsData = []
   for (const [, cmd] of client.commands) commandsData.push(cmd.data.toJSON())
   if (!process.env.CLIENT_ID || !process.env.GUILD_ID) {
-    console.warn('[Commands] CLIENT_ID hoac GUILD_ID chua duoc set → bo qua auto-register')
+    console.warn('[Commands] CLIENT_ID hoặc GUILD_ID chưa được set → bỏ qua auto-register')
     return
   }
   try {
@@ -80,9 +49,11 @@ async function registerCommands() {
       Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
       { body: commandsData }
     )
-    console.log(`[Commands] ✅ Da register ${data.length} slash command(s) voi Discord`)
+    // Luu mapping name -> id de build chip mention `</name:id>`
+    client.commandIds = Object.fromEntries(data.map(c => [c.name, c.id]))
+    console.log(`[Commands] ✅ Đã register ${data.length} slash command(s) với Discord`)
   } catch (err) {
-    console.error('[Commands] ❌ Loi register:', err.message)
+    console.error('[Commands] ❌ Lỗi register:', err.message)
   }
 }
 
@@ -142,9 +113,9 @@ client.once('ready', async () => {
           moderator_tag: 'Bot (auto-unban)',
           reason: 'Hết hạn ban',
         })
-        console.log(`[TempBan] Da auto-unban user ${row.user_id} trong guild ${row.guild_id}`)
+        console.log(`[TempBan] Đã auto-unban user ${row.user_id} trong guild ${row.guild_id}`)
       } catch (err) {
-        console.error('[TempBan] Loi auto-unban:', err.message)
+        console.error('[TempBan] Lỗi auto-unban:', err.message)
       }
     }
   }, 60_000)
