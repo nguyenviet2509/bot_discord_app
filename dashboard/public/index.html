@@ -1781,7 +1781,7 @@
                   <div class="flex gap-2">
                     <select x-model="t.input_role_id" class="flex-1 input-field text-sm">
                       <option value="">-- Chọn role tier (admin tạo trong Discord trước) --</option>
-                      <template x-for="role in $root.flairRoles" :key="role.id">
+                      <template x-for="role in flairRoles" :key="role.id">
                         <option :value="role.id" x-text="role.name"></option>
                       </template>
                     </select>
