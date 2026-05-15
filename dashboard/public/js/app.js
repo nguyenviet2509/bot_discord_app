@@ -874,6 +874,7 @@ document.addEventListener('alpine:init', () => {
     newRoleId: '',
     loading: false,
     saving: false,
+    reloadingRoles: false,
     toast: null,
 
     async init() {
@@ -894,6 +895,18 @@ document.addEventListener('alpine:init', () => {
       }
       this.roles = roles || []
       this.loading = false
+    },
+
+    async reloadRoles() {
+      this.reloadingRoles = true
+      try {
+        const roles = await api('GET', '/discord/roles')
+        this.roles = roles || []
+        this.showToast('Đã làm mới danh sách role ✓', 'green')
+      } catch (err) {
+        this.showToast(err.message || 'Lỗi làm mới role', 'red')
+      }
+      this.reloadingRoles = false
     },
 
     get availableRoles() {

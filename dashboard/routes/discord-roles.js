@@ -3,6 +3,7 @@ const express = require('express')
 const router = express.Router()
 
 router.get('/', async (req, res) => {
+  res.set('Cache-Control', 'no-store')
   const guildId = process.env.GUILD_ID
   const token = process.env.BOT_TOKEN
 
@@ -12,7 +13,8 @@ router.get('/', async (req, res) => {
 
   try {
     const response = await fetch(`https://discord.com/api/v10/guilds/${guildId}/roles`, {
-      headers: { Authorization: `Bot ${token}` },
+      headers: { Authorization: `Bot ${token}`, 'Cache-Control': 'no-cache' },
+      cache: 'no-store',
     })
 
     if (!response.ok) {

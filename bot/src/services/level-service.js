@@ -197,21 +197,30 @@ async function handleLevelUp(client, guild, member, newLevel, settings, triggerM
     }
   }
 
-  try {
-    const content = tpl.mention_user ? `<@${member.id}>` : ''
-    // Neu user chat trong channel duoc cau hinh auto-reply -> reply vao message goc
-    // Khong thi gui message thuong vao channel thong bao level-up
-    if (triggerMessage && replyChannelId && triggerMessage.channel.id === replyChannelId) {
+  const content = tpl.mention_user ? `<@${member.id}>` : ''
+  const shouldReply = triggerMessage && replyChannelId && triggerMessage.channel.id === replyChannelId
+
+  // Auto-reply vao message goc (neu user chat trong channel duoc cau hinh)
+  if (shouldReply) {
+    try {
       await triggerMessage.reply({
         content,
         embeds: [embed],
         allowedMentions: { repliedUser: tpl.mention_user !== false },
       })
-    } else if (channel) {
-      await channel.send({ content, embeds: [embed] })
+    } catch (err) {
+      console.error('[LevelService] Failed to reply level-up message:', err.message)
     }
-  } catch (err) {
-    console.error('[LevelService] Failed to send level-up message:', err.message)
+  }
+
+  // Luon gui vao channel thong bao level-up (neu co cau hinh).
+  // Khi reply channel trung voi notification channel -> tranh gui trung lap.
+  if (channel && !(shouldReply && channel.id === triggerMessage.channel.id)) {
+    try {
+      await channel.send({ content, embeds: [embed] })
+    } catch (err) {
+      console.error('[LevelService] Failed to send level-up message:', err.message)
+    }
   }
 }
 
