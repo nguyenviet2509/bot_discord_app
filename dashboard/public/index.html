@@ -1732,33 +1732,83 @@
             </button>
           </div>
 
-          <div class="space-y-3">
+          <div class="space-y-4">
             <template x-for="t in tiers" :key="t.min_level">
-              <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50">
-                <div class="text-2xl w-12 text-center" x-text="t.active_badge"></div>
-                <div class="flex-1">
-                  <div class="font-semibold text-slate-800 text-sm" x-text="t.name"></div>
-                  <div class="text-xs text-slate-400" x-text="`Level ${t.min_level}+ · Default: ${t.default_badge}`"></div>
+              <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                <div class="flex items-center gap-3 mb-3">
+                  <!-- Preview: emoji hoac ảnh role -->
+                  <template x-if="t.mode === 'role' && t.icon_url">
+                    <img :src="t.icon_url" class="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
+                  </template>
+                  <template x-if="!(t.mode === 'role' && t.icon_url)">
+                    <div class="text-2xl w-10 text-center" x-text="t.active_badge"></div>
+                  </template>
+                  <div class="flex-1">
+                    <div class="font-semibold text-slate-800 text-sm" x-text="t.name"></div>
+                    <div class="text-xs text-slate-400" x-text="`Level ${t.min_level}+ · Default: ${t.default_badge}`"></div>
+                  </div>
+                  <button x-show="t.custom_badge || t.role_id" @click="resetTier(t)"
+                    class="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold">
+                    Reset
+                  </button>
                 </div>
-                <input x-model="t.input_badge" type="text"
-                  :placeholder="t.default_badge" maxlength="8"
-                  class="w-24 input-field text-center text-lg" />
-                <button @click="saveTier(t)" :disabled="t.saving"
-                  class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold disabled:opacity-50">
-                  <span x-text="t.saving ? '...' : 'Lưu'"></span>
-                </button>
-                <button x-show="t.custom_badge" @click="resetTier(t)"
-                  class="px-3 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold">
-                  Reset
-                </button>
+
+                <!-- Mode toggle -->
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                  <label :class="t.input_mode==='emoji' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'"
+                    class="flex items-center gap-2 px-3 py-2 border-2 rounded-lg cursor-pointer text-xs font-semibold">
+                    <input type="radio" :value="'emoji'" x-model="t.input_mode" class="accent-indigo-600" />
+                    Emoji (nickname)
+                  </label>
+                  <label :class="t.input_mode==='role' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'"
+                    class="flex items-center gap-2 px-3 py-2 border-2 rounded-lg cursor-pointer text-xs font-semibold">
+                    <input type="radio" :value="'role'" x-model="t.input_mode" class="accent-indigo-600" />
+                    Role Icon (ảnh)
+                  </label>
+                </div>
+
+                <!-- Inputs based on mode -->
+                <div x-show="t.input_mode === 'emoji'" class="flex gap-2 items-center">
+                  <input x-model="t.input_badge" type="text" :placeholder="`Unicode emoji (vd ${t.default_badge})`"
+                    maxlength="8" class="flex-1 input-field text-center text-lg" />
+                  <button @click="saveTier(t)" :disabled="t.saving"
+                    class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold disabled:opacity-50">
+                    <span x-text="t.saving ? '...' : 'Lưu emoji'"></span>
+                  </button>
+                </div>
+
+                <div x-show="t.input_mode === 'role'" class="space-y-2">
+                  <div class="flex gap-2">
+                    <select x-model="t.input_role_id" class="flex-1 input-field text-sm">
+                      <option value="">-- Chọn role tier (admin tạo trong Discord trước) --</option>
+                      <template x-for="role in $root.flairRoles" :key="role.id">
+                        <option :value="role.id" x-text="role.name"></option>
+                      </template>
+                    </select>
+                    <button @click="saveTier(t)" :disabled="t.saving"
+                      class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold disabled:opacity-50">
+                      <span x-text="t.saving ? '...' : 'Lưu role'"></span>
+                    </button>
+                  </div>
+                  <div class="flex gap-2 items-center">
+                    <input type="file" accept="image/png,image/jpeg,image/gif"
+                      @change="uploadIcon($event, t)"
+                      class="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold file:text-xs cursor-pointer" />
+                    <span x-show="t.uploading" class="text-xs text-indigo-600">Đang upload + push lên Discord...</span>
+                    <img x-show="t.icon_url" :src="t.icon_url" class="w-8 h-8 rounded border" />
+                  </div>
+                  <p class="text-xs text-slate-400">Ảnh PNG/JPG/GIF, max 256KB. Cần Server Boost Level 2 trở lên để Discord nhận icon role.</p>
+                </div>
               </div>
             </template>
           </div>
 
           <div class="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-100">
             <p class="text-xs text-amber-800">
-              💡 <strong>Lưu ý:</strong> Chỉ chấp nhận Unicode emoji (vd 🦄💎🔥). Không hỗ trợ custom server emoji (<code>&lt;:name:id&gt;</code>) vì Discord không render được trong nickname.
-              Override mới chỉ áp dụng khi member lên tier kế tiếp.
+              💡 <strong>Lưu ý:</strong>
+              <br>• <strong>Emoji mode:</strong> bot append emoji vào nickname member. Chỉ Unicode emoji (🦄💎🔥), không hỗ trợ <code>&lt;:name:id&gt;</code>.
+              <br>• <strong>Role Icon mode:</strong> admin tạo role trong Discord trước, dashboard upload ảnh → bot push icon lên role qua Discord API. Bot tự gán role cho member khi lên tier. Cần Server Boost Level 2.
+              <br>• Override mới chỉ áp dụng khi member lên tier kế tiếp.
             </p>
           </div>
         </div>

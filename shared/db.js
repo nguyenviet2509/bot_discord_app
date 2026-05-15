@@ -210,7 +210,9 @@ function initDb() {
   try { database.exec(`ALTER TABLE users ADD COLUMN nickname TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN global_name TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN flair_enabled INTEGER DEFAULT 1`) } catch (_) {}
-  // Tier badge overrides per-guild per-tier (custom emoji thay vi default trong LEVEL_TIERS)
+  // Tier badge overrides per-guild per-tier
+  // mode='emoji' -> badge la Unicode emoji, gan vao nickname
+  // mode='role'  -> role_id la Discord role co icon, bot assign role khi member len tier
   database.exec(`
     CREATE TABLE IF NOT EXISTS guild_tier_badges (
       guild_id TEXT NOT NULL,
@@ -220,6 +222,9 @@ function initDb() {
       PRIMARY KEY (guild_id, tier_min_level)
     );
   `)
+  try { database.exec(`ALTER TABLE guild_tier_badges ADD COLUMN mode TEXT NOT NULL DEFAULT 'emoji'`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_tier_badges ADD COLUMN role_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_tier_badges ADD COLUMN icon_url TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN allowed_role_ids TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN level_up_reply_channel_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
@@ -989,23 +994,35 @@ function setFlairEnabled(userId, guildId, enabled) {
     .run(enabled ? 1 : 0, userId, guildId)
 }
 
-// Tra ve Map<tier_min_level, badge> tat ca override cua guild
+// Tra ve Map<tier_min_level, { mode, badge, role_id, icon_url }> cho guild
 function getTierBadgeOverrides(guildId) {
   const rows = getDb().prepare(
-    `SELECT tier_min_level, badge FROM guild_tier_badges WHERE guild_id = ?`
+    `SELECT tier_min_level, badge, mode, role_id, icon_url FROM guild_tier_badges WHERE guild_id = ?`
   ).all(guildId)
   const map = new Map()
-  for (const r of rows) map.set(r.tier_min_level, r.badge)
+  for (const r of rows) {
+    map.set(r.tier_min_level, {
+      mode: r.mode || 'emoji',
+      badge: r.badge,
+      role_id: r.role_id || null,
+      icon_url: r.icon_url || null,
+    })
+  }
   return map
 }
 
-function setTierBadge(guildId, tierMinLevel, badge) {
+// Set 1 tier override. Truyen day du field; field thieu set null
+function setTierBadge(guildId, tierMinLevel, { mode = 'emoji', badge = '', role_id = null, icon_url = null } = {}) {
   getDb().prepare(`
-    INSERT INTO guild_tier_badges (guild_id, tier_min_level, badge, updated_at)
-    VALUES (?, ?, ?, unixepoch())
+    INSERT INTO guild_tier_badges (guild_id, tier_min_level, badge, mode, role_id, icon_url, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, unixepoch())
     ON CONFLICT(guild_id, tier_min_level) DO UPDATE
-      SET badge = excluded.badge, updated_at = excluded.updated_at
-  `).run(guildId, tierMinLevel, badge)
+      SET badge = excluded.badge,
+          mode = excluded.mode,
+          role_id = excluded.role_id,
+          icon_url = excluded.icon_url,
+          updated_at = excluded.updated_at
+  `).run(guildId, tierMinLevel, badge, mode, role_id, icon_url)
 }
 
 // tierMinLevel = null -> xoa tat ca override cua guild

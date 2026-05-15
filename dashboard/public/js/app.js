@@ -1380,6 +1380,7 @@ document.addEventListener('alpine:init', () => {
   // ============================================================
   Alpine.data('flairConfigSection', () => ({
     tiers: [],
+    flairRoles: [], // Danh sach role Discord cho mode='role'
     loading: false,
     sending: false,
     toast: null,
@@ -1393,26 +1394,45 @@ document.addEventListener('alpine:init', () => {
 
     async load() {
       this.loading = true
-      const res = await api('GET', '/flair-config')
+      const [res, roles] = await Promise.all([
+        api('GET', '/flair-config'),
+        api('GET', '/discord/roles'),
+      ])
+      this.flairRoles = roles || []
       this.tiers = (res?.tiers || []).map(t => ({
         ...t,
+        input_mode: t.mode || 'emoji',
         input_badge: t.custom_badge || '',
+        input_role_id: t.role_id || '',
         saving: false,
+        uploading: false,
       }))
       this.loading = false
     },
 
     async saveTier(t) {
-      const badge = (t.input_badge || '').trim()
-      if (!badge) {
-        this.showToast('Cần nhập emoji', 'red')
-        return
-      }
       t.saving = true
       try {
-        const res = await api('PUT', `/flair-config/${t.min_level}`, { badge })
+        let payload
+        if (t.input_mode === 'role') {
+          if (!t.input_role_id) {
+            this.showToast('Cần chọn role', 'red')
+            t.saving = false
+            return
+          }
+          payload = { mode: 'role', role_id: t.input_role_id }
+        } else {
+          const badge = (t.input_badge || '').trim()
+          if (!badge) {
+            this.showToast('Cần nhập emoji', 'red')
+            t.saving = false
+            return
+          }
+          payload = { mode: 'emoji', badge }
+        }
+        const res = await api('PUT', `/flair-config/${t.min_level}`, payload)
         if (res?.success) {
-          this.showToast(`Đã lưu badge cho ${t.name} ✓`, 'green')
+          this.showToast(`Đã lưu ${t.name} ✓`, 'green')
           await this.load()
         } else {
           this.showToast(res?.error || 'Lưu thất bại', 'red')
@@ -1421,6 +1441,35 @@ document.addEventListener('alpine:init', () => {
         this.showToast(err.message, 'red')
       }
       t.saving = false
+    },
+
+    async uploadIcon(event, t) {
+      const file = event.target.files[0]
+      if (!file) return
+      if (!t.input_role_id) {
+        this.showToast('Cần chọn role trước rồi mới upload icon', 'red')
+        event.target.value = ''
+        return
+      }
+      t.uploading = true
+      const fd = new FormData()
+      fd.append('image', file)
+      fd.append('min_level', String(t.min_level))
+      fd.append('role_id', t.input_role_id)
+      try {
+        const res = await api('POST', '/flair-config/upload-icon', fd)
+        if (res?.success) {
+          this.showToast(`Đã upload + push icon role ✓`, 'green')
+          await this.load()
+        } else {
+          const hint = res?.hint ? `\n💡 ${res.hint}` : ''
+          this.showToast((res?.error || 'Upload thất bại') + hint, 'red')
+        }
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      t.uploading = false
+      event.target.value = ''
     },
 
     async resetTier(t) {

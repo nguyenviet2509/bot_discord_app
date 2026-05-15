@@ -27,11 +27,20 @@ function stripTierBadges(name) {
   return name.replace(STRIP_REGEX, '').trim()
 }
 
-// Lay badge cho 1 tier: uu tien override per-guild, fallback tier.badge mac dinh
-function getBadgeForTier(guildId, tier) {
+// Lay config cho 1 tier: { mode, badge, role_id, icon_url }
+// Fallback ve emoji default neu khong co override
+function getTierConfig(guildId, tier) {
   if (!tier?.badge) return null
   const overrides = db.getTierBadgeOverrides(guildId)
-  return overrides.get(tier.minLevel) || tier.badge
+  const ov = overrides.get(tier.minLevel)
+  if (ov) return ov
+  return { mode: 'emoji', badge: tier.badge, role_id: null, icon_url: null }
+}
+
+// Backward compat: tra ve emoji string (de cac noi cu khong gay)
+function getBadgeForTier(guildId, tier) {
+  const cfg = getTierConfig(guildId, tier)
+  return cfg ? cfg.badge : null
 }
 
 // Tao nickname moi = base + ' ' + badge, dam bao <= 32 ky tu (Discord limit)
@@ -43,13 +52,53 @@ function buildFlairNickname(baseName, badge) {
   return `${base.slice(0, maxBase).trim()} ${badge}`
 }
 
+// Sync tier roles: assign role cua tier hien tai, gỡ role cua tat ca tier khac
+// Dung cho mode='role'. Lay danh sach tat ca role tier tu DB overrides.
+async function syncTierRoles(member, currentTierMinLevel) {
+  const overrides = db.getTierBadgeOverrides(member.guild.id)
+  const allTierRoleIds = new Set()
+  let currentRoleId = null
+  for (const [minLevel, cfg] of overrides.entries()) {
+    if (cfg.mode === 'role' && cfg.role_id) {
+      allTierRoleIds.add(cfg.role_id)
+      if (minLevel === currentTierMinLevel) currentRoleId = cfg.role_id
+    }
+  }
+  // Go role tier cu (khac role tier hien tai)
+  for (const roleId of allTierRoleIds) {
+    if (roleId === currentRoleId) continue
+    if (member.roles.cache.has(roleId)) {
+      try { await member.roles.remove(roleId, 'Tier flair: gỡ tier role cũ') }
+      catch (err) { console.warn(`[Flair] Remove role ${roleId} fail:`, err.message) }
+    }
+  }
+  // Gan role tier moi
+  if (currentRoleId && !member.roles.cache.has(currentRoleId)) {
+    try { await member.roles.add(currentRoleId, 'Tier flair: gán tier role mới') }
+    catch (err) {
+      console.warn(`[Flair] Add role ${currentRoleId} fail:`, err.message)
+      return false
+    }
+  }
+  return true
+}
+
 // Ap dung flair cho 1 member dua tren level hien tai
-// Return: true neu da apply / khong can apply; false neu skip do edge case
+// Mode 'emoji' -> sua nickname. Mode 'role' -> assign tier role.
 async function applyTierFlair(member, newLevel, user) {
   if (!user || user.flair_enabled === 0) return false
   if (newLevel < 10) return false
   const tier = getTierForLevel(newLevel)
-  const badge = getBadgeForTier(member.guild.id, tier)
+  const cfg = getTierConfig(member.guild.id, tier)
+  if (!cfg) return false
+
+  if (cfg.mode === 'role') {
+    // Role icon mode: assign role + go cac tier role cu
+    return await syncTierRoles(member, tier.minLevel)
+  }
+
+  // Emoji mode (default)
+  const badge = cfg.badge
   if (!badge) return false
   if (!member.manageable) {
     console.warn(`[Flair] Skip ${member.id}: not manageable (owner hoac role cao hon bot)`)
@@ -87,6 +136,8 @@ module.exports = {
   stripTierBadges,
   buildFlairNickname,
   getBadgeForTier,
+  getTierConfig,
+  syncTierRoles,
   applyTierFlair,
   removeFlair,
 }
