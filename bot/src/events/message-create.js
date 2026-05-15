@@ -68,7 +68,7 @@ module.exports = {
     if (newLevel > oldLevel) {
       const member = await message.guild.members.fetch(userId).catch(() => null)
       if (member) {
-        await handleLevelUp(client, message.guild, member, newLevel, settings, message)
+        await handleLevelUp(client, message.guild, member, newLevel, settings, message, oldLevel)
       }
     }
 

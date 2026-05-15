@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Tier Flair Mockup — Discord Chat Preview</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'gg sans', 'Segoe UI', Roboto, sans-serif;
+    background: #313338;
+    color: #dbdee1;
+    padding: 24px;
+  }
+  h1 { color: #fff; font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: #949ba4; font-size: 13px; margin-bottom: 24px; }
+
+  .section-title {
+    color: #949ba4;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin: 24px 0 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .chat {
+    background: #313338;
+    border: 1px solid #1e1f22;
+    border-radius: 8px;
+    padding: 16px 16px 8px;
+  }
+  .channel-header {
+    color: #f2f3f5;
+    font-weight: 600;
+    border-bottom: 1px solid #3f4147;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .channel-hash { color: #80848e; font-size: 20px; font-weight: 400; }
+
+  .msg {
+    display: flex;
+    gap: 16px;
+    padding: 6px 0;
+    margin-bottom: 4px;
+  }
+  .msg:hover { background: rgba(4,4,5,0.07); }
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #5865f2, #eb459e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+  }
+  .avatar.a2 { background: linear-gradient(135deg, #00b894, #00cec9); }
+  .avatar.a3 { background: linear-gradient(135deg, #fdcb6e, #e17055); }
+  .avatar.a4 { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+  .avatar.a5 { background: linear-gradient(135deg, #ff7675, #d63031); }
+
+  .body { flex: 1; min-width: 0; }
+  .meta { display: flex; align-items: baseline; gap: 8px; }
+  .name {
+    color: #f2f3f5;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .name .badge {
+    display: inline-block;
+    margin-left: 2px;
+    font-size: 16px;
+    vertical-align: -1px;
+  }
+  .time { color: #949ba4; font-size: 12px; }
+  .text { color: #dbdee1; font-size: 15px; line-height: 1.4; margin-top: 2px; }
+
+  .tier-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #2b2d31;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .tier-table th, .tier-table td {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 14px;
+    border-bottom: 1px solid #1e1f22;
+  }
+  .tier-table th {
+    background: #232428;
+    color: #b5bac1;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+  .tier-table tr:last-child td { border-bottom: none; }
+  .tier-table .nick-cell { font-weight: 600; color: #f2f3f5; }
+
+  .note {
+    background: #2b2d31;
+    border-left: 3px solid #5865f2;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-top: 16px;
+    color: #b5bac1;
+  }
+  .note strong { color: #f2f3f5; }
+
+  .cmd {
+    background: #1e1f22;
+    color: #c7d1d8;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    margin: 4px 0;
+  }
+
+  .opt-out {
+    background: #2b2d31;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 8px;
+  }
+  .ephemeral {
+    background: #1e1f22;
+    color: #949ba4;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Tier Emoji Nickname Flair — UI Mockup</h1>
+<div class="subtitle">Preview cách hiển thị nickname kèm emoji tier trong Discord chat</div>
+
+<div class="section-title">1. Chat preview — Nhiều tier khác nhau</div>
+<div class="chat">
+  <div class="channel-header">
+    <span class="channel-hash">#</span> general
+  </div>
+
+  <div class="msg">
+    <div class="avatar">N</div>
+    <div class="body">
+      <div class="meta">
+        <span class="name">Newbie</span>
+        <span class="time">hôm nay lúc 20:15</span>
+      </div>
+      <div class="text">chào mọi người, tôi mới vào server</div>
+    </div>
+  </div>
+
+  <div class="msg">
+    <div class="avatar a2">T</div>
+    <div class="body">
+      <div class="meta">
+        <span class="name">Tohma <span class="badge">⚫</span></span>
+        <span class="time">hôm nay lúc 20:16</span>
+      </div>
+      <div class="text">welcome bro 👋</div>
+    </div>
+  </div>
+
+  <div class="msg">
+    <div class="avatar a3">L</div>
+    <div class="body">
+      <div class="meta">
+        <span class="name">LinhNguyen <span class="badge">🟡</span></span>
+        <span class="time">hôm nay lúc 20:17</span>
+      </div>
+      <div class="text">chat nhiều lên để lên cấp nè</div>
+    </div>
+  </div>
+
+  <div class="msg">
+    <div class="avatar a4">K</div>
+    <div class="body">
+      <div class="meta">
+        <span class="name">KhoaPham <span class="badge">🩵</span></span>
+        <span class="time">hôm nay lúc 20:18</span>
+      </div>
+      <div class="text">tôi đang cày lên Lục Bảo 💪</div>
+    </div>
+  </div>
+
+  <div class="msg">
+    <div class="avatar a5">M</div>
+    <div class="body">
+      <div class="meta">
+        <span class="name">MasterVN <span class="badge">🔴</span></span>
+        <span class="time">hôm nay lúc 20:19</span>
+      </div>
+      <div class="text">ngon, server vui quá</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">2. Bảng quy đổi tier → emoji (giữ nguyên hệ thống hiện tại)</div>
+<table class="tier-table">
+  <thead>
+    <tr>
+      <th>Level</th>
+      <th>Tier</th>
+      <th>Badge</th>
+      <th>Nickname mẫu (base = "Tohma")</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1 – 9</td><td>Chưa xếp hạng</td><td>—</td><td class="nick-cell">Tohma</td></tr>
+    <tr><td>10 – 19</td><td>Sắt</td><td>⚫</td><td class="nick-cell">Tohma ⚫</td></tr>
+    <tr><td>20 – 29</td><td>Đồng</td><td>🟤</td><td class="nick-cell">Tohma 🟤</td></tr>
+    <tr><td>30 – 39</td><td>Bạc</td><td>⚪</td><td class="nick-cell">Tohma ⚪</td></tr>
+    <tr><td>40 – 49</td><td>Vàng</td><td>🟡</td><td class="nick-cell">Tohma 🟡</td></tr>
+    <tr><td>50 – 59</td><td>Bạch Kim</td><td>🩵</td><td class="nick-cell">Tohma 🩵</td></tr>
+    <tr><td>60 – 69</td><td>Lục Bảo</td><td>🟢</td><td class="nick-cell">Tohma 🟢</td></tr>
+    <tr><td>70 – 79</td><td>Kim Cương</td><td>🔵</td><td class="nick-cell">Tohma 🔵</td></tr>
+    <tr><td>80 – 89</td><td>Cao Thủ</td><td>🟣</td><td class="nick-cell">Tohma 🟣</td></tr>
+    <tr><td>90 – 99</td><td>Đại Cao Thủ</td><td>🟠</td><td class="nick-cell">Tohma 🟠</td></tr>
+    <tr><td>100+</td><td>Thách Đấu</td><td>🔴</td><td class="nick-cell">Tohma 🔴</td></tr>
+  </tbody>
+</table>
+
+<div class="section-title">3. Auto update khi lên tier mới</div>
+<div class="chat">
+  <div class="msg">
+    <div class="avatar a2">T</div>
+    <div class="body">
+      <div class="meta">
+        <span class="name">Tohma <span class="badge">⚫</span></span>
+        <span class="time">hôm qua lúc 23:50</span>
+      </div>
+      <div class="text">vừa lên lv 19, sắp lên Đồng rồi</div>
+    </div>
+  </div>
+
+  <div class="msg">
+    <div class="avatar a2">T</div>
+    <div class="body">
+      <div class="meta">
+        <span class="name">Tohma <span class="badge">🟤</span></span>
+        <span class="time">hôm nay lúc 20:30</span>
+      </div>
+      <div class="text">YES! lv 20, badge đổi rồi nhé 🎉</div>
+    </div>
+  </div>
+</div>
+<div class="note">
+  <strong>Trigger:</strong> Bot chỉ gọi <code>setNickname</code> khi <strong>tier thay đổi</strong> (lv 9→10, 19→20, 29→30...). Lên level trong cùng tier (vd 11→12) không cập nhật → tránh spam audit log.
+</div>
+
+<div class="section-title">4. Opt-out qua `/flair off`</div>
+<div class="opt-out">
+  <div class="ephemeral">🤖 Chỉ bạn thấy được</div>
+  <div style="font-size: 14px; color: #dbdee1;">
+    Đã tắt flair. Emoji đã được gỡ khỏi nickname.
+  </div>
+</div>
+<div class="chat" style="margin-top: 12px;">
+  <div class="msg">
+    <div class="avatar a2">T</div>
+    <div class="body">
+      <div class="meta">
+        <span class="name">Tohma</span>
+        <span class="time">hôm nay lúc 20:35</span>
+      </div>
+      <div class="text">đã tắt flair, nick trở về bình thường</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">5. Edge cases hiển thị</div>
+<table class="tier-table">
+  <thead>
+    <tr>
+      <th>Case</th>
+      <th>Input</th>
+      <th>Output</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Nick dài</td>
+      <td class="nick-cell">SuperLongNicknameThatIsThirtyChar (32) + 🟡</td>
+      <td class="nick-cell">SuperLongNicknameThatIsThi 🟡</td>
+    </tr>
+    <tr>
+      <td>Nick có emoji cũ</td>
+      <td class="nick-cell">Tohma ⚫ → lên tier Đồng</td>
+      <td class="nick-cell">Tohma 🟤 <span style="color:#949ba4;font-weight:400;">(strip ⚫ rồi append 🟤)</span></td>
+    </tr>
+    <tr>
+      <td>Server owner</td>
+      <td class="nick-cell">Owner lên tier</td>
+      <td style="color:#f87171;">Skip + log warn (Discord không cho)</td>
+    </tr>
+    <tr>
+      <td>User opt-out + lên tier</td>
+      <td class="nick-cell">flair_enabled = 0</td>
+      <td style="color:#949ba4;">Không touch nickname</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note" style="margin-top: 24px; border-left-color: #fbbf24;">
+  <strong>⚠️ Lưu ý:</strong> Đây là mockup HTML, emoji render trên Discord client có thể khác chút (kích thước, anti-alias) tùy theme dark/light và OS.
+</div>
+
+</body>
+</html>

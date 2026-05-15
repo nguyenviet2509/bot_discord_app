@@ -102,7 +102,7 @@ function buildProgressBar(percent, length = 10) {
   return '█'.repeat(filled) + '░'.repeat(length - filled)
 }
 
-async function handleLevelUp(client, guild, member, newLevel, settings, triggerMessage = null) {
+async function handleLevelUp(client, guild, member, newLevel, settings, triggerMessage = null, oldLevel = 0) {
   const rewards = db.getRewards(guild.id)
 
   // Assign roles: type='role' OR badge có kèm role_id
@@ -115,6 +115,21 @@ async function handleLevelUp(client, guild, member, newLevel, settings, triggerM
     } catch (err) {
       console.error(`[LevelService] Failed to assign role ${reward.role_id}:`, err.message)
     }
+  }
+
+  // ── Tier Flair: cap nhat nickname khi len tier moi (10/20/.../100) ─────────
+  // Lazy require de tranh circular dependency (tier-flair-service require level-service)
+  try {
+    const { applyTierFlair } = require('./tier-flair-service')
+    const oldTier = getTierForLevel(oldLevel || 0)
+    const newTier = getTierForLevel(newLevel)
+    // Chi trigger khi doi tier (vd 9->10, 19->20). Cung tier (11->12) thi skip.
+    if (newTier.minLevel !== oldTier.minLevel && newLevel >= 10) {
+      const userRow = db.getUser(member.id, guild.id)
+      await applyTierFlair(member, newLevel, userRow)
+    }
+  } catch (err) {
+    console.error('[LevelService] Tier flair update failed:', err.message)
   }
 
   // Channel thong bao level-up (config tu dashboard hoac env)

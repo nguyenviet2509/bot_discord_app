@@ -79,6 +79,8 @@ document.addEventListener('alpine:init', () => {
     modal: false,
     uploading: false,
     saving: false,
+    sending: false,
+    testChannelId: localStorage.getItem('rewards_test_channel_id') || '',
     form: { level_required: 1, type: 'role', role_id: '', badge_url: '', badge_name: '' },
     editId: null,
     toast: null,
@@ -150,6 +152,30 @@ document.addEventListener('alpine:init', () => {
       await api('DELETE', `/rewards/${id}`)
       this.rewards = this.rewards.filter(r => r.id !== id)
       this.showToast('Đã xoá ✓', 'green')
+    },
+
+    async sendTest() {
+      if (!this.testChannelId.trim()) {
+        this.showToast('Vui lòng nhập Channel ID', 'red')
+        return
+      }
+      if (!this.form.level_required) {
+        this.showToast('Cần nhập Level yêu cầu', 'red')
+        return
+      }
+      localStorage.setItem('rewards_test_channel_id', this.testChannelId.trim())
+      this.sending = true
+      try {
+        const res = await api('POST', '/rewards/test', {
+          channel_id: this.testChannelId.trim(),
+          reward: this.form,
+        })
+        if (res?.success) this.showToast('Đã gửi test ✓ — kiểm tra channel Discord', 'green')
+        else this.showToast(res?.error || 'Gửi thất bại', 'red')
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.sending = false
     },
 
     roleName(roleId) {
@@ -1341,6 +1367,106 @@ document.addEventListener('alpine:init', () => {
         .replace(/\{server\}/g, '<span style="color:#5865f2">TênServer</span>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>')
+    },
+
+    showToast(msg, color = 'green') {
+      this.toast = { msg, color }
+      setTimeout(() => { this.toast = null }, 3000)
+    },
+  }))
+
+  // ============================================================
+  // Tier Flair Config Section
+  // ============================================================
+  Alpine.data('flairConfigSection', () => ({
+    tiers: [],
+    loading: false,
+    sending: false,
+    toast: null,
+    testChannelId: localStorage.getItem('flair_test_channel_id') || '',
+    testTier: 10,
+
+    async init() {
+      if (!checkAuth()) return
+      await this.load()
+    },
+
+    async load() {
+      this.loading = true
+      const res = await api('GET', '/flair-config')
+      this.tiers = (res?.tiers || []).map(t => ({
+        ...t,
+        input_badge: t.custom_badge || '',
+        saving: false,
+      }))
+      this.loading = false
+    },
+
+    async saveTier(t) {
+      const badge = (t.input_badge || '').trim()
+      if (!badge) {
+        this.showToast('Cần nhập emoji', 'red')
+        return
+      }
+      t.saving = true
+      try {
+        const res = await api('PUT', `/flair-config/${t.min_level}`, { badge })
+        if (res?.success) {
+          this.showToast(`Đã lưu badge cho ${t.name} ✓`, 'green')
+          await this.load()
+        } else {
+          this.showToast(res?.error || 'Lưu thất bại', 'red')
+        }
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      t.saving = false
+    },
+
+    async resetTier(t) {
+      if (!confirm(`Reset tier ${t.name} về badge mặc định?`)) return
+      try {
+        const res = await api('DELETE', `/flair-config/${t.min_level}`)
+        if (res?.success) {
+          this.showToast(`Đã reset ${t.name} ✓`, 'green')
+          await this.load()
+        }
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+    },
+
+    async resetAll() {
+      if (!confirm('Reset TẤT CẢ tier về badge mặc định?')) return
+      try {
+        const res = await api('DELETE', '/flair-config/all')
+        if (res?.success) {
+          this.showToast('Đã reset tất cả ✓', 'green')
+          await this.load()
+        }
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+    },
+
+    async sendTest() {
+      if (!this.testChannelId.trim()) {
+        this.showToast('Vui lòng nhập Channel ID', 'red')
+        return
+      }
+      localStorage.setItem('flair_test_channel_id', this.testChannelId.trim())
+      this.sending = true
+      try {
+        const res = await api('POST', '/flair-config/test', {
+          channel_id: this.testChannelId.trim(),
+          min_level: this.testTier,
+        })
+        if (res?.success) this.showToast(`Đã gửi test ✓ Mẫu: ${res.sample_nick}`, 'green')
+        else this.showToast(res?.error || 'Gửi thất bại', 'red')
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.sending = false
     },
 
     showToast(msg, color = 'green') {

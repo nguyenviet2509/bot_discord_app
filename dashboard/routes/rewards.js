@@ -93,4 +93,89 @@ router.post('/upload', upload.single('image'), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}` })
 })
 
+// Gui test level-up embed cho 1 reward cu the (preview UI tren Discord)
+// Reuse logic tu level-up-template/test, lay template hien tai tu DB
+router.post('/test', async (req, res) => {
+  const { channel_id, reward } = req.body
+  if (!channel_id) return res.status(400).json({ error: 'channel_id la bat buoc' })
+  if (!reward || !reward.level_required) return res.status(400).json({ error: 'reward + level_required la bat buoc' })
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua duoc cau hinh' })
+
+  const guildId = GUILD_ID()
+  const tpl = db.getLevelUpTemplate(guildId)
+  const lvl = Number(reward.level_required)
+  const fakeXp = lvl * 1000
+
+  // Test reward = reward dang preview (chua luu) hoac db record
+  const isBadge = reward.type === 'badge'
+  const rewardName = isBadge ? (reward.badge_name || 'Badge') : (reward.role_id ? `<@&${reward.role_id}>` : '')
+
+  const fill = (str) => (str || '')
+    .replace(/\{user\}/g, 'TestUser')
+    .replace(/\{level\}/g, String(lvl))
+    .replace(/\{xp\}/g, fakeXp.toLocaleString())
+    .replace(/\{reward\}/g, isBadge ? (reward.badge_name || 'Badge') : (rewardName || 'Role'))
+    .replace(/\{tier(_badge)?\}/g, '')
+
+  const color = tpl.color_mode === 'custom'
+    ? parseInt((tpl.custom_color || '#6366f1').replace('#', ''), 16)
+    : 0x6366f1
+
+  const embed = {
+    title: fill(tpl.title),
+    description: fill(tpl.milestone_description),
+    color,
+    timestamp: new Date().toISOString(),
+  }
+
+  if (tpl.show_avatar) {
+    embed.thumbnail = { url: 'https://cdn.discordapp.com/embed/avatars/0.png' }
+  }
+
+  const fields = []
+  if (tpl.show_tier_field) {
+    const valueName = isBadge ? (reward.badge_name || 'Badge') : 'Role'
+    fields.push({ name: 'Phan thuong', value: valueName, inline: true })
+  }
+  if (tpl.show_xp_field) fields.push({ name: 'Tong XP', value: `${fakeXp.toLocaleString()} XP`, inline: true })
+  if (tpl.show_progress_field) fields.push({ name: 'Tien do', value: '[█████░░░░░] 50%', inline: true })
+
+  if (tpl.show_role_reward && reward.role_id) {
+    fields.push({ name: '🏅 Nhan duoc role', value: `<@&${reward.role_id}>`, inline: false })
+  }
+
+  if (tpl.show_badge_reward && isBadge) {
+    fields.push({ name: '🖼️ Huy hieu moi', value: reward.badge_name || 'Badge', inline: false })
+    if (tpl.show_badge_image && reward.badge_url) {
+      const base = process.env.BASE_URL || ''
+      if (base) embed.image = { url: `${base}${reward.badge_url}` }
+    }
+  }
+
+  if (fields.length) embed.fields = fields
+
+  const body = {
+    content: tpl.mention_user ? '**[TEST]** @TestUser' : '**[TEST Reward preview]**',
+    embeds: [embed],
+  }
+
+  try {
+    const r = await fetch(`https://discord.com/api/v10/channels/${channel_id}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${process.env.BOT_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+    if (!r.ok) {
+      const errText = await r.text()
+      return res.status(r.status).json({ error: `Discord API ${r.status}: ${errText.slice(0, 300)}` })
+    }
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 module.exports = router

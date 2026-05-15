@@ -42,6 +42,7 @@ app.use('/api/welcome-template', auth, require('./routes/welcome-template'))
 app.use('/api/moderation', auth, require('./routes/moderation'))
 app.use('/api/analytics', auth, require('./routes/analytics'))
 app.use('/api/scheduled-messages', auth, require('./routes/scheduled-messages'))
+app.use('/api/flair-config', auth, require('./routes/flair-config'))
 
 // SPA fallback
 app.get('*', (req, res) => {

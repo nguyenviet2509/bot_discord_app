@@ -209,6 +209,17 @@ function initDb() {
   try { database.exec(`ALTER TABLE users ADD COLUMN avatar TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN nickname TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN global_name TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE users ADD COLUMN flair_enabled INTEGER DEFAULT 1`) } catch (_) {}
+  // Tier badge overrides per-guild per-tier (custom emoji thay vi default trong LEVEL_TIERS)
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS guild_tier_badges (
+      guild_id TEXT NOT NULL,
+      tier_min_level INTEGER NOT NULL,
+      badge TEXT NOT NULL,
+      updated_at INTEGER DEFAULT (unixepoch()),
+      PRIMARY KEY (guild_id, tier_min_level)
+    );
+  `)
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN allowed_role_ids TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN level_up_reply_channel_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
@@ -965,4 +976,44 @@ module.exports = {
   createScheduledMessageGroup,
   updateScheduledMessageGroup,
   deleteScheduledMessageGroup,
+  // Tier flair
+  setFlairEnabled,
+  getTierBadgeOverrides,
+  setTierBadge,
+  resetTierBadge,
+}
+
+// ─── Tier Flair ───────────────────────────────────────────────────────────────
+function setFlairEnabled(userId, guildId, enabled) {
+  getDb().prepare(`UPDATE users SET flair_enabled = ? WHERE id = ? AND guild_id = ?`)
+    .run(enabled ? 1 : 0, userId, guildId)
+}
+
+// Tra ve Map<tier_min_level, badge> tat ca override cua guild
+function getTierBadgeOverrides(guildId) {
+  const rows = getDb().prepare(
+    `SELECT tier_min_level, badge FROM guild_tier_badges WHERE guild_id = ?`
+  ).all(guildId)
+  const map = new Map()
+  for (const r of rows) map.set(r.tier_min_level, r.badge)
+  return map
+}
+
+function setTierBadge(guildId, tierMinLevel, badge) {
+  getDb().prepare(`
+    INSERT INTO guild_tier_badges (guild_id, tier_min_level, badge, updated_at)
+    VALUES (?, ?, ?, unixepoch())
+    ON CONFLICT(guild_id, tier_min_level) DO UPDATE
+      SET badge = excluded.badge, updated_at = excluded.updated_at
+  `).run(guildId, tierMinLevel, badge)
+}
+
+// tierMinLevel = null -> xoa tat ca override cua guild
+function resetTierBadge(guildId, tierMinLevel) {
+  if (tierMinLevel == null) {
+    getDb().prepare(`DELETE FROM guild_tier_badges WHERE guild_id = ?`).run(guildId)
+  } else {
+    getDb().prepare(`DELETE FROM guild_tier_badges WHERE guild_id = ? AND tier_min_level = ?`)
+      .run(guildId, tierMinLevel)
+  }
 }
