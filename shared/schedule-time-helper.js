@@ -45,21 +45,24 @@ function isDueByClock(msg, nowSec) {
   return msg.last_sent_at < fire
 }
 
+// Unix seconds cua "hom nay HH:MM" theo gio VN (KHONG lui ve hom qua).
+function anchorTodayUnix(nowSec, startHHMM) {
+  const [hStr, mStr] = String(startHHMM || '00:00').split(':')
+  const hh = Number(hStr) || 0
+  const mm = Number(mStr) || 0
+  const vnDate = new Date((nowSec + VN_OFFSET_SEC) * 1000)
+  const y = vnDate.getUTCFullYear()
+  const mo = vnDate.getUTCMonth()
+  const d = vnDate.getUTCDate()
+  return Math.floor((Date.UTC(y, mo, d, hh, mm, 0) - VN_OFFSET_SEC * 1000) / 1000)
+}
+
 // Interval mode voi anchor (start_time HH:MM, gio VN):
 // Anchor neo vao "hom nay HH:MM" (hoac hom qua neu chua toi gio hom nay).
 // Cac lan fire = anchor + n * interval_sec. Tra ve lan fire gan nhat <= nowSec.
 function lastIntervalFireUnix(nowSec, intervalMinutes, startHHMM) {
   const intervalSec = Math.max(1, Number(intervalMinutes) || 1) * 60
-  const [hStr, mStr] = String(startHHMM || '00:00').split(':')
-  const hh = Number(hStr) || 0
-  const mm = Number(mStr) || 0
-
-  const vnDate = new Date((nowSec + VN_OFFSET_SEC) * 1000)
-  const y = vnDate.getUTCFullYear()
-  const mo = vnDate.getUTCMonth()
-  const d = vnDate.getUTCDate()
-
-  let anchor = Math.floor((Date.UTC(y, mo, d, hh, mm, 0) - VN_OFFSET_SEC * 1000) / 1000)
+  let anchor = anchorTodayUnix(nowSec, startHHMM)
   if (anchor > nowSec) anchor -= 86400 // chua toi gio hom nay → dung anchor hom qua
   const n = Math.floor((nowSec - anchor) / intervalSec)
   return anchor + n * intervalSec
@@ -69,8 +72,13 @@ function isDueByInterval(msg, nowSec) {
   if (!msg.start_time) return false
   const fire = lastIntervalFireUnix(nowSec, msg.interval_minutes, msg.start_time)
   if (nowSec < fire) return false
-  if (!msg.last_sent_at) return true
+  if (!msg.last_sent_at) {
+    // Moi tao/bat: KHONG backfire qua khu truoc start_time hom nay.
+    // Chi gui khi fire-time hien tai roi vao tu anchor hom nay tro di.
+    const anchorToday = anchorTodayUnix(nowSec, msg.start_time)
+    return fire >= anchorToday
+  }
   return msg.last_sent_at < fire
 }
 
-module.exports = { lastFireUnix, isDueByClock, lastIntervalFireUnix, isDueByInterval }
+module.exports = { lastFireUnix, isDueByClock, anchorTodayUnix, lastIntervalFireUnix, isDueByInterval }

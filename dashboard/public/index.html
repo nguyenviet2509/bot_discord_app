@@ -637,7 +637,7 @@
                 <div>
                   <label class="text-xs font-semibold text-slate-600 block mb-1.5">Giờ bắt đầu <span class="text-slate-400 font-normal">(tuỳ chọn)</span></label>
                   <input x-model="form.start_time" type="time" class="input-field" />
-                  <p class="text-xs text-slate-400 mt-1">VD: 03:00 → fire 3h, 6h, 9h... (mốc theo giờ VN). Để trống = tính từ lần gửi gần nhất.</p>
+                  <p class="text-xs text-slate-400 mt-1">Giờ gửi lần đầu trong ngày (theo giờ VN). VD: 17:00 + chu kỳ 60' → gửi 17:00, 18:00, 19:00... Bot không gửi trước giờ này. Để trống = tính từ lần gửi gần nhất.</p>
                 </div>
               </div>
               <div x-show="form.schedule_mode === 'clock'" class="grid grid-cols-2 gap-3">
