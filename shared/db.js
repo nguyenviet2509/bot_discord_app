@@ -51,6 +51,7 @@ function initDb() {
       xp_max INTEGER NOT NULL DEFAULT 25,
       cooldown_seconds INTEGER NOT NULL DEFAULT 60,
       level_up_channel_id TEXT,
+      level_up_reply_channel_id TEXT,
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
@@ -178,6 +179,7 @@ function initDb() {
   try { database.exec(`ALTER TABLE users ADD COLUMN nickname TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN global_name TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN allowed_role_ids TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN level_up_reply_channel_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
@@ -264,13 +266,14 @@ function upsertSettings(settings) {
   const allowedJson = JSON.stringify(Array.isArray(settings.allowed_role_ids) ? settings.allowed_role_ids : [])
   return getDb()
     .prepare(`
-      INSERT INTO guild_settings (guild_id, xp_min, xp_max, cooldown_seconds, level_up_channel_id, allowed_role_ids, updated_at)
-      VALUES (@guild_id, @xp_min, @xp_max, @cooldown_seconds, @level_up_channel_id, @allowed_role_ids, unixepoch())
+      INSERT INTO guild_settings (guild_id, xp_min, xp_max, cooldown_seconds, level_up_channel_id, level_up_reply_channel_id, allowed_role_ids, updated_at)
+      VALUES (@guild_id, @xp_min, @xp_max, @cooldown_seconds, @level_up_channel_id, @level_up_reply_channel_id, @allowed_role_ids, unixepoch())
       ON CONFLICT(guild_id) DO UPDATE SET
         xp_min = excluded.xp_min,
         xp_max = excluded.xp_max,
         cooldown_seconds = excluded.cooldown_seconds,
         level_up_channel_id = excluded.level_up_channel_id,
+        level_up_reply_channel_id = excluded.level_up_reply_channel_id,
         allowed_role_ids = excluded.allowed_role_ids,
         updated_at = unixepoch()
     `)

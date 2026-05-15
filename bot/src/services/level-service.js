@@ -102,7 +102,7 @@ function buildProgressBar(percent, length = 10) {
   return '█'.repeat(filled) + '░'.repeat(length - filled)
 }
 
-async function handleLevelUp(client, guild, member, newLevel, settings) {
+async function handleLevelUp(client, guild, member, newLevel, settings, triggerMessage = null) {
   const rewards = db.getRewards(guild.id)
 
   // Assign roles: type='role' OR badge có kèm role_id
@@ -117,12 +117,12 @@ async function handleLevelUp(client, guild, member, newLevel, settings) {
     }
   }
 
-  // Send level-up notification
+  // Channel thong bao level-up (config tu dashboard hoac env)
   const channelId = settings?.level_up_channel_id || process.env.LEVELUP_CHANNEL_ID
-  if (!channelId) return
-
-  const channel = guild.channels.cache.get(channelId)
-  if (!channel) return
+  const channel = channelId ? guild.channels.cache.get(channelId) : null
+  // Channel ma bot se reply truc tiep vao message user khi lon cap
+  const replyChannelId = settings?.level_up_reply_channel_id || null
+  if (!channel && !(triggerMessage && replyChannelId && triggerMessage.channel.id === replyChannelId)) return
 
   const user = db.getUser(member.id, guild.id)
   const { percent } = getXpProgress(user.xp, newLevel)
@@ -199,7 +199,17 @@ async function handleLevelUp(client, guild, member, newLevel, settings) {
 
   try {
     const content = tpl.mention_user ? `<@${member.id}>` : ''
-    await channel.send({ content, embeds: [embed] })
+    // Neu user chat trong channel duoc cau hinh auto-reply -> reply vao message goc
+    // Khong thi gui message thuong vao channel thong bao level-up
+    if (triggerMessage && replyChannelId && triggerMessage.channel.id === replyChannelId) {
+      await triggerMessage.reply({
+        content,
+        embeds: [embed],
+        allowedMentions: { repliedUser: tpl.mention_user !== false },
+      })
+    } else if (channel) {
+      await channel.send({ content, embeds: [embed] })
+    }
   } catch (err) {
     console.error('[LevelService] Failed to send level-up message:', err.message)
   }

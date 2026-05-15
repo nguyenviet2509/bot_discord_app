@@ -10,6 +10,7 @@ const defaultSettings = () => ({
   xp_max: 25,
   cooldown_seconds: 60,
   level_up_channel_id: process.env.LEVELUP_CHANNEL_ID || null,
+  level_up_reply_channel_id: null,
   allowed_role_ids: [],
 })
 
@@ -19,7 +20,7 @@ router.get('/', (req, res) => {
 })
 
 router.put('/', (req, res) => {
-  const { xp_min, xp_max, cooldown_seconds, level_up_channel_id, allowed_role_ids } = req.body
+  const { xp_min, xp_max, cooldown_seconds, level_up_channel_id, level_up_reply_channel_id, allowed_role_ids } = req.body
 
   if (xp_min !== undefined && xp_max !== undefined && Number(xp_min) >= Number(xp_max)) {
     return res.status(400).json({ error: 'xp_min phải nhỏ hơn xp_max' })
@@ -38,6 +39,7 @@ router.put('/', (req, res) => {
     xp_max: xp_max !== undefined ? Number(xp_max) : current.xp_max,
     cooldown_seconds: cooldown_seconds !== undefined ? Number(cooldown_seconds) : current.cooldown_seconds,
     level_up_channel_id: level_up_channel_id !== undefined ? level_up_channel_id : current.level_up_channel_id,
+    level_up_reply_channel_id: level_up_reply_channel_id !== undefined ? level_up_reply_channel_id : current.level_up_reply_channel_id,
     allowed_role_ids: allowed_role_ids !== undefined ? allowed_role_ids : current.allowed_role_ids,
   })
   res.json({ success: true })

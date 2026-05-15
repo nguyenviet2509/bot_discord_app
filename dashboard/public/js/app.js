@@ -869,7 +869,7 @@ document.addEventListener('alpine:init', () => {
   // Settings Section
   // ============================================================
   Alpine.data('settingsSection', () => ({
-    form: { xp_min: 15, xp_max: 25, cooldown_seconds: 60, level_up_channel_id: '', allowed_role_ids: [] },
+    form: { xp_min: 15, xp_max: 25, cooldown_seconds: 60, level_up_channel_id: '', level_up_reply_channel_id: '', allowed_role_ids: [] },
     roles: [],
     newRoleId: '',
     loading: false,
@@ -888,6 +888,7 @@ document.addEventListener('alpine:init', () => {
           xp_max: data.xp_max,
           cooldown_seconds: data.cooldown_seconds,
           level_up_channel_id: data.level_up_channel_id || '',
+          level_up_reply_channel_id: data.level_up_reply_channel_id || '',
           allowed_role_ids: Array.isArray(data.allowed_role_ids) ? data.allowed_role_ids : [],
         }
       }
