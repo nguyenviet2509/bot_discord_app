@@ -93,6 +93,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>Tin nhắn Level Up</span>
       </div>
+      <div @click="tab='welcome'" :class="tab==='welcome' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21v-2a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Chào mừng thành viên</span>
+      </div>
       <div @click="tab='settings'" :class="tab==='settings' ? 'active' : ''" class="nav-item">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M19.07 4.93 4.93 19.07"/><path d="M12 2v2M12 20v2M4.93 4.93 6.34 6.34M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07 6.34 17.66M17.66 6.34l1.41-1.41"/></svg>
         <span>Cấu hình</span>
@@ -1394,6 +1398,97 @@
               class="px-4 py-2 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               Tiếp &rarr;
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WELCOME MESSAGE TAB -->
+    <div x-show="tab === 'welcome'" x-data="welcomeTemplateSection">
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">Tin nhắn chào mừng</h1>
+          <p class="text-sm text-slate-400 mt-0.5">Bot tự động tag và chào thành viên mới ở "Channel auto-reply khi lên cấp"</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button @click="load()" :disabled="loading" class="btn-refresh" title="Làm mới">
+            <svg :class="loading ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+            <span x-text="loading ? 'Đang tải...' : 'Làm mới'"></span>
+          </button>
+          <button @click="save()" :disabled="saving" class="btn-primary">
+            <span x-text="saving ? 'Đang lưu...' : 'Lưu thay đổi'"></span>
+          </button>
+        </div>
+      </div>
+      <div class="p-8">
+        <div x-show="toast" x-cloak
+          :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
+          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- FORM -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-6">
+            <h3 class="font-bold text-slate-800 mb-4">Cấu hình tin nhắn</h3>
+
+            <label class="flex items-center gap-2.5 mb-5 cursor-pointer select-none">
+              <input type="checkbox" x-model="form.enabled" class="w-4 h-4 accent-indigo-600">
+              <span class="text-sm font-semibold text-slate-700">Bật tin nhắn chào mừng</span>
+            </label>
+
+            <div class="mb-4">
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Nội dung tin nhắn</label>
+              <textarea x-model="form.message" rows="6" maxlength="1800"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-y"
+                placeholder="Chào mừng {user}..."></textarea>
+              <div class="flex items-center justify-between mt-2">
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" @click="insertVar('{user}')" class="px-2 py-1 text-xs font-mono bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100">{user}</button>
+                  <button type="button" @click="insertVar('{username}')" class="px-2 py-1 text-xs font-mono bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100">{username}</button>
+                  <button type="button" @click="insertVar('{server}')" class="px-2 py-1 text-xs font-mono bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100">{server}</button>
+                </div>
+                <span class="text-xs text-slate-400" x-text="(form.message?.length || 0) + '/1800'"></span>
+              </div>
+              <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+                <strong>{user}</strong>: tag thành viên (ping). <strong>{username}</strong>: tên (không ping). <strong>{server}</strong>: tên server. Hỗ trợ <code>**đậm**</code>.
+              </p>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+              <strong>Lưu ý:</strong> Tin nhắn được gửi vào kênh đã đặt ở <em>Cấu hình → Channel auto-reply khi lên cấp</em>.
+              <span x-show="!replyChannelId" class="block mt-1 font-semibold text-red-700">⚠️ Hiện chưa cấu hình — hãy vào tab Cấu hình để đặt.</span>
+              <span x-show="replyChannelId" class="block mt-1">Channel ID hiện tại: <code x-text="replyChannelId"></code></span>
+            </div>
+
+            <div class="mt-5 pt-5 border-t border-slate-100">
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Gửi tin nhắn test</label>
+              <div class="flex gap-2">
+                <input type="text" x-model="testChannelId" placeholder="Channel ID (mặc định: kênh auto-reply)"
+                  class="flex-1 px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                <button @click="sendTest()" :disabled="sending"
+                  class="px-4 py-2.5 bg-slate-800 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 disabled:opacity-50">
+                  <span x-text="sending ? 'Đang gửi...' : 'Gửi test'"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PREVIEW -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-6">
+            <h3 class="font-bold text-slate-800 mb-4">Xem trước</h3>
+            <div class="rounded-xl p-4" style="background:#313338">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style="background:#5865f2">B</div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-baseline gap-2">
+                    <span class="font-semibold" style="color:#fff">Bot</span>
+                    <span class="px-1.5 py-0.5 text-[10px] font-bold rounded" style="background:#5865f2;color:#fff">APP</span>
+                    <span class="text-xs" style="color:#949ba4">hôm nay 14:14</span>
+                  </div>
+                  <div class="text-sm mt-0.5" style="color:#dbdee1;line-height:1.5" x-html="previewHtml"></div>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-slate-500 mt-3">Bản xem trước minh họa — thành viên thật sẽ được ping qua <code>{user}</code>.</p>
           </div>
         </div>
       </div>

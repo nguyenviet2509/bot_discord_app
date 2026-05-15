@@ -73,6 +73,13 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS welcome_template (
+      guild_id TEXT PRIMARY KEY,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      message TEXT NOT NULL DEFAULT 'Chào mừng {user} đã tham gia server! 🎉 Hãy giới thiệu bản thân và làm quen với mọi người nhé.',
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+
     CREATE TABLE IF NOT EXISTS scheduled_message_groups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id TEXT NOT NULL,
@@ -831,6 +838,34 @@ function upsertLevelUpTemplate(template) {
     .run(merged)
 }
 
+// ============================================================
+// Welcome Template (chao mung member moi)
+// ============================================================
+const WELCOME_DEFAULTS = {
+  enabled: 1,
+  message: 'Chào mừng {user} đã tham gia server! 🎉 Hãy giới thiệu bản thân và làm quen với mọi người nhé.',
+}
+
+function getWelcomeTemplate(guildId) {
+  const row = getDb()
+    .prepare('SELECT * FROM welcome_template WHERE guild_id = ?')
+    .get(guildId)
+  return row || { guild_id: guildId, ...WELCOME_DEFAULTS }
+}
+
+function upsertWelcomeTemplate({ guild_id, enabled, message }) {
+  return getDb()
+    .prepare(`
+      INSERT INTO welcome_template (guild_id, enabled, message, updated_at)
+      VALUES (@guild_id, @enabled, @message, unixepoch())
+      ON CONFLICT(guild_id) DO UPDATE SET
+        enabled = excluded.enabled,
+        message = excluded.message,
+        updated_at = unixepoch()
+    `)
+    .run({ guild_id, enabled: enabled ? 1 : 0, message: message || WELCOME_DEFAULTS.message })
+}
+
 function getChannelsWithLinks(guildId) {
   return getDb()
     .prepare('SELECT DISTINCT channel_id, channel_name FROM links WHERE guild_id = ? ORDER BY channel_name ASC')
@@ -860,6 +895,8 @@ module.exports = {
   getChannelsWithLinks,
   getLevelUpTemplate,
   upsertLevelUpTemplate,
+  getWelcomeTemplate,
+  upsertWelcomeTemplate,
   memberHasAccess,
   addTempBan,
   removeTempBan,

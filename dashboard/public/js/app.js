@@ -1110,4 +1110,89 @@ document.addEventListener('alpine:init', () => {
 
     timeAgo,
   }))
+
+  // ============================================================
+  // Welcome Template Section (chao mung member moi)
+  // ============================================================
+  Alpine.data('welcomeTemplateSection', () => ({
+    form: {
+      enabled: true,
+      message: 'Chào mừng {user} đã tham gia server! 🎉 Hãy giới thiệu bản thân và làm quen với mọi người nhé.',
+    },
+    replyChannelId: '',
+    testChannelId: '',
+    loading: false,
+    saving: false,
+    sending: false,
+    toast: null,
+
+    async init() {
+      if (!checkAuth()) return
+      await this.load()
+    },
+
+    async load() {
+      this.loading = true
+      const [tpl, settings] = await Promise.all([
+        api('GET', '/welcome-template'),
+        api('GET', '/settings'),
+      ])
+      if (tpl) this.form = { enabled: !!tpl.enabled, message: tpl.message || '' }
+      this.replyChannelId = settings?.level_up_reply_channel_id || ''
+      if (!this.testChannelId) this.testChannelId = this.replyChannelId
+      this.loading = false
+    },
+
+    insertVar(v) {
+      this.form.message = (this.form.message || '') + v
+    },
+
+    async save() {
+      this.saving = true
+      try {
+        const res = await api('PUT', '/welcome-template', this.form)
+        if (res?.success) this.showToast('Đã lưu ✓', 'green')
+        else this.showToast(res?.error || 'Lỗi', 'red')
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.saving = false
+    },
+
+    async sendTest() {
+      const ch = (this.testChannelId || this.replyChannelId || '').trim()
+      if (!ch) {
+        this.showToast('Vui lòng nhập Channel ID hoặc cấu hình "Channel auto-reply khi lên cấp"', 'red')
+        return
+      }
+      this.sending = true
+      try {
+        const res = await api('POST', '/welcome-template/test', {
+          channel_id: ch,
+          message: this.form.message,
+        })
+        if (res?.success) this.showToast('Đã gửi test ✓', 'green')
+        else this.showToast(res?.error || 'Gửi thất bại', 'red')
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.sending = false
+    },
+
+    get previewHtml() {
+      const escaped = (this.form.message || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      return escaped
+        .replace(/\{user\}/g, '<span style="color:#5865f2;background:#5865f21a;padding:0 2px;border-radius:3px">@TenThanhVien</span>')
+        .replace(/\{username\}/g, '<span style="color:#5865f2">TenThanhVien</span>')
+        .replace(/\{server\}/g, '<span style="color:#5865f2">TênServer</span>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>')
+    },
+
+    showToast(msg, color = 'green') {
+      this.toast = { msg, color }
+      setTimeout(() => { this.toast = null }, 3000)
+    },
+  }))
 })
