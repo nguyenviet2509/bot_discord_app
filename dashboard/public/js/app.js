@@ -305,6 +305,7 @@ document.addEventListener('alpine:init', () => {
     editId: null,
     draggedId: null,
     dragOverGroup: undefined, // undefined = none, null = ungrouped zone, number = group id
+    statusFilter: 'all', // 'all' | 'enabled' | 'disabled'
     levelUpChannelId: '', // tu /settings, dung lam goi y khi tao leaderboard
     form: {
       name: '', channel_id: '', content: '', image_url: '',
@@ -341,7 +342,12 @@ document.addEventListener('alpine:init', () => {
       const byGroup = new Map()
       this.groups.forEach(g => byGroup.set(g.id, { id: g.id, name: g.name, items: [] }))
       const ungrouped = { id: null, name: 'Chưa phân nhóm', items: [] }
-      this.messages.forEach(m => {
+      const filtered = this.messages.filter(m => {
+        if (this.statusFilter === 'enabled') return !!m.enabled
+        if (this.statusFilter === 'disabled') return !m.enabled
+        return true
+      })
+      filtered.forEach(m => {
         const gid = m.group_id
         if (gid && byGroup.has(gid)) byGroup.get(gid).items.push(m)
         else ungrouped.items.push(m)
@@ -349,6 +355,12 @@ document.addEventListener('alpine:init', () => {
       const out = Array.from(byGroup.values())
       if (ungrouped.items.length > 0) out.push(ungrouped)
       return out
+    },
+
+    get statusCounts() {
+      let enabled = 0, disabled = 0
+      this.messages.forEach(m => { m.enabled ? enabled++ : disabled++ })
+      return { all: this.messages.length, enabled, disabled }
     },
 
     async createGroup() {
