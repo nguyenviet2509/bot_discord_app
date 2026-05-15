@@ -215,6 +215,10 @@ function initDb() {
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN group_id INTEGER`) } catch (_) {}
+  try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN kind TEXT NOT NULL DEFAULT 'text'`) } catch (_) {}
+  try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN schedule_time TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN schedule_weekday INTEGER`) } catch (_) {}
+  try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN start_time TEXT`) } catch (_) {}
   // Post approval flow settings
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN post_entry_channel_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN review_channel_id TEXT`) } catch (_) {}
@@ -435,22 +439,26 @@ function getScheduledMessageById(id, guildId) {
     .get(id, guildId)
 }
 
-function createScheduledMessage({ guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id }) {
+function createScheduledMessage({ guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id, kind, schedule_time, schedule_weekday, start_time }) {
   return getDb()
     .prepare(`
-      INSERT INTO scheduled_messages (guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO scheduled_messages (guild_id, channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id, kind, schedule_time, schedule_weekday, start_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       guild_id, channel_id, name || null, content || null, image_url || null,
       interval_minutes || 180, enabled ? 1 : 0,
       use_embed ? 1 : 0, embed_title || null, embed_color || '#6366f1',
-      group_id || null
+      group_id || null,
+      kind === 'leaderboard' ? 'leaderboard' : 'text',
+      schedule_time || null,
+      (schedule_weekday === null || schedule_weekday === undefined || schedule_weekday === '') ? null : Number(schedule_weekday),
+      start_time || null
     )
 }
 
-function updateScheduledMessage(id, { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id }) {
-  // group_id: explicit null = ungroup; undefined = keep current
+function updateScheduledMessage(id, { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id, kind, schedule_time, schedule_weekday, start_time }) {
+  // group_id / schedule_time / schedule_weekday: explicit null = clear; undefined = keep current
   return getDb()
     .prepare(`
       UPDATE scheduled_messages SET
@@ -463,7 +471,11 @@ function updateScheduledMessage(id, { channel_id, name, content, image_url, inte
         use_embed = COALESCE(@use_embed, use_embed),
         embed_title = COALESCE(@embed_title, embed_title),
         embed_color = COALESCE(@embed_color, embed_color),
-        group_id = CASE WHEN @group_id_set = 1 THEN @group_id ELSE group_id END
+        group_id = CASE WHEN @group_id_set = 1 THEN @group_id ELSE group_id END,
+        kind = COALESCE(@kind, kind),
+        schedule_time = CASE WHEN @schedule_time_set = 1 THEN @schedule_time ELSE schedule_time END,
+        schedule_weekday = CASE WHEN @schedule_weekday_set = 1 THEN @schedule_weekday ELSE schedule_weekday END,
+        start_time = CASE WHEN @start_time_set = 1 THEN @start_time ELSE start_time END
       WHERE id = @id
     `)
     .run({
@@ -479,6 +491,13 @@ function updateScheduledMessage(id, { channel_id, name, content, image_url, inte
       embed_color: embed_color ?? null,
       group_id_set: group_id === undefined ? 0 : 1,
       group_id: group_id || null,
+      kind: kind === undefined ? null : (kind === 'leaderboard' ? 'leaderboard' : 'text'),
+      schedule_time_set: schedule_time === undefined ? 0 : 1,
+      schedule_time: schedule_time || null,
+      schedule_weekday_set: schedule_weekday === undefined ? 0 : 1,
+      schedule_weekday: (schedule_weekday === null || schedule_weekday === '' || schedule_weekday === undefined) ? null : Number(schedule_weekday),
+      start_time_set: start_time === undefined ? 0 : 1,
+      start_time: start_time || null,
     })
 }
 
@@ -525,12 +544,19 @@ function markScheduledMessageSent(id) {
     .run(id)
 }
 
+// Tra ve tat ca msg enabled cua interval-mode toi han.
+// Cron-mode (schedule_time IS NOT NULL) duoc tra ve toan bo de caller dung schedule-time-helper kiem tra.
 function getDueScheduledMessages(nowSec) {
   return getDb()
     .prepare(`
       SELECT * FROM scheduled_messages
       WHERE enabled = 1
-        AND (last_sent_at IS NULL OR (? - last_sent_at) >= interval_minutes * 60)
+        AND (
+          schedule_time IS NOT NULL
+          OR start_time IS NOT NULL
+          OR last_sent_at IS NULL
+          OR (? - last_sent_at) >= interval_minutes * 60
+        )
     `)
     .all(nowSec)
 }
@@ -778,6 +804,15 @@ function deleteLink(id, guildId) {
     .run(id, guildId)
 }
 
+// Xóa nhiều link cùng lúc theo danh sách id
+function deleteLinks(ids, guildId) {
+  if (!Array.isArray(ids) || ids.length === 0) return { changes: 0 }
+  const placeholders = ids.map(() => '?').join(',')
+  return getDb()
+    .prepare(`DELETE FROM links WHERE guild_id = ? AND id IN (${placeholders})`)
+    .run(guildId, ...ids)
+}
+
 // ============================================================
 // Level Up Template
 // ============================================================
@@ -892,6 +927,7 @@ module.exports = {
   getLinks,
   countLinks,
   deleteLink,
+  deleteLinks,
   getChannelsWithLinks,
   getLevelUpTemplate,
   upsertLevelUpTemplate,

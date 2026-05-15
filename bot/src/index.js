@@ -6,6 +6,8 @@ const fs = require('fs')
 const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction, getDueScheduledMessages, markScheduledMessageSent } = require('../../shared/db')
 const { scanSilentMembers } = require('../../shared/scan-silent-members')
 const { buildPayload } = require('../../shared/build-scheduled-payload')
+const { buildLeaderboardText, mergeContentWithLeaderboard } = require('../../shared/build-leaderboard-text')
+const { isDueByClock, isDueByInterval } = require('../../shared/schedule-time-helper')
 const { scheduleDaily } = require('./utils/daily-cron')
 
 initDb()
@@ -64,7 +66,12 @@ client.once('ready', async () => {
   // Scheduled messages worker: check moi 60s, send neu da den han
   setInterval(async () => {
     const nowSec = Math.floor(Date.now() / 1000)
-    const due = getDueScheduledMessages(nowSec)
+    const candidates = getDueScheduledMessages(nowSec)
+    const due = candidates.filter(m => {
+      if (m.schedule_time) return isDueByClock(m, nowSec)
+      if (m.start_time) return isDueByInterval(m, nowSec)
+      return true // legacy: SQL da loc
+    })
     for (const msg of due) {
       try {
         const channel = client.channels.cache.get(msg.channel_id)
@@ -73,7 +80,12 @@ client.once('ready', async () => {
           console.warn(`[SchedMsg] Channel ${msg.channel_id} not found, skip msg id=${msg.id}`)
           continue
         }
-        const { payload, files } = buildPayload(msg)
+        let msgToSend = msg
+        if (msg.kind === 'leaderboard') {
+          const lbText = await buildLeaderboardText(msg.guild_id, { client })
+          msgToSend = { ...msg, content: mergeContentWithLeaderboard(msg.content, lbText) }
+        }
+        const { payload, files } = buildPayload(msgToSend)
         await channel.send({ ...payload, files: files.map(f => ({ attachment: f.path, name: f.name })) })
         markScheduledMessageSent(msg.id)
         console.log(`[SchedMsg] Sent id=${msg.id} → channel ${msg.channel_id}`)

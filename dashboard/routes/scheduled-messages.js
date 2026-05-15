@@ -5,6 +5,7 @@ const fs = require('fs')
 const crypto = require('crypto')
 const db = require('../../shared/db')
 const { buildPayload } = require('../../shared/build-scheduled-payload')
+const { buildLeaderboardText, mergeContentWithLeaderboard } = require('../../shared/build-leaderboard-text')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
@@ -62,17 +63,44 @@ router.delete('/groups/:id', (req, res) => {
   res.json({ success: true })
 })
 
+// Validate HH:MM (24h). Tra ve string da chuan hoa hoac null.
+function normSchedTime(v) {
+  if (v === null || v === '' || v === undefined) return v === undefined ? undefined : null
+  const m = String(v).match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return undefined // invalid → caller xu ly
+  const hh = Number(m[1]); const mm = Number(m[2])
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return undefined
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+}
+
 router.post('/', (req, res) => {
-  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id } = req.body
+  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id, kind, schedule_time, schedule_weekday, start_time } = req.body
   if (!channel_id) return res.status(400).json({ error: 'channel_id bat buoc' })
-  if (!content && !image_url && !embed_title) return res.status(400).json({ error: 'Phai co content, anh hoac embed title' })
+  const isLeaderboard = kind === 'leaderboard'
+  if (!isLeaderboard && !content && !image_url && !embed_title) return res.status(400).json({ error: 'Phai co content, anh hoac embed title' })
   const mins = Number(interval_minutes)
   if (!Number.isFinite(mins) || mins < 1) return res.status(400).json({ error: 'interval_minutes phai >= 1' })
+  let st = null
+  if (schedule_time) {
+    st = normSchedTime(schedule_time)
+    if (st === undefined) return res.status(400).json({ error: 'schedule_time khong hop le (HH:MM)' })
+  }
+  const wd = (schedule_weekday === '' || schedule_weekday === null || schedule_weekday === undefined) ? null : Number(schedule_weekday)
+  if (wd !== null && (!Number.isInteger(wd) || wd < 0 || wd > 6)) return res.status(400).json({ error: 'schedule_weekday phai 0-6 hoac null' })
+  let stt = null
+  if (start_time) {
+    stt = normSchedTime(start_time)
+    if (stt === undefined) return res.status(400).json({ error: 'start_time khong hop le (HH:MM)' })
+  }
   const result = db.createScheduledMessage({
     guild_id: GUILD_ID(), channel_id, name, content, image_url,
     interval_minutes: mins, enabled: !!enabled,
     use_embed: !!use_embed, embed_title, embed_color,
     group_id: group_id ? Number(group_id) : null,
+    kind: isLeaderboard ? 'leaderboard' : 'text',
+    schedule_time: st,
+    schedule_weekday: wd,
+    start_time: stt,
   })
   res.json({ id: result.lastInsertRowid })
 })
@@ -81,12 +109,43 @@ router.put('/:id', (req, res) => {
   const id = Number(req.params.id)
   const existing = db.getScheduledMessageById(id, GUILD_ID())
   if (!existing) return res.status(404).json({ error: 'Khong tim thay' })
-  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id } = req.body
+  const { channel_id, name, content, image_url, interval_minutes, enabled, use_embed, embed_title, embed_color, group_id, kind, schedule_time, schedule_weekday, start_time } = req.body
+  let stPayload = undefined
+  if (schedule_time !== undefined) {
+    if (schedule_time === null || schedule_time === '') stPayload = null
+    else {
+      const norm = normSchedTime(schedule_time)
+      if (norm === undefined) return res.status(400).json({ error: 'schedule_time khong hop le (HH:MM)' })
+      stPayload = norm
+    }
+  }
+  let wdPayload = undefined
+  if (schedule_weekday !== undefined) {
+    if (schedule_weekday === null || schedule_weekday === '') wdPayload = null
+    else {
+      const wd = Number(schedule_weekday)
+      if (!Number.isInteger(wd) || wd < 0 || wd > 6) return res.status(400).json({ error: 'schedule_weekday phai 0-6 hoac null' })
+      wdPayload = wd
+    }
+  }
+  let sttPayload = undefined
+  if (start_time !== undefined) {
+    if (start_time === null || start_time === '') sttPayload = null
+    else {
+      const norm = normSchedTime(start_time)
+      if (norm === undefined) return res.status(400).json({ error: 'start_time khong hop le (HH:MM)' })
+      sttPayload = norm
+    }
+  }
   db.updateScheduledMessage(id, {
     channel_id, name, content, image_url,
     interval_minutes: interval_minutes !== undefined ? Number(interval_minutes) : undefined,
     enabled, use_embed, embed_title, embed_color,
     group_id: group_id === undefined ? undefined : (group_id ? Number(group_id) : null),
+    kind: kind === undefined ? undefined : (kind === 'leaderboard' ? 'leaderboard' : 'text'),
+    schedule_time: stPayload,
+    schedule_weekday: wdPayload,
+    start_time: sttPayload,
   })
   res.json({ success: true })
 })
@@ -109,7 +168,12 @@ router.post('/:id/send-now', async (req, res) => {
   if (!msg) return res.status(404).json({ error: 'Khong tim thay' })
   if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua co' })
   try {
-    const { payload, files } = buildPayload(msg, { restAPI: true })
+    let msgToSend = msg
+    if (msg.kind === 'leaderboard') {
+      const lbText = await buildLeaderboardText(GUILD_ID(), { limit: 10 })
+      msgToSend = { ...msg, content: mergeContentWithLeaderboard(msg.content, lbText) }
+    }
+    const { payload, files } = buildPayload(msgToSend, { restAPI: true })
     const url = `https://discord.com/api/v10/channels/${msg.channel_id}/messages`
     let r
     if (files.length > 0) {

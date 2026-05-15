@@ -175,9 +175,51 @@ document.addEventListener('alpine:init', () => {
     search: '',
     loading: false,
     toast: null,
+    page: 1,
+    limit: 20,
 
     async init() {
       await this.load()
+    },
+
+    // Phân trang client-side trên kết quả đã lọc
+    get totalPages() {
+      return Math.max(1, Math.ceil(this.filtered.length / this.limit))
+    },
+
+    get paged() {
+      const start = (this.page - 1) * this.limit
+      return this.filtered.slice(start, start + this.limit)
+    },
+
+    // Dãy số trang để hiển thị (rút gọn với '...')
+    get pageNumbers() {
+      const tp = this.totalPages
+      const cur = this.page
+      if (tp <= 7) return Array.from({ length: tp }, (_, i) => i + 1)
+      const out = [1]
+      const start = Math.max(2, cur - 1)
+      const end = Math.min(tp - 1, cur + 1)
+      if (start > 2) out.push('...')
+      for (let i = start; i <= end; i++) out.push(i)
+      if (end < tp - 1) out.push('...')
+      out.push(tp)
+      return out
+    },
+
+    onSearchInput() {
+      this.page = 1
+    },
+
+    onLimitChange() {
+      this.page = 1
+    },
+
+    prevPage() { if (this.page > 1) this.page-- },
+    nextPage() { if (this.page < this.totalPages) this.page++ },
+    goPage(p) {
+      if (typeof p !== 'number' || p < 1 || p > this.totalPages) return
+      this.page = p
     },
 
     async load() {
@@ -263,11 +305,16 @@ document.addEventListener('alpine:init', () => {
     editId: null,
     draggedId: null,
     dragOverGroup: undefined, // undefined = none, null = ungrouped zone, number = group id
+    levelUpChannelId: '', // tu /settings, dung lam goi y khi tao leaderboard
     form: {
       name: '', channel_id: '', content: '', image_url: '',
       interval_minutes: 180, enabled: true,
       use_embed: false, embed_title: '', embed_color: '#6366f1',
-      group_id: '',
+      group_id: '', kind: 'text',
+      schedule_mode: 'interval', // 'interval' | 'clock'
+      schedule_time: '00:00',
+      schedule_weekday: '', // '' = moi ngay, '0'..'6'
+      start_time: '', // moc neo cho interval mode (HH:MM, optional)
     },
     toast: null,
 
@@ -278,12 +325,14 @@ document.addEventListener('alpine:init', () => {
 
     async load() {
       this.loading = true
-      const [msgs, grps] = await Promise.all([
+      const [msgs, grps, settings] = await Promise.all([
         api('GET', '/scheduled-messages'),
         api('GET', '/scheduled-messages/groups'),
+        api('GET', '/settings'),
       ])
       this.messages = (msgs || []).map(m => ({ ...m, enabled: !!m.enabled }))
       this.groups = grps || []
+      this.levelUpChannelId = settings?.level_up_reply_channel_id || ''
       this.loading = false
     },
 
@@ -381,7 +430,9 @@ document.addEventListener('alpine:init', () => {
         name: '', channel_id: '', content: '', image_url: '',
         interval_minutes: 180, enabled: true,
         use_embed: false, embed_title: '', embed_color: '#6366f1',
-        group_id: presetGroupId || '',
+        group_id: presetGroupId || '', kind: 'text',
+        schedule_mode: 'interval', schedule_time: '00:00', schedule_weekday: '',
+        start_time: '',
       }
       this.modal = true
     },
@@ -399,8 +450,30 @@ document.addEventListener('alpine:init', () => {
         embed_title: m.embed_title || '',
         embed_color: m.embed_color || '#6366f1',
         group_id: m.group_id || '',
+        kind: m.kind === 'leaderboard' ? 'leaderboard' : 'text',
+        schedule_mode: m.schedule_time ? 'clock' : 'interval',
+        schedule_time: m.schedule_time || '00:00',
+        schedule_weekday: m.schedule_weekday === null || m.schedule_weekday === undefined ? '' : String(m.schedule_weekday),
+        start_time: m.start_time || '',
       }
       this.modal = true
+    },
+
+    // Khi doi kind sang leaderboard: goi y channel + schedule + content mau (chi khi tao moi)
+    onKindChange() {
+      if (this.editId) return
+      if (this.form.kind === 'leaderboard') {
+        if (!this.form.channel_id && this.levelUpChannelId) this.form.channel_id = this.levelUpChannelId
+        if (this.form.schedule_mode === 'interval') {
+          // Chuyen sang cron: moi tuan Chu Nhat 00:00
+          this.form.schedule_mode = 'clock'
+          this.form.schedule_time = '00:00'
+          this.form.schedule_weekday = '0' // Chu Nhat
+        }
+        if (!this.form.content) {
+          this.form.content = '🏆 **Bảng xếp hạng XP tuần này** 🏆\n\n{leaderboard}\n\nChúc mừng các thành viên tích cực!'
+        }
+      }
     },
 
     async uploadImage(event) {
@@ -416,13 +489,27 @@ document.addEventListener('alpine:init', () => {
 
     async save() {
       if (!this.form.channel_id) return this.showToast('Thiếu channel_id', 'red')
-      if (!this.form.content && !this.form.image_url) return this.showToast('Phải có content hoặc ảnh', 'red')
+      const isLb = this.form.kind === 'leaderboard'
+      if (!isLb && !this.form.content && !this.form.image_url) return this.showToast('Phải có content hoặc ảnh', 'red')
       if (!this.form.interval_minutes || this.form.interval_minutes < 1) return this.showToast('Interval phải >= 1', 'red')
+      if (this.form.schedule_mode === 'clock' && !/^\d{1,2}:\d{2}$/.test(this.form.schedule_time || '')) {
+        return this.showToast('Giờ không hợp lệ (HH:MM)', 'red')
+      }
+      if (this.form.schedule_mode === 'interval' && this.form.start_time && !/^\d{1,2}:\d{2}$/.test(this.form.start_time)) {
+        return this.showToast('Giờ bắt đầu không hợp lệ (HH:MM)', 'red')
+      }
       this.saving = true
       try {
         const url = this.editId ? `/scheduled-messages/${this.editId}` : '/scheduled-messages'
         const method = this.editId ? 'PUT' : 'POST'
-        const res = await api(method, url, this.form)
+        const payload = {
+          ...this.form,
+          schedule_time: this.form.schedule_mode === 'clock' ? this.form.schedule_time : null,
+          schedule_weekday: this.form.schedule_mode === 'clock' ? this.form.schedule_weekday : null,
+          start_time: this.form.schedule_mode === 'interval' ? (this.form.start_time || null) : null,
+        }
+        delete payload.schedule_mode
+        const res = await api(method, url, payload)
         if (res?.error) this.showToast(res.error, 'red')
         else {
           this.showToast('Đã lưu ✓', 'green')
@@ -1026,12 +1113,13 @@ document.addEventListener('alpine:init', () => {
     channels: [],
     total: 0,
     page: 1,
-    limit: 50,
+    limit: 20,
     search: '',
     channelFilter: '',
     loading: false,
     toast: null,
     _searchTimer: null,
+    selected: [], // danh sách id link đang được chọn để xóa hàng loạt
 
     async init() {
       await this.load()
@@ -1047,6 +1135,7 @@ document.addEventListener('alpine:init', () => {
         this.channels = data.channels || []
         this.page = data.page || 1
       }
+      this.selected = [] // reset chọn khi đổi trang/lọc
       this.loading = false
     },
 
@@ -1060,6 +1149,11 @@ document.addEventListener('alpine:init', () => {
       this.load()
     },
 
+    onLimitChange() {
+      this.page = 1
+      this.load()
+    },
+
     prevPage() {
       if (this.page > 1) { this.page--; this.load() }
     },
@@ -1068,8 +1162,55 @@ document.addEventListener('alpine:init', () => {
       if (this.page * this.limit < this.total) { this.page++; this.load() }
     },
 
+    goPage(p) {
+      if (p < 1 || p > this.totalPages || p === this.page) return
+      this.page = p
+      this.load()
+    },
+
     get totalPages() {
       return Math.max(1, Math.ceil(this.total / this.limit))
+    },
+
+    // Mảng các số trang hiển thị, thêm '...' khi quá nhiều trang
+    get pageNumbers() {
+      const tp = this.totalPages
+      const cur = this.page
+      if (tp <= 7) return Array.from({ length: tp }, (_, i) => i + 1)
+      const out = [1]
+      const start = Math.max(2, cur - 1)
+      const end = Math.min(tp - 1, cur + 1)
+      if (start > 2) out.push('...')
+      for (let i = start; i <= end; i++) out.push(i)
+      if (end < tp - 1) out.push('...')
+      out.push(tp)
+      return out
+    },
+
+    // Trạng thái checkbox "chọn tất cả"
+    get allChecked() {
+      return this.links.length > 0 && this.selected.length === this.links.length
+    },
+
+    toggleAll(e) {
+      this.selected = e.target.checked ? this.links.map((l) => l.id) : []
+    },
+
+    toggleOne(id) {
+      const i = this.selected.indexOf(id)
+      if (i === -1) this.selected.push(id)
+      else this.selected.splice(i, 1)
+    },
+
+    async deleteSelected() {
+      if (this.selected.length === 0) return
+      if (!confirm(`Xóa ${this.selected.length} link đã chọn?`)) return
+      const res = await api('DELETE', '/links', { ids: this.selected })
+      if (res?.success) {
+        this.showToast(`Đã xóa ${res.deleted} link`, 'green')
+        this.selected = []
+        await this.load()
+      }
     },
 
     getDomain(url) {

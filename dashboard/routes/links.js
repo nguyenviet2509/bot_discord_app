@@ -18,6 +18,15 @@ router.get('/', (req, res) => {
   res.json({ links: rows, total, channels, page: parseInt(page) || 1, limit: parsedLimit })
 })
 
+// DELETE /api/links  body: { ids: [..] }  - xóa hàng loạt link
+router.delete('/', (req, res) => {
+  const guildId = GUILD_ID()
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((v) => parseInt(v)).filter(Boolean) : []
+  if (ids.length === 0) return res.status(400).json({ error: 'Danh sách id không hợp lệ' })
+  const result = db.deleteLinks(ids, guildId)
+  res.json({ success: true, deleted: result.changes })
+})
+
 // DELETE /api/links/:id
 router.delete('/:id', (req, res) => {
   const guildId = GUILD_ID()
