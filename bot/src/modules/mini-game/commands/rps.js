@@ -8,7 +8,7 @@ const timeoutMgr = require('../services/match-timeout')
 const renderer = require('../services/rps-renderer')
 const lifecycle = require('../services/rps-lifecycle')
 
-const STAKE_MIN = 1
+const STAKE_MIN = 0
 const STAKE_MAX = 1000
 const ACCEPT_TIMEOUT_MS = 60_000
 
@@ -24,7 +24,7 @@ module.exports = {
     if (!guild) return interaction.reply({ content: 'Lệnh chỉ dùng trong server.', ephemeral: true })
 
     const opponent = interaction.options.getUser('doi-thu')
-    const stake = interaction.options.getInteger('cuoc') ?? 10
+    const stake = interaction.options.getInteger('cuoc') ?? 0  // 0 = choi vui, khong cuoc coin
     const a = interaction.user
 
     // ===== Validation =====
@@ -45,11 +45,13 @@ module.exports = {
     const activeB = matchStore.getActiveMatchByUser(guild.id, opponent.id)
     if (activeB) return interaction.reply({ content: `⚠️ ${opponent.username} đang có 1 trận chưa kết thúc.`, ephemeral: true })
 
-    // Coin check
-    const balA = getCoin(guild.id, a.id)
-    if (balA < stake) return interaction.reply({ content: `💸 Bạn chỉ có 🪙 ${balA}, không đủ cược ${stake} coin.`, ephemeral: true })
-    const balB = getCoin(guild.id, opponent.id)
-    if (balB < stake) return interaction.reply({ content: `💸 ${opponent.username} chỉ có 🪙 ${balB}, không đủ cược ${stake} coin.`, ephemeral: true })
+    // Coin check - chi khi co cuoc (stake > 0)
+    if (stake > 0) {
+      const balA = getCoin(guild.id, a.id)
+      if (balA < stake) return interaction.reply({ content: `💸 Bạn chỉ có 🪙 ${balA}, không đủ cược ${stake} coin.`, ephemeral: true })
+      const balB = getCoin(guild.id, opponent.id)
+      if (balB < stake) return interaction.reply({ content: `💸 ${opponent.username} chỉ có 🪙 ${balB}, không đủ cược ${stake} coin.`, ephemeral: true })
+    }
 
     // ===== Create match (escrow A) =====
     const match = matchStore.createMatch({

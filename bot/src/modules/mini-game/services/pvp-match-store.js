@@ -31,7 +31,7 @@ function createMatch({ guildId, channelId, game, playerA, playerB, stake, meta }
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(guildId, channelId, game, playerA, playerB, stake, STATE.PENDING, meta ? JSON.stringify(meta) : null)
     matchId = info.lastInsertRowid
-    addCoin(guildId, playerA, -stake, `${game}-pvp:escrow:match${matchId}`)
+    if (stake > 0) addCoin(guildId, playerA, -stake, `${game}-pvp:escrow:match${matchId}`)
   })()
   return getMatchById(matchId)
 }
@@ -50,7 +50,7 @@ function acceptMatch(matchId) {
     if (!m || m.state !== STATE.PENDING) {
       throw new Error('Match khong o trang thai pending')
     }
-    addCoin(m.guild_id, m.player_b, -m.stake, `${m.game}-pvp:escrow:match${matchId}`)
+    if (m.stake > 0) addCoin(m.guild_id, m.player_b, -m.stake, `${m.game}-pvp:escrow:match${matchId}`)
     db.prepare('UPDATE pvp_match SET state = ? WHERE id = ?').run(STATE.PICKING, matchId)
     result = getMatchById(matchId)
   })()
@@ -64,11 +64,13 @@ function cancelMatch(matchId, reason) {
   db.transaction(() => {
     const m = getMatchById(matchId)
     if (!m || m.state === STATE.FINISHED || m.state === STATE.CANCELLED) return
-    // Hoan A (luon co escrow tu luc create)
-    addCoin(m.guild_id, m.player_a, m.stake, `${m.game}-pvp:refund:match${matchId}:${reason || 'cancel'}`)
-    // Hoan B chi khi da accept (state >= picking)
-    if (m.state === STATE.PICKING) {
-      addCoin(m.guild_id, m.player_b, m.stake, `${m.game}-pvp:refund:match${matchId}:${reason || 'cancel'}`)
+    if (m.stake > 0) {
+      // Hoan A (luon co escrow tu luc create)
+      addCoin(m.guild_id, m.player_a, m.stake, `${m.game}-pvp:refund:match${matchId}:${reason || 'cancel'}`)
+      // Hoan B chi khi da accept (state >= picking)
+      if (m.state === STATE.PICKING) {
+        addCoin(m.guild_id, m.player_b, m.stake, `${m.game}-pvp:refund:match${matchId}:${reason || 'cancel'}`)
+      }
     }
     db.prepare('UPDATE pvp_match SET state = ?, finished_at = unixepoch() WHERE id = ?')
       .run(STATE.CANCELLED, matchId)
@@ -96,13 +98,15 @@ function settleMatch(matchId, winnerUserId) {
   db.transaction(() => {
     const m = getMatchById(matchId)
     if (!m || m.state !== STATE.PICKING) throw new Error('Match chua san sang settle')
-    if (winnerUserId === 'draw') {
-      // Hoan ca 2 (do A va B deu da escrow)
-      addCoin(m.guild_id, m.player_a, m.stake, `${m.game}-pvp:draw:match${matchId}`)
-      addCoin(m.guild_id, m.player_b, m.stake, `${m.game}-pvp:draw:match${matchId}`)
-    } else {
-      // Winner an tron 2 phan escrow (da bi tru 1 phan luc challenge/accept)
-      addCoin(m.guild_id, winnerUserId, m.stake * 2, `${m.game}-pvp:win:match${matchId}`)
+    if (m.stake > 0) {
+      if (winnerUserId === 'draw') {
+        // Hoan ca 2 (do A va B deu da escrow)
+        addCoin(m.guild_id, m.player_a, m.stake, `${m.game}-pvp:draw:match${matchId}`)
+        addCoin(m.guild_id, m.player_b, m.stake, `${m.game}-pvp:draw:match${matchId}`)
+      } else {
+        // Winner an tron 2 phan escrow (da bi tru 1 phan luc challenge/accept)
+        addCoin(m.guild_id, winnerUserId, m.stake * 2, `${m.game}-pvp:win:match${matchId}`)
+      }
     }
     db.prepare('UPDATE pvp_match SET state = ?, winner = ?, finished_at = unixepoch() WHERE id = ?')
       .run(STATE.FINISHED, winnerUserId, matchId)

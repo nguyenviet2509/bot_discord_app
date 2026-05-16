@@ -9,16 +9,18 @@ const COLOR = { wait: 0x6366f1, win: 0x22c55e, lose: 0xef4444, draw: 0xeab308, c
 
 // Embed loi thach dau (pending) - chua co ai chon.
 function buildChallengeEmbed({ aTag, bTag, stake, matchId }) {
+  const isCasual = !stake
   return new EmbedBuilder()
     .setColor(COLOR.draw)
     .setTitle('🥊 Thách đấu Kéo Búa Bao')
     .setDescription(`**${aTag}** thách đấu **${bTag}**`)
     .addFields(
-      { name: '💰 Cược', value: `**${stake} coin** mỗi người`, inline: true },
-      { name: '🏆 Người thắng nhận', value: `**+${stake} coin** (lấy hết cọc)`, inline: true },
+      isCasual
+        ? { name: '🎮 Chế độ', value: '**Vui** — không cược coin', inline: false }
+        : { name: '💰 Cược', value: `**${stake} coin** / người · Thắng nhận **+${stake}**, thua **-${stake}**`, inline: false },
       { name: '⏱ Thời hạn', value: `${bTag} có 60s để chấp nhận`, inline: false },
     )
-    .setFooter({ text: `Match #${matchId} • Coin đã được tạm giữ` })
+    .setFooter({ text: `Match #${matchId}${isCasual ? '' : ' • Coin đã được tạm giữ'}` })
 }
 
 // Row 2 nut accept/decline cho B.
@@ -43,7 +45,7 @@ function buildPickingEmbed({ aTag, bTag, stake, matchId, pickA, pickB }) {
       { name: 'VS', value: '⚔️', inline: true },
       { name: bTag, value: bIcon, inline: true },
     )
-    .setFooter({ text: `Match #${matchId} • Cược ${stake} coin/người • Timeout 60s` })
+    .setFooter({ text: `Match #${matchId} • ${stake ? `Cược ${stake} coin/người` : 'Vui (không cược)'} • Timeout 60s` })
 }
 
 // Row 3 nut pick gui ephemeral cho 1 player.
@@ -73,17 +75,16 @@ function buildResultEmbed({ aTag, bTag, pickA, pickB, winner, stake, matchId, ba
   }
   const aLabel = pickA ? `${LABEL[pickA].emoji} ${LABEL[pickA].vi}` : '⏱ Hết giờ'
   const bLabel = pickB ? `${LABEL[pickB].emoji} ${LABEL[pickB].vi}` : '⏱ Hết giờ'
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle(title)
-    .setDescription(desc)
-    .addFields(
-      { name: aTag + (winner === 'a' ? ' 👑' : ''), value: aLabel, inline: true },
-      { name: 'VS', value: '⚔️', inline: true },
-      { name: bTag + (winner === 'b' ? ' 👑' : ''), value: bLabel, inline: true },
-      { name: '💰 Kết toán', value: buildSettleText({ winner, stake, aTag, bTag, balanceA, balanceB }), inline: false },
-    )
-    .setFooter({ text: `Match #${matchId}` })
+  const fields = [
+    { name: aTag + (winner === 'a' ? ' 👑' : ''), value: aLabel, inline: true },
+    { name: 'VS', value: '⚔️', inline: true },
+    { name: bTag + (winner === 'b' ? ' 👑' : ''), value: bLabel, inline: true },
+  ]
+  if (stake > 0) {
+    fields.push({ name: '💰 Kết toán', value: buildSettleText({ winner, stake, aTag, bTag, balanceA, balanceB }), inline: false })
+  }
+  return new EmbedBuilder().setColor(color).setTitle(title).setDescription(desc).addFields(...fields)
+    .setFooter({ text: `Match #${matchId}${stake > 0 ? '' : ' • Vui (không cược)'}` })
 }
 
 function buildSettleText({ winner, stake, aTag, bTag, balanceA, balanceB }) {
