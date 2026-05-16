@@ -81,6 +81,8 @@ document.addEventListener('alpine:init', () => {
     saving: false,
     sending: false,
     pushingIcon: false,
+    roleIconPreviewUrl: '', // dataURL hoac CDN URL hien thi preview icon role
+    roleIconCacheBust: 0,    // bust CDN cache sau khi push moi
     testChannelId: localStorage.getItem('rewards_test_channel_id') || '',
     form: { level_required: 1, type: 'role', role_id: '', badge_url: '', badge_name: '' },
     editId: null,
@@ -105,6 +107,7 @@ document.addEventListener('alpine:init', () => {
     openAdd() {
       this.editId = null
       this.form = { level_required: 1, type: 'role', role_id: '', badge_url: '', badge_name: '' }
+      this.roleIconPreviewUrl = ''
       this.modal = true
     },
 
@@ -117,7 +120,24 @@ document.addEventListener('alpine:init', () => {
         badge_url: reward.badge_url || '',
         badge_name: reward.badge_name || '',
       }
+      this.roleIconPreviewUrl = ''
       this.modal = true
+      // Auto fetch icon hien tai cua role (neu co) de hien thi preview "live"
+      if (reward.role_id) this.fetchCurrentRoleIcon()
+    },
+
+    // Goi GET /rewards/role-icon/:roleId -> lay icon hash hien tai tu Discord
+    async fetchCurrentRoleIcon() {
+      if (!this.form.role_id) {
+        this.roleIconPreviewUrl = ''
+        return
+      }
+      try {
+        const res = await api('GET', `/rewards/role-icon/${this.form.role_id}`)
+        this.roleIconPreviewUrl = res?.icon_url || ''
+      } catch (_) {
+        this.roleIconPreviewUrl = ''
+      }
     },
 
     async uploadImage(event) {
@@ -144,6 +164,11 @@ document.addEventListener('alpine:init', () => {
         event.target.value = ''
         return
       }
+      // Preview client-side ngay lap tuc qua FileReader -> dataURL
+      const reader = new FileReader()
+      reader.onload = e => { this.roleIconPreviewUrl = e.target.result }
+      reader.readAsDataURL(file)
+
       this.pushingIcon = true
       const fd = new FormData()
       fd.append('image', file)
@@ -152,6 +177,8 @@ document.addEventListener('alpine:init', () => {
         const res = await api('POST', '/rewards/upload-role-icon', fd)
         if (res?.success) {
           this.showToast('Đã upload + push icon lên role ✓', 'green')
+          // Sau khi push, fetch lai icon hash moi tu Discord de confirm
+          setTimeout(() => this.fetchCurrentRoleIcon(), 800)
         } else {
           const hint = res?.hint ? `\n💡 ${res.hint}` : ''
           this.showToast((res?.error || 'Upload thất bại') + hint, 'red')
@@ -176,6 +203,7 @@ document.addEventListener('alpine:init', () => {
         })
         if (res?.success) {
           this.showToast('Đã push ảnh lên role làm icon ✓ — kiểm tra Server Settings → Roles', 'green')
+          setTimeout(() => this.fetchCurrentRoleIcon(), 800)
         } else {
           const hint = res?.hint ? `\n💡 ${res.hint}` : ''
           this.showToast((res?.error || 'Push thất bại') + hint, 'red')

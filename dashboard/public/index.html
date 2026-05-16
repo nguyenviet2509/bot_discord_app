@@ -243,7 +243,7 @@
               <img x-show="form.badge_url" :src="form.badge_url" class="h-20 w-20 rounded-xl object-cover border-2 border-slate-200" />
               <div>
                 <label class="text-sm font-semibold text-slate-700 block mb-1.5">Role kèm theo <span class="text-slate-400 font-normal">(tùy chọn)</span></label>
-                <select x-model="form.role_id" class="input-field">
+                <select x-model="form.role_id" @change="fetchCurrentRoleIcon()" class="input-field">
                   <option value="">-- Không gán role --</option>
                   <template x-for="role in roles" :key="role.id">
                     <option :value="role.id" x-text="role.name"></option>
@@ -253,12 +253,24 @@
               </div>
               <!-- Flair: push anh lam icon role tren Discord (Boost L2) -->
               <div x-show="form.role_id" class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 space-y-2.5">
-                <div>
-                  <div class="text-sm font-semibold text-indigo-900 mb-0.5">🎖️ Icon role trên Discord</div>
-                  <p class="text-xs text-indigo-700 leading-snug">
-                    Push 1 ảnh lên Discord làm icon của role kèm theo. Icon sẽ hiển thị cạnh tên
-                    member khi họ chat. <strong>Cần Server Boost Level 2</strong> (≥7 boost) — ảnh ≤256KB.
-                  </p>
+                <div class="flex items-start gap-3">
+                  <div class="flex-1">
+                    <div class="text-sm font-semibold text-indigo-900 mb-0.5">🎖️ Icon role trên Discord</div>
+                    <p class="text-xs text-indigo-700 leading-snug">
+                      Push 1 ảnh lên Discord làm icon của role kèm theo. Icon sẽ hiển thị cạnh tên
+                      member khi họ chat. <strong>Cần Server Boost Level 2</strong> (≥7 boost) — ảnh ≤256KB.
+                    </p>
+                  </div>
+                  <!-- Preview icon hien tai (dataURL local hoac Discord CDN) -->
+                  <div class="shrink-0">
+                    <div class="text-[10px] font-semibold text-indigo-700 uppercase mb-1 text-center">Icon hiện tại</div>
+                    <img x-show="roleIconPreviewUrl" :src="roleIconPreviewUrl"
+                      class="w-14 h-14 rounded-lg object-cover border-2 border-indigo-300 bg-white" />
+                    <div x-show="!roleIconPreviewUrl"
+                      class="w-14 h-14 rounded-lg border-2 border-dashed border-indigo-300 bg-white flex items-center justify-center text-indigo-300 text-xs">
+                      Chưa có
+                    </div>
+                  </div>
                 </div>
                 <!-- Option 1: upload anh RIENG cho role icon (khong dong toi badge_url) -->
                 <div>

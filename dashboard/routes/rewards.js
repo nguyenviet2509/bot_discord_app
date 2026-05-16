@@ -133,6 +133,28 @@ const roleIconUpload = multer({
 // POST /upload-role-icon: upload anh RIENG cho role icon + push len Discord
 // trong 1 request. Khong dong vao badge_url cua reward.
 // Form-data: { image, role_id }
+// GET /role-icon/:roleId: query Discord lay icon hash hien tai cua role
+// Tra ve URL CDN de dashboard hien thi preview "live" cua role icon.
+router.get('/role-icon/:roleId', async (req, res) => {
+  const { roleId } = req.params
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua cau hinh' })
+  try {
+    const r = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID()}/roles`, {
+      headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
+    })
+    if (!r.ok) return res.status(r.status).json({ error: `Discord API ${r.status}` })
+    const roles = await r.json()
+    const role = roles.find(r => r.id === roleId)
+    if (!role) return res.json({ icon_url: null })
+    const iconUrl = role.icon
+      ? `https://cdn.discordapp.com/role-icons/${role.id}/${role.icon}.png?size=128`
+      : null
+    res.json({ icon_url: iconUrl, role_name: role.name })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 router.post('/upload-role-icon', roleIconUpload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Khong co file' })
   const { role_id } = req.body
