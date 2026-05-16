@@ -26,6 +26,23 @@ function resolveImage(imageUrl) {
   return { url: `attachment://${filename}`, filePath, filename }
 }
 
+// Trich xuat cac mention tu noi dung text (user/role/everyone/here)
+// Discord chi ping khi mention nam o truong "content" ngoai embed.
+// Tra ve chuoi mention da ghep (cach nhau bang space), de prepend vao content.
+function extractMentions(text) {
+  if (!text) return ''
+  const re = /<@!?\d+>|<@&\d+>|@everyone|@here/g
+  const found = text.match(re)
+  if (!found || found.length === 0) return ''
+  // Bo trung lap, giu thu tu xuat hien
+  const seen = new Set()
+  const uniq = []
+  for (const m of found) {
+    if (!seen.has(m)) { seen.add(m); uniq.push(m) }
+  }
+  return uniq.join(' ')
+}
+
 function buildPayload(msg, { restAPI = false } = {}) {
   const useEmbed = !!msg.use_embed
   const { url: imgUrl, filePath, filename } = resolveImage(msg.image_url)
@@ -40,8 +57,10 @@ function buildPayload(msg, { restAPI = false } = {}) {
       color,
       ...(imgUrl ? { image: { url: imgUrl } } : {}),
     }
+    // Mention trong embed.description khong ping → copy ra content ngoai embed
+    const mentionPrefix = extractMentions(msg.content)
     payload = {
-      content: '',
+      content: mentionPrefix,
       embeds: [embed],
       [allowedKey]: { parse: ['everyone', 'roles', 'users'] },
     }

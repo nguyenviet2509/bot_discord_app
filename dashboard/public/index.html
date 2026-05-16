@@ -627,7 +627,39 @@
             </div>
             <div>
               <label class="text-sm font-semibold text-slate-700 block mb-1.5">Nội dung text</label>
-              <textarea x-model="form.content" rows="4" placeholder="VD: @everyone Anh em on goi ne 🎉" class="input-field"></textarea>
+              <textarea x-ref="contentArea" x-model="form.content" rows="4" placeholder="VD: @everyone Anh em on goi ne 🎉" class="input-field"></textarea>
+
+              <!-- Mention picker: chen <@USER_ID> vao content de Discord ping member -->
+              <div class="mt-2 relative" @click.outside="mentionPickerOpen=false">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <button type="button" @click="openMentionPicker()"
+                    class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 border border-indigo-200 hover:border-indigo-400 bg-indigo-50 hover:bg-indigo-100 rounded-lg px-2.5 py-1 transition">
+                    ➕ Tag thành viên
+                  </button>
+                  <button type="button" @click="insertRawMention('@everyone')"
+                    class="text-xs text-slate-600 hover:text-slate-800 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg px-2 py-1">@everyone</button>
+                  <button type="button" @click="insertRawMention('@here')"
+                    class="text-xs text-slate-600 hover:text-slate-800 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg px-2 py-1">@here</button>
+                  <span x-show="form.use_embed" class="text-xs text-amber-600">⚠️ Embed: mention sẽ tự động đặt ngoài viền để ping được</span>
+                </div>
+                <div x-show="mentionPickerOpen" x-transition.opacity
+                  class="absolute z-30 mt-2 left-0 right-0 max-w-md bg-white border border-slate-200 rounded-xl shadow-lg p-2">
+                  <input x-model="mentionQuery" x-ref="mentionSearch" type="text" placeholder="Tìm theo tên hoặc nickname..."
+                    class="input-field text-sm mb-2" />
+                  <div x-show="loadingMembers" class="text-xs text-slate-500 px-2 py-3">Đang tải danh sách...</div>
+                  <div x-show="!loadingMembers && filteredMentionMembers.length === 0" class="text-xs text-slate-500 px-2 py-3">Không tìm thấy thành viên</div>
+                  <div class="max-h-64 overflow-y-auto">
+                    <template x-for="m in filteredMentionMembers" :key="m.id">
+                      <button type="button" @click="insertMention(m)"
+                        class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-indigo-50 text-left">
+                        <span class="text-sm font-medium text-slate-700" x-text="m.nickname || m.global_name || m.username || m.id"></span>
+                        <span class="text-xs text-slate-400" x-text="'@'+(m.username||m.id)"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
               <details class="mt-1.5">
                 <summary class="text-xs text-indigo-600 cursor-pointer font-semibold">📝 Cách format (markdown + mention)</summary>
                 <div class="mt-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1 leading-relaxed">

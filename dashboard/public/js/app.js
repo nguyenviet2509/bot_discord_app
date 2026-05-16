@@ -417,6 +417,12 @@ document.addEventListener('alpine:init', () => {
     dragOverGroup: undefined, // undefined = none, null = ungrouped zone, number = group id
     statusFilter: 'all', // 'all' | 'enabled' | 'disabled'
     levelUpChannelId: '', // tu /settings, dung lam goi y khi tao leaderboard
+    // ---- Mention picker (tag thanh vien vao noi dung) ----
+    mentionMembers: [],          // cache danh sach member tu /api/members
+    mentionPickerOpen: false,
+    mentionQuery: '',
+    loadingMembers: false,
+    mentionFetchedAt: 0,         // timestamp ms, cache 5 phut
     form: {
       name: '', channel_id: '', content: '', image_url: '',
       interval_minutes: 180, enabled: true,
@@ -667,6 +673,65 @@ document.addEventListener('alpine:init', () => {
     showToast(msg, color = 'green') {
       this.toast = { msg, color }
       setTimeout(() => { this.toast = null }, 3000)
+    },
+
+    // ---- Mention picker helpers ----
+    async openMentionPicker() {
+      this.mentionPickerOpen = !this.mentionPickerOpen
+      if (!this.mentionPickerOpen) return
+      this.mentionQuery = ''
+      // Cache 5 phut de tranh goi lai /members lien tuc
+      const fresh = Date.now() - this.mentionFetchedAt < 5 * 60 * 1000
+      if (!this.mentionMembers.length || !fresh) {
+        this.loadingMembers = true
+        try {
+          const data = await api('GET', '/members')
+          this.mentionMembers = Array.isArray(data) ? data : []
+          this.mentionFetchedAt = Date.now()
+        } catch (err) {
+          this.showToast('Không tải được danh sách thành viên', 'red')
+        }
+        this.loadingMembers = false
+      }
+      // Focus o tim kiem sau khi DOM update
+      this.$nextTick(() => { this.$refs.mentionSearch?.focus() })
+    },
+
+    get filteredMentionMembers() {
+      const q = (this.mentionQuery || '').toLowerCase().trim()
+      const list = this.mentionMembers
+      if (!q) return list.slice(0, 50)
+      return list.filter(m => {
+        const fields = [m.username, m.nickname, m.global_name, m.id]
+        return fields.some(f => f && String(f).toLowerCase().includes(q))
+      }).slice(0, 50)
+    },
+
+    // Chen <@USER_ID> vao form.content tai vi tri con tro (hoac cuoi)
+    insertMention(member) {
+      if (!member?.id) return
+      this.insertAtCursor(`<@${member.id}> `)
+      this.mentionPickerOpen = false
+    },
+
+    // Chen mention tho (@everyone / @here) vao content
+    insertRawMention(text) {
+      this.insertAtCursor(`${text} `)
+    },
+
+    insertAtCursor(text) {
+      const ta = this.$refs.contentArea
+      const current = this.form.content || ''
+      if (!ta) { this.form.content = current + text; return }
+      const start = ta.selectionStart ?? current.length
+      const end = ta.selectionEnd ?? current.length
+      this.form.content = current.slice(0, start) + text + current.slice(end)
+      // Dat lai con tro sau text vua chen
+      this.$nextTick(() => {
+        const pos = start + text.length
+        ta.focus()
+        ta.setSelectionRange(pos, pos)
+      })
     },
 
     timeAgo,
