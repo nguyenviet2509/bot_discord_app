@@ -4,6 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const crypto = require('crypto')
 const db = require('../../shared/db')
+const { pushRoleIcon } = require('../../shared/discord-role-icon')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
@@ -91,6 +92,28 @@ router.delete('/:id', (req, res) => {
 router.post('/upload', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Không có file được upload' })
   res.json({ url: `/uploads/${req.file.filename}` })
+})
+
+// POST /push-role-icon: dung anh badge da upload (badge_url) lam icon cua role
+// kem theo (role_id). Reuse logic flair: PATCH Discord role icon qua API.
+// Body: { badge_url: '/uploads/xxx.png', role_id: '12345...' }
+router.post('/push-role-icon', async (req, res) => {
+  const { badge_url, role_id } = req.body
+  if (!badge_url || !role_id) return res.status(400).json({ error: 'badge_url va role_id la bat buoc' })
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua cau hinh' })
+
+  // badge_url co dang '/uploads/xxx.png' -> resolve absolute path
+  const filename = path.basename(badge_url)
+  const filePath = path.join(UPLOADS_DIR, filename)
+
+  const result = await pushRoleIcon({
+    guildId: GUILD_ID(),
+    roleId: role_id,
+    filePath,
+    botToken: process.env.BOT_TOKEN,
+  })
+  if (!result.ok) return res.status(result.status).json({ error: result.error, hint: result.hint })
+  res.json({ success: true })
 })
 
 // Gui test level-up embed cho 1 reward cu the (preview UI tren Discord)

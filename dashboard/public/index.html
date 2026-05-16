@@ -251,6 +251,23 @@
                 </select>
                 <p class="text-xs text-slate-400 mt-1">Nếu chọn, member sẽ nhận cả badge và role này khi đạt level.</p>
               </div>
+              <!-- Flair: dung anh badge lam icon role tren Discord -->
+              <div x-show="form.badge_url && form.role_id" class="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
+                <div class="flex items-start gap-3">
+                  <div class="flex-1">
+                    <div class="text-sm font-semibold text-indigo-900 mb-0.5">🎖️ Dùng ảnh badge làm icon role</div>
+                    <p class="text-xs text-indigo-700 leading-snug">
+                      Push ảnh badge này lên Discord làm icon của role kèm theo.
+                      Icon sẽ hiển thị cạnh tên member khi họ chat (Discord native).
+                      <strong>Cần Server Boost Level 2</strong> (≥7 boost) — ảnh ≤256KB.
+                    </p>
+                  </div>
+                  <button @click="pushBadgeAsRoleIcon()" :disabled="pushingIcon"
+                    class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
+                    <span x-text="pushingIcon ? 'Đang push...' : 'Push icon'"></span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           <!-- Test Send Section -->

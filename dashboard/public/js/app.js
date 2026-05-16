@@ -80,6 +80,7 @@ document.addEventListener('alpine:init', () => {
     uploading: false,
     saving: false,
     sending: false,
+    pushingIcon: false,
     testChannelId: localStorage.getItem('rewards_test_channel_id') || '',
     form: { level_required: 1, type: 'role', role_id: '', badge_url: '', badge_name: '' },
     editId: null,
@@ -128,6 +129,29 @@ document.addEventListener('alpine:init', () => {
       const data = await api('POST', '/rewards/upload', fd)
       if (data?.url) this.form.badge_url = data.url
       this.uploading = false
+    },
+
+    async pushBadgeAsRoleIcon() {
+      if (!this.form.badge_url || !this.form.role_id) {
+        this.showToast('Cần có ảnh badge và role kèm theo', 'red')
+        return
+      }
+      this.pushingIcon = true
+      try {
+        const res = await api('POST', '/rewards/push-role-icon', {
+          badge_url: this.form.badge_url,
+          role_id: this.form.role_id,
+        })
+        if (res?.success) {
+          this.showToast('Đã push ảnh lên role làm icon ✓ — kiểm tra Server Settings → Roles', 'green')
+        } else {
+          const hint = res?.hint ? `\n💡 ${res.hint}` : ''
+          this.showToast((res?.error || 'Push thất bại') + hint, 'red')
+        }
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.pushingIcon = false
     },
 
     async save() {
@@ -1499,6 +1523,11 @@ document.addEventListener('alpine:init', () => {
         const res = await api('POST', '/flair-config/upload-icon', fd)
         if (res?.success) {
           this.showToast(`Đã upload + push icon role ✓`, 'green')
+          await this.load()
+        } else if (res?.saved) {
+          // Config DA luu DB nhung Discord PATCH that bai (vd thieu Boost L2)
+          const hint = res?.hint ? `\n💡 ${res.hint}` : ''
+          this.showToast(`⚠️ Đã lưu config (mode=role). Discord chưa nhận icon: ${res?.error || ''}${hint}`, 'amber')
           await this.load()
         } else {
           const hint = res?.hint ? `\n💡 ${res.hint}` : ''

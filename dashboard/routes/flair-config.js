@@ -9,6 +9,7 @@ const { LEVEL_TIERS } = require('../../bot/src/services/level-service')
 const {
   isValidBadge, buildFlairNickname, getBadgeForTier, getTierConfig,
 } = require('../../bot/src/services/tier-flair-service')
+const { pushRoleIcon } = require('../../shared/discord-role-icon')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
@@ -108,46 +109,39 @@ router.post('/upload-icon', upload.single('image'), async (req, res) => {
 
   const iconUrl = `/uploads/${req.file.filename}`
   const filePath = path.join(UPLOADS_DIR, req.file.filename)
+  const tierExists = LEVEL_TIERS.find(t => t.minLevel === Number(min_level))
+
+  // Luu DB truoc (mode='role' + icon_url + role_id) — bao dam config persist
+  // ke ca khi Discord PATCH fail (vd server chua co Boost L2).
+  // Test preview se phan anh dung mode role thay vi fallback ve emoji default.
+  const existing = db.getTierBadgeOverrides(GUILD_ID()).get(Number(min_level))
+  db.setTierBadge(GUILD_ID(), Number(min_level), {
+    mode: 'role',
+    badge: existing?.badge || tierExists?.badge || '',
+    role_id,
+    icon_url: iconUrl,
+  })
 
   try {
-    // Doc file va encode base64 data URI cho Discord API
-    const buf = fs.readFileSync(filePath)
-    const mime = req.file.mimetype
-    const dataUri = `data:${mime};base64,${buf.toString('base64')}`
-
-    // PATCH /guilds/{guild.id}/roles/{role.id} voi field icon
-    const url = `https://discord.com/api/v10/guilds/${GUILD_ID()}/roles/${role_id}`
-    const r = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bot ${process.env.BOT_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ icon: dataUri }),
+    const result = await pushRoleIcon({
+      guildId: GUILD_ID(),
+      roleId: role_id,
+      filePath,
+      botToken: process.env.BOT_TOKEN,
     })
-    if (!r.ok) {
-      const errText = await r.text()
-      // Discord 403 thuong la khi server chua co Boost Level 2
-      return res.status(r.status).json({
-        error: `Discord API ${r.status}: ${errText.slice(0, 300)}`,
-        hint: r.status === 403 || r.status === 400
-          ? 'Co the server chua dat Boost Level 2 (can ≥7 boost de upload role icon).'
-          : undefined,
+    if (!result.ok) {
+      // Config DA luu DB nen test preview van hien Mode: Role Icon — chi rieng
+      // icon tren Discord chat khong hien duoc cho den khi server du Boost L2.
+      return res.status(result.status).json({
+        error: result.error,
+        hint: result.hint,
+        icon_url: iconUrl,
+        saved: true,
       })
     }
-
-    // Luu icon_url vao DB
-    const existing = db.getTierBadgeOverrides(GUILD_ID()).get(Number(min_level))
-    db.setTierBadge(GUILD_ID(), Number(min_level), {
-      mode: 'role',
-      badge: existing?.badge || '',
-      role_id,
-      icon_url: iconUrl,
-    })
-
     res.json({ success: true, icon_url: iconUrl })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message, icon_url: iconUrl, saved: true })
   }
 })
 
@@ -163,10 +157,34 @@ router.post('/test', async (req, res) => {
   const isRole = cfg.mode === 'role'
 
   let description
+  let thumbnailUrl = null
   if (isRole) {
+    // Query Discord API kiem tra role co thuc su co icon hash hay khong
+    // -> xac nhan upload thanh cong + server du Boost L2
+    let roleIconStatus = '⏳ Chua kiem tra'
+    try {
+      const rr = await fetch(`https://discord.com/api/v10/guilds/${guildId}/roles`, {
+        headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
+      })
+      if (rr.ok) {
+        const roles = await rr.json()
+        const role = roles.find(r => r.id === cfg.role_id)
+        if (role?.icon) {
+          // Discord CDN URL cho role icon — hien thi cạnh ten member co role nay
+          thumbnailUrl = `https://cdn.discordapp.com/role-icons/${role.id}/${role.icon}.png?size=128`
+          roleIconStatus = `✅ Icon đã có trên Discord (\`${role.icon.slice(0, 12)}...\`)`
+        } else {
+          roleIconStatus = '❌ Role chưa có icon trên Discord (có thể server chưa đủ Boost Level 2 hoặc upload bị reject)'
+        }
+      }
+    } catch (e) {
+      roleIconStatus = `⚠️ Không query được Discord: ${e.message}`
+    }
+
     description = `Tier **${tier.name}** (lv ${tier.minLevel}+) — Mode: **Role Icon**\n` +
-      `Bot sẽ gán role <@&${cfg.role_id}> cho member khi lên tier này.\n` +
-      `Icon role sẽ tự hiển thị cạnh tên trong chat (Discord native).`
+      `Bot sẽ gán role <@&${cfg.role_id}> cho member khi lên tier này.\n\n` +
+      `**Trạng thái icon trên Discord:** ${roleIconStatus}\n\n` +
+      `_Lưu ý: icon role chỉ hiển thị cạnh tên user thật khi (1) server đạt Boost Level 2, (2) user đó được gán role. Embed test này không simulate được icon cạnh tên bot._`
   } else {
     const sampleNick = buildFlairNickname('TestUser', cfg.badge)
     description = `Tier **${tier.name}** (lv ${tier.minLevel}+) — Mode: **Emoji**\n` +
@@ -179,6 +197,7 @@ router.post('/test', async (req, res) => {
     color: tier.color,
     timestamp: new Date().toISOString(),
   }
+  if (thumbnailUrl) embed.thumbnail = { url: thumbnailUrl }
 
   try {
     const r = await fetch(`https://discord.com/api/v10/channels/${channel_id}/messages`, {
