@@ -63,14 +63,6 @@ client.once('ready', async () => {
   console.log(`[Bot] ✅ Ready! Logged in as ${client.user.tag}`)
   await registerCommands()
 
-  // Audit permission MANAGE_NICKNAMES cho tier flair feature
-  client.guilds.cache.forEach(guild => {
-    const me = guild.members.me
-    if (me && !me.permissions.has('ManageNicknames')) {
-      console.warn(`[Flair] Guild ${guild.name} (${guild.id}): bot thieu MANAGE_NICKNAMES → flair feature se khong hoat dong cho guild nay.`)
-    }
-  })
-
   // Scheduled messages worker: check moi 60s, send neu da den han
   setInterval(async () => {
     const nowSec = Math.floor(Date.now() / 1000)

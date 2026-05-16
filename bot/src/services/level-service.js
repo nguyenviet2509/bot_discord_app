@@ -117,21 +117,6 @@ async function handleLevelUp(client, guild, member, newLevel, settings, triggerM
     }
   }
 
-  // ── Tier Flair: cap nhat nickname khi len tier moi (10/20/.../100) ─────────
-  // Lazy require de tranh circular dependency (tier-flair-service require level-service)
-  try {
-    const { applyTierFlair } = require('./tier-flair-service')
-    const oldTier = getTierForLevel(oldLevel || 0)
-    const newTier = getTierForLevel(newLevel)
-    // Chi trigger khi doi tier (vd 9->10, 19->20). Cung tier (11->12) thi skip.
-    if (newTier.minLevel !== oldTier.minLevel && newLevel >= 10) {
-      const userRow = db.getUser(member.id, guild.id)
-      await applyTierFlair(member, newLevel, userRow)
-    }
-  } catch (err) {
-    console.error('[LevelService] Tier flair update failed:', err.message)
-  }
-
   // Channel thong bao level-up (config tu dashboard hoac env)
   const channelId = settings?.level_up_channel_id || process.env.LEVELUP_CHANNEL_ID
   const channel = channelId ? guild.channels.cache.get(channelId) : null
