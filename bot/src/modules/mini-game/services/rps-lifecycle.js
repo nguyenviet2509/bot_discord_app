@@ -41,18 +41,11 @@ async function onAccept(interaction, matchId) {
   const { aTag, bTag } = await getTags(interaction.client, m)
   const fresh = matchStore.getMatchById(matchId)
 
-  // Edit message public: chuyen sang trang thai picking, bo nut accept/decline
+  // Edit message public: chuyen sang trang thai picking + public open-pick button
   await interaction.update({
     embeds: [renderer.buildPickingEmbed({ aTag, bTag, stake: m.stake, matchId, pickA: fresh.pick_a, pickB: fresh.pick_b })],
-    components: [],
-    content: '',
-  })
-
-  // Gui ephemeral pick UI cho B
-  await interaction.followUp({
-    content: `🎮 Đối thủ: **${aTag}** — chọn nước đi:`,
-    components: [renderer.buildPickButtons(matchId)],
-    ephemeral: true,
+    components: [renderer.buildOpenPickButton(matchId)],
+    content: `<@${m.player_a}> <@${m.player_b}> bấm **🎯 Chọn nước đi** để chọn (riêng tư, chỉ bạn thấy).`,
   })
 
   // Timeout 60s: chua pick du -> settle theo nguoi da pick
@@ -77,6 +70,28 @@ async function onDecline(interaction, matchId) {
   await interaction.update({
     embeds: [renderer.buildCancelEmbed({ aTag, bTag, matchId, reason: `${bTag} đã từ chối` })],
     components: [], content: '',
+  })
+}
+
+// User (A hoac B) bam public "Chon nuoc di" -> bot reply ephemeral pick buttons.
+async function onOpenPick(interaction, matchId) {
+  const m = matchStore.getMatchById(matchId)
+  if (!m) return interaction.reply({ content: '❌ Trận không tồn tại.', ephemeral: true })
+  const isA = interaction.user.id === m.player_a
+  const isB = interaction.user.id === m.player_b
+  if (!isA && !isB) return interaction.reply({ content: '❌ Bạn không phải người chơi trong trận này.', ephemeral: true })
+  if (m.state !== matchStore.STATE.PICKING) {
+    return interaction.reply({ content: '⚠️ Trận chưa sẵn sàng hoặc đã kết thúc.', ephemeral: true })
+  }
+  const myPick = isA ? m.pick_a : m.pick_b
+  if (myPick) {
+    const label = require('./rps-engine').LABEL[myPick]
+    return interaction.reply({ content: `✅ Bạn đã chọn ${label.emoji} **${label.vi}**. Chờ đối thủ...`, ephemeral: true })
+  }
+  return interaction.reply({
+    content: '🎮 Chọn nước đi của bạn:',
+    components: [renderer.buildPickButtons(matchId)],
+    ephemeral: true,
   })
 }
 
@@ -181,4 +196,4 @@ async function cancelByTimeout(client, matchId, reason) {
   }
 }
 
-module.exports = { onAccept, onDecline, onPick, cancelByTimeout, settle }
+module.exports = { onAccept, onDecline, onOpenPick, onPick, cancelByTimeout, settle }

@@ -60,6 +60,17 @@ function buildPickButtons(matchId) {
   )
 }
 
+// Public button: bam de mo ephemeral pick UI (ca A va B dung chung).
+function buildOpenPickButton(matchId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`mg:rps:open-pick:${matchId}`)
+      .setLabel('Chọn nước đi')
+      .setEmoji('🎯')
+      .setStyle(ButtonStyle.Primary),
+  )
+}
+
 // Embed ket qua cuoi cung (reveal ca 2 + chuyen coin).
 function buildResultEmbed({ aTag, bTag, pickA, pickB, winner, stake, matchId, balanceA, balanceB, timeoutLoser }) {
   let title, color, desc
@@ -124,6 +135,7 @@ module.exports = {
   buildChallengeButtons,
   buildPickingEmbed,
   buildPickButtons,
+  buildOpenPickButton,
   buildResultEmbed,
   buildCancelEmbed,
   userTag,

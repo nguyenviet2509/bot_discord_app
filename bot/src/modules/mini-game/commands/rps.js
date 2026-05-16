@@ -62,10 +62,9 @@ module.exports = {
     const aTag = (await guild.members.fetch(a.id).catch(() => null))?.displayName || a.username
     const bTag = memberB.displayName
 
-    // ===== Reply ephemeral pick UI cho A =====
+    // ===== Reply ephemeral xac nhan cho A =====
     await interaction.reply({
-      content: `🎮 Đã gửi lời thách đấu tới **${bTag}**. Bạn chọn nước đi sẵn (B accept xong sẽ reveal):`,
-      components: [renderer.buildPickButtons(match.id)],
+      content: `🎮 Đã gửi lời thách đấu tới **${bTag}**. Đợi đối thủ phản hồi...`,
       ephemeral: true,
     })
 
