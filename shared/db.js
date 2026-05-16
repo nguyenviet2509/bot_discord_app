@@ -77,6 +77,7 @@ function initDb() {
       guild_id TEXT PRIMARY KEY,
       enabled INTEGER NOT NULL DEFAULT 1,
       message TEXT NOT NULL DEFAULT 'Chào mừng {user} đã tham gia server! 🎉 Hãy giới thiệu bản thân và làm quen với mọi người nhé.',
+      image_url TEXT,
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
@@ -241,6 +242,7 @@ function initDb() {
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN public_forum_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN post_admin_role_ids TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE posts ADD COLUMN image_url TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE welcome_template ADD COLUMN image_url TEXT`) } catch (_) {}
   return database
 }
 
@@ -904,17 +906,23 @@ function getWelcomeTemplate(guildId) {
   return row || { guild_id: guildId, ...WELCOME_DEFAULTS }
 }
 
-function upsertWelcomeTemplate({ guild_id, enabled, message }) {
+function upsertWelcomeTemplate({ guild_id, enabled, message, image_url }) {
   return getDb()
     .prepare(`
-      INSERT INTO welcome_template (guild_id, enabled, message, updated_at)
-      VALUES (@guild_id, @enabled, @message, unixepoch())
+      INSERT INTO welcome_template (guild_id, enabled, message, image_url, updated_at)
+      VALUES (@guild_id, @enabled, @message, @image_url, unixepoch())
       ON CONFLICT(guild_id) DO UPDATE SET
         enabled = excluded.enabled,
         message = excluded.message,
+        image_url = excluded.image_url,
         updated_at = unixepoch()
     `)
-    .run({ guild_id, enabled: enabled ? 1 : 0, message: message || WELCOME_DEFAULTS.message })
+    .run({
+      guild_id,
+      enabled: enabled ? 1 : 0,
+      message: message || WELCOME_DEFAULTS.message,
+      image_url: image_url || null,
+    })
 }
 
 function getChannelsWithLinks(guildId) {

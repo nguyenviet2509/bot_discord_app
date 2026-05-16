@@ -76,4 +76,4 @@ function buildPayload(msg, { restAPI = false } = {}) {
   return { payload, files }
 }
 
-module.exports = { buildPayload }
+module.exports = { buildPayload, resolveImage }

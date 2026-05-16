@@ -1,4 +1,5 @@
 const db = require('../../../shared/db')
+const { resolveImage } = require('../../../shared/build-scheduled-payload')
 
 module.exports = {
   name: 'guildMemberAdd',
@@ -34,10 +35,16 @@ module.exports = {
         .replace(/\{username\}/g, member.user.username)
         .replace(/\{server\}/g, member.guild.name)
 
-      await channel.send({
+      // Đính kèm ảnh (nếu có): local file → attachment, URL tuyệt đối → embed.image.url
+      const { url: imgUrl, filePath, filename } = resolveImage(tpl.image_url)
+      const sendOpts = {
         content,
-        allowed_mentions: { users: [member.id] },
-      })
+        allowedMentions: { users: [member.id] },
+      }
+      if (imgUrl) sendOpts.embeds = [{ image: { url: imgUrl } }]
+      if (filePath) sendOpts.files = [{ attachment: filePath, name: filename }]
+
+      await channel.send(sendOpts)
     } catch (err) {
       console.error('[Welcome] send fail:', err.message)
     }

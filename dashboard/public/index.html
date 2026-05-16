@@ -1725,6 +1725,25 @@
               </p>
             </div>
 
+            <div class="mb-4">
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Ảnh đính kèm (tuỳ chọn)</label>
+              <template x-if="!form.image_url">
+                <label class="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-xl text-sm text-slate-500 hover:border-indigo-400 hover:text-indigo-600 cursor-pointer transition">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span x-text="uploading ? 'Đang upload...' : 'Chọn ảnh (JPEG/PNG/GIF/WEBP, ≤5MB)'"></span>
+                  <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" @change="uploadImage($event)" :disabled="uploading">
+                </label>
+              </template>
+              <template x-if="form.image_url">
+                <div class="relative inline-block">
+                  <img :src="form.image_url" alt="welcome" class="max-h-48 rounded-xl border border-slate-200">
+                  <button type="button" @click="removeImage()" class="absolute -top-2 -right-2 w-7 h-7 bg-white border border-slate-300 rounded-full shadow flex items-center justify-center text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-300" title="Xoá ảnh">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              </template>
+            </div>
+
             <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
               <strong>Lưu ý:</strong> Tin nhắn được gửi vào kênh đã đặt ở <em>Cấu hình → Channel auto-reply khi lên cấp</em>.
               <span x-show="!replyChannelId" class="block mt-1 font-semibold text-red-700">⚠️ Hiện chưa cấu hình — hãy vào tab Cấu hình để đặt.</span>
@@ -1757,6 +1776,9 @@
                     <span class="text-xs" style="color:#949ba4">hôm nay 14:14</span>
                   </div>
                   <div class="text-sm mt-0.5" style="color:#dbdee1;line-height:1.5" x-html="previewHtml"></div>
+                  <template x-if="form.image_url">
+                    <img :src="form.image_url" alt="preview" class="mt-2 max-h-72 rounded-lg" style="border:1px solid #1e1f22">
+                  </template>
                 </div>
               </div>
             </div>

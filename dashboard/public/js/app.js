@@ -1485,12 +1485,14 @@ document.addEventListener('alpine:init', () => {
     form: {
       enabled: true,
       message: 'Chào mừng {user} đã tham gia server! 🎉 Hãy giới thiệu bản thân và làm quen với mọi người nhé.',
+      image_url: '',
     },
     replyChannelId: '',
     testChannelId: '',
     loading: false,
     saving: false,
     sending: false,
+    uploading: false,
     toast: null,
 
     async init() {
@@ -1504,7 +1506,7 @@ document.addEventListener('alpine:init', () => {
         api('GET', '/welcome-template'),
         api('GET', '/settings'),
       ])
-      if (tpl) this.form = { enabled: !!tpl.enabled, message: tpl.message || '' }
+      if (tpl) this.form = { enabled: !!tpl.enabled, message: tpl.message || '', image_url: tpl.image_url || '' }
       this.replyChannelId = settings?.level_up_reply_channel_id || ''
       if (!this.testChannelId) this.testChannelId = this.replyChannelId
       this.loading = false
@@ -1512,6 +1514,31 @@ document.addEventListener('alpine:init', () => {
 
     insertVar(v) {
       this.form.message = (this.form.message || '') + v
+    },
+
+    async uploadImage(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      this.uploading = true
+      try {
+        const fd = new FormData()
+        fd.append('image', file)
+        const data = await api('POST', '/welcome-template/upload', fd)
+        if (data?.url) {
+          this.form.image_url = data.url
+          this.showToast('Đã upload ảnh ✓', 'green')
+        } else {
+          this.showToast(data?.error || 'Upload thất bại', 'red')
+        }
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.uploading = false
+      event.target.value = ''
+    },
+
+    removeImage() {
+      this.form.image_url = ''
     },
 
     async save() {
@@ -1537,6 +1564,7 @@ document.addEventListener('alpine:init', () => {
         const res = await api('POST', '/welcome-template/test', {
           channel_id: ch,
           message: this.form.message,
+          image_url: this.form.image_url || null,
         })
         if (res?.success) this.showToast('Đã gửi test ✓', 'green')
         else this.showToast(res?.error || 'Gửi thất bại', 'red')
