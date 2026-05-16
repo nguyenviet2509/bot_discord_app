@@ -1079,6 +1079,8 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('commandsSection', () => ({
     commands: [],
     loading: false,
+    search: '',
+    collapsed: {}, // map group name -> true if collapsed
 
     async init() {
       await this.load()
@@ -1090,12 +1092,28 @@ document.addEventListener('alpine:init', () => {
       this.loading = false
     },
 
+    // Lọc command theo từ khóa: khớp tên, mô tả, hoặc tên tham số.
+    _matchesSearch(cmd) {
+      const q = this.search.trim().toLowerCase()
+      if (!q) return true
+      if (cmd.name && cmd.name.toLowerCase().includes(q)) return true
+      if (cmd.description && cmd.description.toLowerCase().includes(q)) return true
+      if (Array.isArray(cmd.options)) {
+        for (const opt of cmd.options) {
+          if (opt.name && opt.name.toLowerCase().includes(q)) return true
+          if (opt.description && opt.description.toLowerCase().includes(q)) return true
+        }
+      }
+      return false
+    },
+
     // Group commands by prefix (text before the first dash).
     // Groups with only 1 command fall into "Khác".
     // Returns: [{ name, items }, ...] then { name: 'Khác', items } if any
     get groupedCommands() {
+      const filtered = this.commands.filter(c => this._matchesSearch(c))
       const byPrefix = new Map()
-      this.commands.forEach(c => {
+      filtered.forEach(c => {
         const prefix = (c.name.split('-')[0] || c.name).toLowerCase()
         if (!byPrefix.has(prefix)) byPrefix.set(prefix, [])
         byPrefix.get(prefix).push(c)
@@ -1116,6 +1134,27 @@ document.addEventListener('alpine:init', () => {
         groups.push({ name: 'Khác', items: others })
       }
       return groups
+    },
+
+    // Khi đang tìm kiếm thì luôn mở rộng để xem kết quả.
+    isExpanded(groupName) {
+      if (this.search.trim()) return true
+      return !this.collapsed[groupName]
+    },
+
+    toggleGroup(groupName) {
+      if (this.search.trim()) return // bỏ qua khi đang tìm kiếm
+      this.collapsed[groupName] = !this.collapsed[groupName]
+    },
+
+    expandAll() {
+      this.collapsed = {}
+    },
+
+    collapseAll() {
+      const next = {}
+      for (const g of this.groupedCommands) next[g.name] = true
+      this.collapsed = next
     },
 
     optionTypeName(type) {
