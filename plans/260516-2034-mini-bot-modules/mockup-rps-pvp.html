@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>Mockup — /rps PvP (1v1)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  * { font-family: 'Inter', sans-serif; }
+  body { background: #313338; color: #e2e8f0; }
+  .channel-bar { background: #2b2d31; border-bottom: 1px solid #1f2023; }
+  .msg-hover:hover { background: rgba(4,4,5,.07); }
+  .embed { display: flex; background: #2b2d31; border-radius: 4px; max-width: 560px; }
+  .embed-bar { width: 4px; background: #6366f1; border-radius: 4px 0 0 4px; flex-shrink: 0; }
+  .embed-bar.warn { background: #eab308; }
+  .embed-bar.win { background: #22c55e; }
+  .embed-bar.lose { background: #ef4444; }
+  .embed-bar.ephe { background: #4e5058; }
+  .embed-inner { padding: 12px 16px; flex: 1; }
+  .btn-discord { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
+  .btn-primary { background: #5865f2; color: white; }
+  .btn-success { background: #248046; color: white; }
+  .btn-danger  { background: #da373c; color: white; }
+  .btn-secondary { background: #4e5058; color: white; }
+  .btn-discord:disabled { opacity: .5; cursor: not-allowed; }
+  .slash { display: inline-flex; align-items: center; background: rgba(88,101,242,.15); color: #c9cdfb; padding: 0 4px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+  .slash::before { content: '/'; opacity: .7; }
+  .mention { background: rgba(88,101,242,.3); color: #c9cdfb; padding: 0 2px; border-radius: 3px; font-weight: 500; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; flex-shrink: 0; }
+  .eph { background: rgba(78,80,88,.2); border-left: 3px solid #4e5058; padding: 8px 12px; border-radius: 0 4px 4px 0; font-size: 12px; color: #b5bac1; max-width: 560px; }
+  .eph-only { font-size: 11px; color: #949ba4; margin-top: 4px; }
+  .scene-label { font-size: 11px; color: #6366f1; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+  .arrow { color: #6366f1; font-size: 20px; text-align: center; margin: 8px 0; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="max-w-5xl mx-auto">
+  <div class="channel-bar px-5 py-3 flex items-center gap-3 sticky top-0 z-10">
+    <span class="text-slate-400 text-xl">#</span>
+    <div class="font-semibold text-white">mini-game</div>
+    <div class="text-slate-500 text-xs ml-2">Mô phỏng /rps PvP — 2 player đấu nhau, có cược coin</div>
+  </div>
+
+  <div class="p-6 space-y-6">
+
+    <!-- 1. Challenge -->
+    <div>
+      <div class="scene-label">① quanlm thách đấu minhvu</div>
+      <div class="msg-hover px-2 py-2 flex gap-3">
+        <div class="avatar" style="background:#5865f2">Q</div>
+        <div class="flex-1">
+          <div class="flex items-baseline gap-2"><span class="font-semibold text-white">quanlm</span><span class="text-xs text-slate-500">22:40</span></div>
+          <div class="mt-1"><span class="slash">rps</span> <span class="mention">@minhvu</span> cược: 20</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Bot challenge embed -->
+    <div>
+      <div class="scene-label">② Bot post embed thách đấu (công khai)</div>
+      <div class="msg-hover px-2 py-2 flex gap-3">
+        <div class="avatar" style="background:#22c55e">B</div>
+        <div class="flex-1">
+          <div class="flex items-baseline gap-2"><span class="font-semibold text-emerald-400">Level Bot</span><span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold">APP</span><span class="text-xs text-slate-500">22:40</span></div>
+
+          <div class="embed mt-1">
+            <div class="embed-bar warn"></div>
+            <div class="embed-inner">
+              <div class="text-xs text-slate-400 mb-1">🎮 Kéo Búa Bao — PvP</div>
+              <div class="text-base font-bold text-white mb-1">🥊 <span class="text-indigo-400">quanlm</span> thách đấu <span class="text-indigo-400">minhvu</span></div>
+              <div class="text-sm text-slate-300 mt-2">
+                <div>💰 Cược: <b>20 coin</b> mỗi người</div>
+                <div>🏆 Người thắng nhận tất: <b class="text-emerald-400">+20 coin</b></div>
+                <div>💔 Người thua: <b class="text-rose-400">-20 coin</b></div>
+                <div class="text-xs text-yellow-400 mt-2">⚠️ minhvu có 60s để chấp nhận</div>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-3">Coin đã được tạm giữ • Hoàn nếu bị từ chối</div>
+            </div>
+          </div>
+
+          <div class="mt-2 flex gap-2">
+            <button class="btn-discord btn-success">✅ Chấp nhận</button>
+            <button class="btn-discord btn-danger">✖ Từ chối</button>
+          </div>
+          <div class="eph-only">Chỉ <b>minhvu</b> bấm được 2 nút này</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓ minhvu bấm "Chấp nhận"</div>
+
+    <!-- 3. Both pick -->
+    <div>
+      <div class="scene-label">③ Bot edit embed — Yêu cầu cả 2 chọn nước đi</div>
+      <div class="msg-hover px-2 py-2 flex gap-3">
+        <div class="avatar" style="background:#22c55e">B</div>
+        <div class="flex-1">
+          <div class="flex items-baseline gap-2"><span class="font-semibold text-emerald-400">Level Bot</span><span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold">APP</span><span class="text-xs text-slate-500">22:40</span><span class="text-[10px] text-slate-500 italic">(đã chỉnh sửa)</span></div>
+
+          <div class="embed mt-1">
+            <div class="embed-bar"></div>
+            <div class="embed-inner">
+              <div class="text-xs text-slate-400 mb-1">🎮 Kéo Búa Bao — PvP</div>
+              <div class="text-base font-bold text-white mb-2">⏳ Cả hai chọn nước đi...</div>
+              <div class="grid grid-cols-2 gap-3 my-2">
+                <div class="bg-[#1e1f22] rounded p-3 text-center">
+                  <div class="text-xs text-slate-400">quanlm</div>
+                  <div class="text-2xl my-1">⏳</div>
+                  <div class="text-xs text-yellow-400">Đang chọn...</div>
+                </div>
+                <div class="bg-[#1e1f22] rounded p-3 text-center">
+                  <div class="text-xs text-slate-400">minhvu</div>
+                  <div class="text-2xl my-1">⏳</div>
+                  <div class="text-xs text-yellow-400">Đang chọn...</div>
+                </div>
+              </div>
+              <div class="text-xs text-slate-400">Cược: 20 coin/người • Timeout: 60s</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Ephemeral pick (each player) -->
+    <div>
+      <div class="scene-label">④ Bot gửi ephemeral cho từng người (chỉ player đó thấy)</div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <!-- quanlm sees -->
+        <div class="bg-[#2b2d31] rounded-lg p-3 border-l-4 border-indigo-500">
+          <div class="text-xs text-indigo-400 font-semibold mb-2">👁 Chỉ quanlm thấy</div>
+          <div class="embed">
+            <div class="embed-bar ephe"></div>
+            <div class="embed-inner">
+              <div class="text-sm font-semibold text-white">Chọn nước đi của bạn</div>
+              <div class="text-xs text-slate-400 mt-1">Đối thủ: <b>minhvu</b> • Cược: 20 coin</div>
+            </div>
+          </div>
+          <div class="mt-2 flex gap-2 flex-wrap">
+            <button class="btn-discord btn-secondary">✂️ Kéo</button>
+            <button class="btn-discord btn-secondary">🪨 Búa</button>
+            <button class="btn-discord btn-secondary">📄 Bao</button>
+          </div>
+        </div>
+
+        <!-- minhvu sees -->
+        <div class="bg-[#2b2d31] rounded-lg p-3 border-l-4 border-rose-500">
+          <div class="text-xs text-rose-400 font-semibold mb-2">👁 Chỉ minhvu thấy</div>
+          <div class="embed">
+            <div class="embed-bar ephe"></div>
+            <div class="embed-inner">
+              <div class="text-sm font-semibold text-white">Chọn nước đi của bạn</div>
+              <div class="text-xs text-slate-400 mt-1">Đối thủ: <b>quanlm</b> • Cược: 20 coin</div>
+            </div>
+          </div>
+          <div class="mt-2 flex gap-2 flex-wrap">
+            <button class="btn-discord btn-secondary">✂️ Kéo</button>
+            <button class="btn-discord btn-secondary">🪨 Búa</button>
+            <button class="btn-discord btn-secondary">📄 Bao</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓ quanlm bấm 🪨 trước</div>
+
+    <!-- 5. Status update -->
+    <div>
+      <div class="scene-label">⑤ Bot update embed công khai — quanlm đã chọn</div>
+      <div class="msg-hover px-2 py-2 flex gap-3">
+        <div class="avatar" style="background:#22c55e">B</div>
+        <div class="flex-1">
+          <div class="flex items-baseline gap-2"><span class="font-semibold text-emerald-400">Level Bot</span><span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold">APP</span><span class="text-xs text-slate-500">22:40</span><span class="text-[10px] text-slate-500 italic">(đã chỉnh sửa)</span></div>
+
+          <div class="embed mt-1">
+            <div class="embed-bar"></div>
+            <div class="embed-inner">
+              <div class="text-xs text-slate-400 mb-1">🎮 Kéo Búa Bao — PvP</div>
+              <div class="text-base font-bold text-white mb-2">⏳ Đang chờ minhvu...</div>
+              <div class="grid grid-cols-2 gap-3 my-2">
+                <div class="bg-[#1e1f22] rounded p-3 text-center">
+                  <div class="text-xs text-slate-400">quanlm</div>
+                  <div class="text-2xl my-1">❓</div>
+                  <div class="text-xs text-emerald-400">✅ Đã chọn</div>
+                </div>
+                <div class="bg-[#1e1f22] rounded p-3 text-center">
+                  <div class="text-xs text-slate-400">minhvu</div>
+                  <div class="text-2xl my-1">⏳</div>
+                  <div class="text-xs text-yellow-400">Đang chọn...</div>
+                </div>
+              </div>
+              <div class="text-xs text-slate-400">Nước đi quanlm sẽ ẩn cho đến khi minhvu chọn xong</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓ minhvu bấm ✂️ → Reveal</div>
+
+    <!-- 6. Result -->
+    <div>
+      <div class="scene-label">⑥ KẾT QUẢ — Reveal cả 2 + chuyển coin</div>
+      <div class="msg-hover px-2 py-2 flex gap-3">
+        <div class="avatar" style="background:#22c55e">B</div>
+        <div class="flex-1">
+          <div class="flex items-baseline gap-2"><span class="font-semibold text-emerald-400">Level Bot</span><span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold">APP</span><span class="text-xs text-slate-500">22:41</span><span class="text-[10px] text-slate-500 italic">(đã chỉnh sửa)</span></div>
+
+          <div class="embed mt-1">
+            <div class="embed-bar win"></div>
+            <div class="embed-inner">
+              <div class="text-xs text-slate-400 mb-1">🎮 Kéo Búa Bao — PvP</div>
+              <div class="text-lg font-bold text-emerald-400 mb-2">🏆 quanlm thắng!</div>
+              <div class="grid grid-cols-3 gap-3 my-3">
+                <div class="text-center">
+                  <div class="text-xs text-emerald-400 font-semibold mb-1">quanlm 👑</div>
+                  <div class="text-5xl">🪨</div>
+                  <div class="text-xs text-slate-300 mt-1">búa</div>
+                </div>
+                <div class="flex items-center justify-center text-3xl text-slate-500">VS</div>
+                <div class="text-center">
+                  <div class="text-xs text-rose-400 mb-1">minhvu</div>
+                  <div class="text-5xl opacity-60">✂️</div>
+                  <div class="text-xs text-slate-300 mt-1">kéo</div>
+                </div>
+              </div>
+              <div class="border-t border-[#3f4147] pt-2 mt-2 grid grid-cols-2 gap-2 text-sm">
+                <div class="bg-emerald-900/30 rounded p-2">
+                  <div class="text-xs text-emerald-300">quanlm</div>
+                  <div class="text-emerald-400 font-bold">+20 coin → 🪙 345</div>
+                </div>
+                <div class="bg-rose-900/30 rounded p-2">
+                  <div class="text-xs text-rose-300">minhvu</div>
+                  <div class="text-rose-400 font-bold">-20 coin → 🪙 125</div>
+                </div>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-3">Trận đấu kết thúc • #mini-game</div>
+            </div>
+          </div>
+
+          <div class="mt-2 flex gap-2">
+            <button class="btn-discord btn-primary">🔄 Tái đấu (đảo vai)</button>
+            <button class="btn-discord btn-secondary">📊 Lịch sử PvP</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Edge case -->
+    <div class="border-t border-slate-700 pt-6">
+      <div class="scene-label">⚠️ EDGE CASES được xử lý</div>
+      <div class="space-y-2">
+        <div class="eph">
+          <b class="text-rose-400">❌ Từ chối:</b> minhvu bấm "Từ chối" → embed update "Trận đấu bị hủy", hoàn coin tạm giữ cho cả 2.
+        </div>
+        <div class="eph">
+          <b class="text-rose-400">⏱ Timeout chấp nhận (60s):</b> minhvu không phản hồi → tự hủy + hoàn coin + ephemeral "Đối thủ không phản hồi" cho quanlm.
+        </div>
+        <div class="eph">
+          <b class="text-rose-400">⏱ Timeout chọn (60s):</b> ai chưa chọn → người đó tính thua mặc định, người chọn rồi thắng. (hoặc hủy hòa — tùy chốt)
+        </div>
+        <div class="eph">
+          <b class="text-rose-400">🤝 Hòa:</b> Cả 2 chọn giống nhau → embed "Hòa!", hoàn lại coin tạm giữ, không ai thắng.
+        </div>
+        <div class="eph">
+          <b class="text-rose-400">💸 Không đủ coin:</b> A có 5 coin, cược 20 → bot reply ephemeral cho A "Bạn chỉ có 5 coin, không đủ cược". Tương tự check B khi accept.
+        </div>
+        <div class="eph">
+          <b class="text-rose-400">🙅 Tự thách:</b> A mention chính mình → reply ephemeral "Không thể tự thách đấu".
+        </div>
+        <div class="eph">
+          <b class="text-rose-400">🤖 Thách bot:</b> Mention bot → reply ephemeral "Bot không tham gia PvP (dùng /rps-vs-bot nếu muốn)". (HOẶC giữ vs-bot làm mode thứ 2)
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="border-t border-slate-700 pt-6">
+      <div class="bg-[#2b2d31] border border-[#1f2023] rounded-lg p-5">
+        <div class="text-xs text-indigo-400 font-semibold uppercase tracking-wider mb-2">Tóm tắt cơ chế PvP</div>
+        <ul class="text-sm text-slate-300 space-y-1.5">
+          <li>• Lệnh: <span class="slash">rps</span> <span class="mention">@user</span> [cược=10] (min 1, max 1000)</li>
+          <li>• <b>Escrow:</b> trừ cược cả 2 ngay khi B accept, hoàn nếu hủy/hòa/timeout</li>
+          <li>• <b>Reveal pattern:</b> ephemeral chọn → public chỉ hiện "đã chọn" → reveal đồng thời khi đủ 2</li>
+          <li>• <b>Winner takes all:</b> +cược cho thắng, -cược cho thua (zero-sum)</li>
+          <li>• Hỗ trợ tái đấu nhanh qua nút (đảo vai A ↔ B)</li>
+          <li>• Log: cả 2 phía vào <code class="text-xs bg-[#1e1f22] px-1 rounded">module_usage_log</code> + <code class="text-xs bg-[#1e1f22] px-1 rounded">coin_tx</code> (4 tx: trừ A, trừ B, +winner, hoàn nếu cần)</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

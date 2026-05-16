@@ -37,6 +37,10 @@ for (const file of fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'))) {
   client.on(event.name, (...args) => event.execute(...args, client))
 }
 
+// Load modules (sub-bot): quet bot/src/modules/<key>/, nap manifest + commands
+const loadModules = require('./modules/_loader')
+loadModules(client)
+
 // Auto-register slash commands voi Discord khi bot start
 async function registerCommands() {
   const commandsData = []

@@ -1,6 +1,7 @@
 // Event handler tap trung cho tat ca interaction (slash, modal, button, select, autocomplete)
 const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js')
 const db = require('../../../shared/db')
+const dbMg = require('../../../shared/db-mini-game')
 const dbPosts = require('../../../shared/db-posts')
 const postService = require('../services/post-service')
 const { takePending } = require('../utils/pending-image-cache')
@@ -26,6 +27,20 @@ async function handleSlashCommand(interaction, client) {
     if (!db.memberHasAccess(interaction.member, allowed)) {
       return interaction.reply({
         content: '🚫 Bạn không có quyền sử dụng bot này. Liên hệ admin để được cấp role.',
+        ephemeral: true,
+      }).catch(() => {})
+    }
+  }
+
+  // Module gate: command thuoc module phai duoc enable cho guild
+  const moduleKey = command._module
+  if (moduleKey && interaction.guild) {
+    const manifest = client._modules?.get(moduleKey)
+    const dbState = dbMg.isModuleEnabled(interaction.guild.id, moduleKey)
+    const enabled = dbState === null ? !!manifest?.defaultEnabled : dbState
+    if (!enabled) {
+      return interaction.reply({
+        content: `⚠️ Module **${manifest?.name || moduleKey}** chưa được bật cho server này. Liên hệ admin để bật.`,
         ephemeral: true,
       }).catch(() => {})
     }
@@ -105,6 +120,18 @@ async function handleModalSubmit(interaction) {
 // ============================================================
 async function handleButton(interaction) {
   const id = interaction.customId
+
+  // Module button handlers (mg:..., other modules in future) duoc dang ky qua _moduleButtonHandlers
+  const moduleHandlers = interaction.client._moduleButtonHandlers || []
+  for (const handler of moduleHandlers) {
+    try {
+      const handled = await handler(interaction)
+      if (handled) return
+    } catch (err) {
+      console.error('[ModuleButton]', err)
+    }
+  }
+
   if (!id.startsWith('post:')) return
 
   const parts = id.split(':')

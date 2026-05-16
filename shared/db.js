@@ -243,6 +243,10 @@ function initDb() {
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN post_admin_role_ids TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE posts ADD COLUMN image_url TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE welcome_template ADD COLUMN image_url TEXT`) } catch (_) {}
+
+  // Schema cho module system & mini-game PvP (tach file rieng)
+  require('./db-mini-game').initMiniGameSchema(database)
+
   return database
 }
 
@@ -933,6 +937,7 @@ function getChannelsWithLinks(guildId) {
 
 module.exports = {
   initDb,
+  getDb,
   getUser,
   upsertUser,
   getRewards,

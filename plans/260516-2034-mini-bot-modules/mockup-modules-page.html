@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Modules Page</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    * { font-family: 'Inter', -apple-system, sans-serif; }
+    [x-cloak] { display: none !important; }
+    .sidebar-bg { background: linear-gradient(180deg, #0f172a 0%, #1e1040 100%); }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 10px;
+      color: #94a3b8; cursor: pointer; font-size: 14px; font-weight: 500;
+      transition: all .15s; border-left: 3px solid transparent; user-select: none;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.06); color: #e2e8f0; }
+    .nav-item.active { background: rgba(99,102,241,.15); color: #a5b4fc; border-left-color: #6366f1; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
+    .module-card {
+      background: white; border-radius: 16px; padding: 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06); transition: all .15s;
+      border: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 14px;
+    }
+    .module-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.09); }
+    .module-card.enabled { border-color: #c7d2fe; background: linear-gradient(180deg, #fafbff 0%, #ffffff 100%); }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .badge-on { background: #dcfce7; color: #15803d; }
+    .badge-off { background: #f1f5f9; color: #64748b; }
+    .cmd-chip { display: inline-flex; align-items: center; padding: 3px 8px; background: #eef2ff; color: #4338ca; border-radius: 6px; font-size: 11px; font-weight: 500; font-family: ui-monospace, monospace; }
+
+    /* Toggle switch */
+    .switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; transition: .2s; border-radius: 999px; }
+    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; top: 3px; background: white; transition: .2s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    input:checked + .slider { background: #6366f1; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1e293b; color: white; padding: 12px 18px; border-radius: 12px; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,.2); opacity: 0; transform: translateY(8px); transition: all .2s; pointer-events: none; z-index: 60; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .modal-box { background: white; border-radius: 20px; width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+    .stat-mini { background: #f8fafc; border-radius: 12px; padding: 14px; }
+    .tab-btn { padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: all .15s; }
+    .tab-btn:hover { background: #f1f5f9; }
+    .tab-btn.active { background: #eef2ff; color: #4338ca; }
+    .activity-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    .activity-row:last-child { border-bottom: 0; }
+    .module-card { cursor: pointer; }
+    .module-card .switch { cursor: default; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen" x-data="modulesPage()" x-cloak>
+<div class="flex min-h-screen">
+
+  <!-- SIDEBAR (rút gọn, ảo) -->
+  <aside class="sidebar-bg w-60 min-h-screen fixed top-0 left-0 flex flex-col z-20">
+    <div class="px-5 pt-7 pb-5">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-900/40">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        <div>
+          <div class="text-white font-bold text-sm">Level Bot</div>
+          <div class="text-indigo-400 text-xs mt-0.5">Admin Dashboard</div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-4 h-px bg-white/10"></div>
+    <nav class="px-3 pt-4 flex-1 space-y-0.5">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest px-3 pb-2">Quản lý</p>
+      <div class="nav-item">📦 <span>Máy chủ</span></div>
+      <div class="nav-item">🏆 <span>Phần thưởng</span></div>
+      <div class="nav-item">👥 <span>Thành viên</span></div>
+      <div class="nav-item">🛡 <span>Quản lý mod</span></div>
+      <div class="nav-item">📊 <span>Analytics</span></div>
+      <div class="nav-item active">🧩 <span>Modules</span></div>
+      <div class="nav-item">⚙️ <span>Cài đặt</span></div>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="ml-60 flex-1 p-8">
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Modules</h1>
+        <p class="text-slate-500 text-sm mt-1">Bật / tắt các "bot nhỏ" cho server <span class="font-semibold text-indigo-600">My Test Server</span></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <input type="text" placeholder="Tìm module..." x-model="search"
+          class="px-4 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:border-indigo-400 w-64" />
+        <button @click="refresh()" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600">
+          🔄 Làm mới
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="card p-5">
+        <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Tổng module</div>
+        <div class="text-3xl font-bold text-slate-900 mt-2" x-text="modules.length"></div>
+      </div>
+      <div class="card p-5">
+        <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Đang bật</div>
+        <div class="text-3xl font-bold text-emerald-600 mt-2" x-text="enabledCount()"></div>
+      </div>
+      <div class="card p-5">
+        <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Tổng commands</div>
+        <div class="text-3xl font-bold text-indigo-600 mt-2" x-text="totalCommands()"></div>
+      </div>
+    </div>
+
+    <!-- Module Grid -->
+    <div class="grid grid-cols-2 gap-5">
+      <template x-for="m in filtered()" :key="m.key">
+        <div class="module-card" :class="m.enabled ? 'enabled' : ''" @click="openDetail(m)">
+          <!-- Header -->
+          <div class="flex items-start justify-between">
+            <div class="flex items-start gap-3">
+              <div class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                   :style="`background:${m.color}15;color:${m.color}`" x-text="m.icon"></div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-slate-900 text-base" x-text="m.name"></h3>
+                  <span class="badge" :class="m.enabled ? 'badge-on' : 'badge-off'"
+                        x-text="m.enabled ? '● Đang bật' : '○ Đã tắt'"></span>
+                </div>
+                <code class="text-xs text-slate-400 font-mono" x-text="m.key"></code>
+              </div>
+            </div>
+            <label class="switch" @click.stop>
+              <input type="checkbox" :checked="m.enabled" @change="toggle(m)" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- Description -->
+          <p class="text-sm text-slate-600 leading-relaxed" x-text="m.description"></p>
+
+          <!-- Commands -->
+          <div>
+            <div class="text-xs text-slate-500 font-semibold mb-2">SLASH COMMANDS</div>
+            <div class="flex flex-wrap gap-1.5">
+              <template x-for="c in m.commands">
+                <span class="cmd-chip" x-text="'/' + c"></span>
+              </template>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
+            <span>Mặc định: <span x-text="m.defaultEnabled ? 'Bật' : 'Tắt'" class="font-medium"></span></span>
+            <span x-show="m.enabled" class="text-emerald-600 font-medium">✓ Hoạt động</span>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Empty state -->
+    <div x-show="filtered().length === 0" class="card p-12 text-center text-slate-400">
+      <div class="text-4xl mb-3">🔍</div>
+      <div>Không có module nào khớp với tìm kiếm</div>
+    </div>
+  </main>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" x-show="detail" @click="closeDetail()" x-transition.opacity>
+  <div class="modal-box" @click.stop x-show="detail" x-transition>
+    <template x-if="detail">
+      <div>
+        <!-- Modal header -->
+        <div class="p-6 border-b border-slate-100 flex items-start justify-between">
+          <div class="flex items-start gap-4">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+                 :style="`background:${detail.color}15;color:${detail.color}`" x-text="detail.icon"></div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-xl font-bold text-slate-900" x-text="detail.name"></h2>
+                <span class="badge" :class="detail.enabled ? 'badge-on' : 'badge-off'"
+                      x-text="detail.enabled ? '● Đang bật' : '○ Đã tắt'"></span>
+              </div>
+              <code class="text-xs text-slate-400 font-mono" x-text="detail.key"></code>
+              <p class="text-sm text-slate-600 mt-2 leading-relaxed" x-text="detail.description"></p>
+            </div>
+          </div>
+          <button @click="closeDetail()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">×</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="px-6 pt-4 flex gap-1 border-b border-slate-100">
+          <div class="tab-btn" :class="tab==='stats' ? 'active' : ''" @click="tab='stats'">📊 Thống kê</div>
+          <div class="tab-btn" :class="tab==='commands' ? 'active' : ''" @click="tab='commands'">⚡ Commands</div>
+          <div class="tab-btn" :class="tab==='users' ? 'active' : ''" @click="tab='users'">👥 Top users</div>
+          <div class="tab-btn" :class="tab==='activity' ? 'active' : ''" @click="tab='activity'">📜 Hoạt động</div>
+          <div class="tab-btn" :class="tab==='settings' ? 'active' : ''" @click="tab='settings'">⚙️ Cài đặt</div>
+        </div>
+
+        <!-- Tab content -->
+        <div class="p-6">
+          <!-- STATS -->
+          <div x-show="tab==='stats'">
+            <div class="grid grid-cols-4 gap-3 mb-5">
+              <div class="stat-mini">
+                <div class="text-xs text-slate-500 font-semibold uppercase">Lượt dùng 7d</div>
+                <div class="text-2xl font-bold text-slate-900 mt-1" x-text="detail.stats.uses7d"></div>
+              </div>
+              <div class="stat-mini">
+                <div class="text-xs text-slate-500 font-semibold uppercase">User unique</div>
+                <div class="text-2xl font-bold text-indigo-600 mt-1" x-text="detail.stats.uniqueUsers"></div>
+              </div>
+              <div class="stat-mini">
+                <div class="text-xs text-slate-500 font-semibold uppercase">Coin chi</div>
+                <div class="text-2xl font-bold text-emerald-600 mt-1" x-text="detail.stats.coinPaid"></div>
+              </div>
+              <div class="stat-mini">
+                <div class="text-xs text-slate-500 font-semibold uppercase">Lỗi 24h</div>
+                <div class="text-2xl font-bold text-rose-600 mt-1" x-text="detail.stats.errors24h"></div>
+              </div>
+            </div>
+            <div class="stat-mini">
+              <div class="text-xs text-slate-500 font-semibold uppercase mb-2">Trạng thái</div>
+              <div class="text-sm text-slate-700">
+                Mặc định khi cài: <span class="font-semibold" x-text="detail.defaultEnabled ? 'Bật' : 'Tắt'"></span><br>
+                Bật lần cuối: <span class="font-semibold" x-text="detail.stats.enabledAt"></span><br>
+                Phiên bản module: <span class="font-mono text-xs">1.0.0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- COMMANDS -->
+          <div x-show="tab==='commands'">
+            <div class="space-y-2">
+              <template x-for="c in detail.commandDetails">
+                <div class="stat-mini flex items-center justify-between">
+                  <div>
+                    <code class="text-sm font-semibold text-indigo-700">/<span x-text="c.name"></span></code>
+                    <p class="text-xs text-slate-500 mt-1" x-text="c.desc"></p>
+                  </div>
+                  <span class="text-sm text-slate-500"><span class="font-bold text-slate-900" x-text="c.uses"></span> lượt</span>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- USERS -->
+          <div x-show="tab==='users'">
+            <div class="text-xs text-slate-500 font-semibold uppercase mb-3">Top 5 users tuần này</div>
+            <div class="space-y-2">
+              <template x-for="(u,i) in detail.topUsers">
+                <div class="stat-mini flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold" x-text="i+1"></div>
+                    <div>
+                      <div class="text-sm font-semibold text-slate-900" x-text="u.name"></div>
+                      <div class="text-xs text-slate-500" x-text="u.id"></div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-sm font-bold text-slate-900" x-text="u.uses + ' lượt'"></div>
+                    <div class="text-xs text-emerald-600" x-text="(u.coin >= 0 ? '+' : '') + u.coin + ' coin'"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- ACTIVITY -->
+          <div x-show="tab==='activity'">
+            <div class="text-xs text-slate-500 font-semibold uppercase mb-2">10 sự kiện gần nhất</div>
+            <template x-for="a in detail.activity">
+              <div class="activity-row">
+                <div class="text-lg" x-text="a.icon"></div>
+                <div class="flex-1">
+                  <div class="text-sm text-slate-700" x-html="a.text"></div>
+                  <div class="text-xs text-slate-400" x-text="a.time"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- SETTINGS -->
+          <div x-show="tab==='settings'">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between stat-mini">
+                <div>
+                  <div class="text-sm font-semibold text-slate-900">Bật module</div>
+                  <div class="text-xs text-slate-500">Tắt sẽ chặn tất cả commands của module này</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" :checked="detail.enabled" @change="toggle(detail)" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="stat-mini">
+                <div class="text-sm font-semibold text-slate-900 mb-2">Channel mặc định</div>
+                <select class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  <option>#general</option>
+                  <option>#mini-game</option>
+                  <option>#bot-spam</option>
+                </select>
+                <p class="text-xs text-slate-500 mt-2">Một số game (vd: guess-number timeout) sẽ post thông báo vào channel này.</p>
+              </div>
+              <div class="stat-mini">
+                <div class="text-sm font-semibold text-slate-900 mb-2">Roles được dùng</div>
+                <div class="flex gap-2 flex-wrap">
+                  <span class="cmd-chip">@everyone</span>
+                  <button class="text-xs text-indigo-600 hover:underline">+ Thêm role</button>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Để trống = ai cũng dùng được.</p>
+              </div>
+              <div class="flex justify-end gap-2 pt-2">
+                <button class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Reset</button>
+                <button class="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Lưu thay đổi</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" :class="toastMsg ? 'show' : ''" x-text="toastMsg"></div>
+
+<script>
+function modulesPage() {
+  return {
+    search: '',
+    toastMsg: '',
+    detail: null,
+    tab: 'stats',
+    openDetail(m) { this.detail = m; this.tab = 'stats'; },
+    closeDetail() { this.detail = null; },
+    modules: [
+      {
+        key: 'mini-game',
+        name: 'Mini Game',
+        description: 'Đoán số, kéo búa bao, chẵn lẻ — thắng được cộng coin. Tăng tương tác và giải trí cho server.',
+        defaultEnabled: false,
+        enabled: true,
+        commands: ['guess-number','rps','odd-even','coin'],
+        icon: '🎮', color: '#6366f1',
+        stats: { uses7d: 248, uniqueUsers: 37, coinPaid: '+1,820', errors24h: 0, enabledAt: '2026-05-16 19:45' },
+        commandDetails: [
+          { name: 'rps', desc: 'Chơi kéo-búa-bao với bot', uses: 124 },
+          { name: 'guess-number', desc: 'Đoán số bot rand 1-100', uses: 67 },
+          { name: 'odd-even', desc: 'Cược chẵn/lẻ với coin', uses: 41 },
+          { name: 'coin', desc: 'Xem số dư và lịch sử coin', uses: 16 },
+        ],
+        topUsers: [
+          { name: 'quanlm', id: '432...891', uses: 58, coin: 320 },
+          { name: 'minhvu', id: '512...004', uses: 41, coin: 180 },
+          { name: 'lan_nguyen', id: '678...123', uses: 28, coin: -45 },
+          { name: 'tester01', id: '999...777', uses: 19, coin: 110 },
+          { name: 'huy_bot', id: '111...555', uses: 12, coin: 50 },
+        ],
+        activity: [
+          { icon: '🏆', text: '<b>quanlm</b> thắng <code>/guess-number</code> (+50 coin)', time: '2 phút trước' },
+          { icon: '✂️', text: '<b>minhvu</b> dùng <code>/rps búa</code> — thua', time: '5 phút trước' },
+          { icon: '🎲', text: '<b>lan_nguyen</b> cược 100 ở <code>/odd-even</code> — thắng', time: '12 phút trước' },
+          { icon: '⚠️', text: '<code>/guess-number</code> session hết hạn ở #general', time: '18 phút trước' },
+          { icon: '💰', text: '<b>tester01</b> xem <code>/coin balance</code>', time: '24 phút trước' },
+          { icon: '✂️', text: '<b>quanlm</b> dùng <code>/rps kéo</code> — thắng', time: '30 phút trước' },
+        ],
+      },
+      {
+        key: 'youtube-notify',
+        name: 'YouTube Notify',
+        description: 'Theo dõi kênh YouTube và đăng thông báo vào channel khi có video mới. (Demo - sẽ làm sau pilot)',
+        defaultEnabled: false,
+        enabled: false,
+        commands: ['yt-watch','yt-unwatch','yt-list'],
+        icon: '📺', color: '#ef4444',
+        stats: { uses7d: 0, uniqueUsers: 0, coinPaid: '0', errors24h: 0, enabledAt: 'Chưa bật' },
+        commandDetails: [], topUsers: [], activity: [],
+      },
+      {
+        key: 'daily-meme',
+        name: 'Daily Meme',
+        description: 'Mỗi ngày tự động đăng 1 meme random vào channel đã chỉ định. (Demo)',
+        defaultEnabled: false,
+        enabled: false,
+        commands: ['meme','meme-channel'],
+        icon: '😂', color: '#f59e0b',
+        stats: { uses7d: 0, uniqueUsers: 0, coinPaid: '0', errors24h: 0, enabledAt: 'Chưa bật' },
+        commandDetails: [], topUsers: [], activity: [],
+      },
+      {
+        key: 'rss-feed',
+        name: 'RSS Feed',
+        description: 'Subscribe các nguồn RSS và đăng vào channel khi có bài mới. (Demo)',
+        defaultEnabled: false,
+        enabled: false,
+        commands: ['rss-add','rss-remove','rss-list'],
+        icon: '📰', color: '#10b981',
+        stats: { uses7d: 0, uniqueUsers: 0, coinPaid: '0', errors24h: 0, enabledAt: 'Chưa bật' },
+        commandDetails: [], topUsers: [], activity: [],
+      },
+    ],
+    filtered() {
+      const q = this.search.trim().toLowerCase();
+      if (!q) return this.modules;
+      return this.modules.filter(m =>
+        m.name.toLowerCase().includes(q) ||
+        m.key.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q)
+      );
+    },
+    enabledCount() { return this.modules.filter(m => m.enabled).length; },
+    totalCommands() { return this.modules.reduce((a,m) => a + m.commands.length, 0); },
+    toggle(m) {
+      m.enabled = !m.enabled;
+      this.showToast(`${m.enabled ? '✅ Đã bật' : '⏸ Đã tắt'} module "${m.name}"`);
+    },
+    refresh() { this.showToast('🔄 Đã làm mới danh sách'); },
+    showToast(msg) {
+      this.toastMsg = msg;
+      clearTimeout(this._t);
+      this._t = setTimeout(() => this.toastMsg = '', 2200);
+    },
+  }
+}
+</script>
+</body>
+</html>
