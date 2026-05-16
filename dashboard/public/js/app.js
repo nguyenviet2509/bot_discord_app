@@ -131,6 +131,38 @@ document.addEventListener('alpine:init', () => {
       this.uploading = false
     },
 
+    async uploadRoleIcon(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      if (!this.form.role_id) {
+        this.showToast('Cần chọn Role kèm theo trước', 'red')
+        event.target.value = ''
+        return
+      }
+      if (file.size > 256 * 1024) {
+        this.showToast(`Ảnh ${(file.size / 1024).toFixed(0)}KB > 256KB. Discord yêu cầu ≤256KB.`, 'red')
+        event.target.value = ''
+        return
+      }
+      this.pushingIcon = true
+      const fd = new FormData()
+      fd.append('image', file)
+      fd.append('role_id', this.form.role_id)
+      try {
+        const res = await api('POST', '/rewards/upload-role-icon', fd)
+        if (res?.success) {
+          this.showToast('Đã upload + push icon lên role ✓', 'green')
+        } else {
+          const hint = res?.hint ? `\n💡 ${res.hint}` : ''
+          this.showToast((res?.error || 'Upload thất bại') + hint, 'red')
+        }
+      } catch (err) {
+        this.showToast(err.message, 'red')
+      }
+      this.pushingIcon = false
+      event.target.value = ''
+    },
+
     async pushBadgeAsRoleIcon() {
       if (!this.form.badge_url || !this.form.role_id) {
         this.showToast('Cần có ảnh badge và role kèm theo', 'red')

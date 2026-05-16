@@ -251,20 +251,27 @@
                 </select>
                 <p class="text-xs text-slate-400 mt-1">Nếu chọn, member sẽ nhận cả badge và role này khi đạt level.</p>
               </div>
-              <!-- Flair: dung anh badge lam icon role tren Discord -->
-              <div x-show="form.badge_url && form.role_id" class="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
-                <div class="flex items-start gap-3">
-                  <div class="flex-1">
-                    <div class="text-sm font-semibold text-indigo-900 mb-0.5">🎖️ Dùng ảnh badge làm icon role</div>
-                    <p class="text-xs text-indigo-700 leading-snug">
-                      Push ảnh badge này lên Discord làm icon của role kèm theo.
-                      Icon sẽ hiển thị cạnh tên member khi họ chat (Discord native).
-                      <strong>Cần Server Boost Level 2</strong> (≥7 boost) — ảnh ≤256KB.
-                    </p>
-                  </div>
+              <!-- Flair: push anh lam icon role tren Discord (Boost L2) -->
+              <div x-show="form.role_id" class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 space-y-2.5">
+                <div>
+                  <div class="text-sm font-semibold text-indigo-900 mb-0.5">🎖️ Icon role trên Discord</div>
+                  <p class="text-xs text-indigo-700 leading-snug">
+                    Push 1 ảnh lên Discord làm icon của role kèm theo. Icon sẽ hiển thị cạnh tên
+                    member khi họ chat. <strong>Cần Server Boost Level 2</strong> (≥7 boost) — ảnh ≤256KB.
+                  </p>
+                </div>
+                <!-- Option 1: upload anh RIENG cho role icon (khong dong toi badge_url) -->
+                <div>
+                  <label class="text-xs font-semibold text-indigo-900 block mb-1">Chọn ảnh khác để làm icon role:</label>
+                  <input type="file" accept="image/jpeg,image/png,image/gif" @change="uploadRoleIcon($event)"
+                    class="w-full text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-indigo-600 file:text-white file:font-semibold file:text-xs cursor-pointer" />
+                  <p x-show="pushingIcon" class="text-indigo-600 text-xs mt-1">Đang upload + push lên Discord...</p>
+                </div>
+                <!-- Option 2: tai su dung anh badge hien co -->
+                <div x-show="form.badge_url" class="pt-2 border-t border-indigo-200">
                   <button @click="pushBadgeAsRoleIcon()" :disabled="pushingIcon"
-                    class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
-                    <span x-text="pushingIcon ? 'Đang push...' : 'Push icon'"></span>
+                    class="px-3 py-1.5 rounded-md bg-white border border-indigo-300 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 disabled:opacity-50">
+                    Hoặc dùng ảnh badge ở trên làm icon role
                   </button>
                 </div>
               </div>

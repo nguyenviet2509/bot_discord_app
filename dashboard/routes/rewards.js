@@ -116,6 +116,43 @@ router.post('/push-role-icon', async (req, res) => {
   res.json({ success: true })
 })
 
+// Multer rieng cho upload role icon (Discord limit 256KB, khac voi badge 2MB)
+const roleIconUpload = multer({
+  storage: multer.diskStorage({
+    destination: UPLOADS_DIR,
+    filename: (_, file, cb) => cb(null, `role-icon-${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`),
+  }),
+  limits: { fileSize: 256 * 1024 },
+  fileFilter: (_, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif']
+    if (allowed.includes(file.mimetype)) return cb(null, true)
+    cb(new Error('Chi chap nhan JPEG/PNG/GIF <=256KB'))
+  },
+})
+
+// POST /upload-role-icon: upload anh RIENG cho role icon + push len Discord
+// trong 1 request. Khong dong vao badge_url cua reward.
+// Form-data: { image, role_id }
+router.post('/upload-role-icon', roleIconUpload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Khong co file' })
+  const { role_id } = req.body
+  if (!role_id) return res.status(400).json({ error: 'role_id la bat buoc' })
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua cau hinh' })
+
+  const filePath = path.join(UPLOADS_DIR, req.file.filename)
+  const result = await pushRoleIcon({
+    guildId: GUILD_ID(),
+    roleId: role_id,
+    filePath,
+    botToken: process.env.BOT_TOKEN,
+  })
+  // Xoa temp file sau khi push (khong can luu, anh da nam tren Discord CDN)
+  fs.unlink(filePath, () => {})
+
+  if (!result.ok) return res.status(result.status).json({ error: result.error, hint: result.hint })
+  res.json({ success: true })
+})
+
 // Gui test level-up embed cho 1 reward cu the (preview UI tren Discord)
 // Reuse logic tu level-up-template/test, lay template hien tai tu DB
 router.post('/test', async (req, res) => {
