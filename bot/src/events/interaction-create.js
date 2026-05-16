@@ -262,6 +262,11 @@ async function handleSelectMenu(interaction) {
 // Autocomplete
 // ============================================================
 async function handleAutocomplete(interaction) {
+  // Uu tien: neu command co ham autocomplete rieng -> goi
+  const command = interaction.client.commands.get(interaction.commandName)
+  if (command?.autocomplete) {
+    try { return await command.autocomplete(interaction) } catch (err) { console.error('[Autocomplete]', err); return }
+  }
   const focused = interaction.options.getFocused(true)
   if (focused.name !== 'post_id') return
 
