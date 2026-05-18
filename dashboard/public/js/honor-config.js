@@ -22,33 +22,9 @@
   // State
   // ============================================================
   const state = {
-    roles: [],
     channels: [],
-    selectedRoleIds: new Set(),
     defaultChannelId: null,
-  }
-
-  // ============================================================
-  // Role chips
-  // ============================================================
-  function renderRoleChips() {
-    const box = el('roleChips')
-    if (!state.roles.length) {
-      box.innerHTML = '<em class="text-muted">Đang tải roles...</em>'
-      return
-    }
-    box.innerHTML = state.roles.map(r => {
-      const active = state.selectedRoleIds.has(r.id) ? 'active' : ''
-      return `<span class="role-chip ${active}" data-id="${r.id}">${r.name}</span>`
-    }).join('')
-    box.querySelectorAll('.role-chip').forEach(chip => {
-      chip.onclick = () => {
-        const id = chip.dataset.id
-        if (state.selectedRoleIds.has(id)) state.selectedRoleIds.delete(id)
-        else state.selectedRoleIds.add(id)
-        chip.classList.toggle('active')
-      }
-    })
+    user1Avatar: null,
   }
 
   // ============================================================
@@ -78,7 +54,6 @@
   // ============================================================
   async function saveSettings() {
     const body = {
-      allowed_role_ids: [...state.selectedRoleIds],
       default_channel_id: el('channelSelect').value || null,
       gold_emoji: el('goldEmoji').value.trim() || null,
       silver_emoji: el('silverEmoji').value.trim() || null,
@@ -97,14 +72,19 @@
   // Preview — support ca top3 va team
   // ============================================================
   function buildTop3Payload() {
+    // Avatar Quan quan lay tu state.user1Avatar (auto-fetch khi nhap user ID)
     return {
       type: 'top3',
       title: el('pTitle').value.trim(),
       guildName: 'Server',
       bannerUrl: el('pBanner').value.trim(),
-      user1: { id: '1', name: el('pName1').value, reason: el('pReason1').value, avatarUrl: el('pAvatar').value || undefined },
-      user2: { id: '2', name: el('pName2').value, reason: el('pReason2').value },
-      user3: { id: '3', name: el('pName3').value, reason: el('pReason3').value },
+      user1: {
+        id: el('pId1').value.trim() || '1',
+        name: el('pName1').value, reason: el('pReason1').value,
+        avatarUrl: state.user1Avatar || undefined,
+      },
+      user2: { id: el('pId2').value.trim() || '2', name: el('pName2').value, reason: el('pReason2').value },
+      user3: { id: el('pId3').value.trim() || '3', name: el('pName3').value, reason: el('pReason3').value },
     }
   }
 
@@ -118,6 +98,55 @@
       reason: el('tReason').value.trim(),
       bannerUrl: el('tBanner').value.trim(),
       members: ids.map(id => ({ id })),
+    }
+  }
+
+  // ============================================================
+  // Auto-fetch avatar khi nhap User ID Quan quan
+  // ============================================================
+  async function fetchUser1Avatar() {
+    const id = el('pId1').value.trim()
+    if (!/^\d{17,20}$/.test(id)) { state.user1Avatar = null; return }
+    try {
+      const r = await api(`/honor/user-avatar?id=${id}`)
+      const data = await r.json()
+      if (r.ok) {
+        state.user1Avatar = data.avatar_url
+        // Auto-fill display name neu trong
+        if (!el('pName1').value.trim()) el('pName1').value = data.global_name || data.username
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  // ============================================================
+  // Banner upload
+  // ============================================================
+  async function uploadBanner(prefix) {
+    const fileInput = el(`${prefix}BannerFile`)
+    const file = fileInput.files?.[0]
+    if (!file) {
+      el(`${prefix}BannerStatus`).innerHTML = '<span class="text-danger">❌ Chọn file trước</span>'
+      return
+    }
+    el(`${prefix}BannerStatus`).innerHTML = '<span class="text-muted">⏳ Đang upload...</span>'
+    const form = new FormData()
+    form.append('file', file)
+    try {
+      const r = await fetch('/api/honor/banner-upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
+      const data = await r.json()
+      if (!r.ok) {
+        el(`${prefix}BannerStatus`).innerHTML = `<span class="text-danger">❌ ${escapeHtml(data.error || 'Lỗi')}</span>`
+        return
+      }
+      el(`${prefix}Banner`).value = data.url
+      el(`${prefix}BannerStatus`).innerHTML = '<span class="text-success">✅ Đã upload</span>'
+      el(`${prefix}BannerPreview`).innerHTML = `<img src="${escapeHtml(data.url)}" style="max-width:360px;max-height:120px;border-radius:6px;border:1px solid #ddd">`
+    } catch (err) {
+      el(`${prefix}BannerStatus`).innerHTML = `<span class="text-danger">❌ ${escapeHtml(err.message)}</span>`
     }
   }
 
@@ -177,6 +206,85 @@
     const type = el('pType').value
     el('formTop3').style.display = type === 'top3' ? '' : 'none'
     el('formTeam').style.display = type === 'team' ? '' : 'none'
+  }
+
+  // ============================================================
+  // Emoji upload — bot tu post anh len Discord Application Emoji
+  // ============================================================
+  // Parse Discord custom emoji `<:name:id>` (hoac animated `<a:name:id>`) -> CDN URL preview
+  function emojiCodeToImgUrl(code) {
+    if (!code) return null
+    const m = code.match(/^<(a)?:([^:]+):(\d+)>$/)
+    if (!m) return null
+    const ext = m[1] ? 'gif' : 'png'
+    return `https://cdn.discordapp.com/emojis/${m[3]}.${ext}?size=64`
+  }
+
+  function renderEmojiPreview(slot, code) {
+    const box = el(`${slot}EmojiPreview`)
+    if (!box) return
+    const url = emojiCodeToImgUrl(code)
+    if (url) {
+      box.innerHTML = `<img src="${url}" alt="${slot}" style="width:48px;height:48px;border-radius:6px;border:1px solid #ddd">`
+    } else if (code) {
+      // unicode emoji hoac chuoi khong parse duoc -> hien text
+      box.innerHTML = `<span style="font-size:32px">${escapeHtml(code)}</span>`
+    } else {
+      box.innerHTML = '<span class="text-muted small">— Chưa cấu hình —</span>'
+    }
+  }
+
+  async function uploadEmoji(slot) {
+    const fileInput = el(`${slot}EmojiFile`)
+    const file = fileInput.files?.[0]
+    if (!file) {
+      el('emojiUploadStatus').innerHTML = `<span class="text-danger">❌ Chọn file cho slot ${slot} trước</span>`
+      return
+    }
+    if (file.size > 256 * 1024) {
+      el('emojiUploadStatus').innerHTML = `<span class="text-danger">❌ File > 256KB (kích thước hiện tại: ${Math.round(file.size / 1024)}KB)</span>`
+      return
+    }
+    const form = new FormData()
+    form.append('slot', slot)
+    form.append('file', file)
+    el('emojiUploadStatus').innerHTML = `<span class="text-muted">⏳ Đang upload ${slot}...</span>`
+    try {
+      const r = await fetch('/api/honor/emoji-upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
+      const data = await r.json()
+      if (!r.ok) {
+        el('emojiUploadStatus').innerHTML = `<span class="text-danger">❌ ${escapeHtml(data.error || 'Lỗi')}</span>`
+        return
+      }
+      el(`${slot}Emoji`).value = data.emoji_code
+      renderEmojiPreview(slot, data.emoji_code)
+      el('emojiUploadStatus').innerHTML = `<span class="text-success">✅ Đã upload ${slot}: <code>${escapeHtml(data.emoji_code)}</code></span>`
+      fileInput.value = ''
+    } catch (err) {
+      el('emojiUploadStatus').innerHTML = `<span class="text-danger">❌ ${escapeHtml(err.message)}</span>`
+    }
+  }
+
+  async function removeEmoji(slot) {
+    if (!confirm(`Xoá emoji ${slot}?`)) return
+    el('emojiUploadStatus').innerHTML = `<span class="text-muted">⏳ Đang xoá ${slot}...</span>`
+    try {
+      const r = await api(`/honor/emoji/${slot}`, { method: 'DELETE' })
+      const data = await r.json()
+      if (!r.ok) {
+        el('emojiUploadStatus').innerHTML = `<span class="text-danger">❌ ${escapeHtml(data.error || 'Lỗi')}</span>`
+        return
+      }
+      el(`${slot}Emoji`).value = ''
+      renderEmojiPreview(slot, null)
+      el('emojiUploadStatus').innerHTML = `<span class="text-success">✅ Đã xoá ${slot}</span>`
+    } catch (err) {
+      el('emojiUploadStatus').innerHTML = `<span class="text-danger">❌ ${escapeHtml(err.message)}</span>`
+    }
   }
 
   // ============================================================
@@ -262,23 +370,22 @@
   // ============================================================
   async function init() {
     try {
-      const [rRoles, rChannels, rSettings] = await Promise.all([
-        api('/discord/roles'),
+      const [rChannels, rSettings] = await Promise.all([
         api('/honor/channels'),
         api('/honor/settings'),
       ])
-      state.roles = await rRoles.json()
       state.channels = await rChannels.json()
       const settings = await rSettings.json()
-      state.selectedRoleIds = new Set(settings.allowed_role_ids || [])
       state.defaultChannelId = settings.default_channel_id || null
 
-      // Pre-fill 3 emoji input
+      // Pre-fill 3 emoji input (hidden) + render preview
       el('goldEmoji').value = settings.gold_emoji || ''
       el('silverEmoji').value = settings.silver_emoji || ''
       el('bronzeEmoji').value = settings.bronze_emoji || ''
+      renderEmojiPreview('gold', settings.gold_emoji)
+      renderEmojiPreview('silver', settings.silver_emoji)
+      renderEmojiPreview('bronze', settings.bronze_emoji)
 
-      renderRoleChips()
       renderChannelSelect()
       await loadHistory()
       await renderPreview()
@@ -291,6 +398,15 @@
   el('previewBtn').onclick = renderPreview
   el('sendTestBtn').onclick = sendTest
   el('pType').onchange = switchPreviewForm
+  el('pId1').addEventListener('blur', fetchUser1Avatar)
+  el('pBannerUpload').onclick = () => uploadBanner('p')
+  el('tBannerUpload').onclick = () => uploadBanner('t')
+  document.querySelectorAll('.upload-emoji-btn').forEach(btn => {
+    btn.onclick = () => uploadEmoji(btn.dataset.slot)
+  })
+  document.querySelectorAll('.remove-emoji-btn').forEach(btn => {
+    btn.onclick = () => removeEmoji(btn.dataset.slot)
+  })
   bindHistoryTabs()
 
   init()

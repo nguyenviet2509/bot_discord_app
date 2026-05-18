@@ -54,16 +54,15 @@ function buildHonorEmbed(p) {
     bronze: (p.medalEmojis?.bronze || DEFAULT_MEDALS.bronze),
   }
 
-  // H1 trong description = text to nhat Discord cho phep render
+  // Toan bo trong description voi H1 + H2 de "BẢNG VÀNG" hien len truoc va to nhat
   const description = [
     `# 🏛️ ${title}`,
-    ``,
+    `## ${medals.gold} QUÁN QUÂN — ${u1.name}`,
     `> *"${escapeMd(u1.reason)}"*`,
   ].join('\n')
 
   const embed = {
     ...(p.guildIconUrl ? { author: { name: guildName, icon_url: p.guildIconUrl } } : {}),
-    title: `${medals.gold} QUÁN QUÂN — ${u1.name}`,
     description,
     color: GOLD,
     ...(u1.avatarUrl ? { thumbnail: { url: u1.avatarUrl } } : {}),

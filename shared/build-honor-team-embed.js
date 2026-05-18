@@ -56,16 +56,15 @@ function buildHonorTeamEmbed(p) {
     })
   }
 
-  // H1 title trong description (text to nhat)
+  // Gom title vao description voi H1 + H2 (Bảng vàng truoc, ten team sau)
   const description = [
     `# 🏛️ ${title}`,
-    ``,
+    `## 🎖️ ${teamName}`,
     `> *"${escapeMd(reason)}"*`,
   ].join('\n')
 
   const embed = {
     ...(p.guildIconUrl ? { author: { name: guildName, icon_url: p.guildIconUrl } } : {}),
-    title: `🎖️ ${teamName}`,
     description,
     color: GOLD,
     fields,

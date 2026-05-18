@@ -50,11 +50,11 @@
   <!-- Settings -->
   <div class="card mb-3">
     <div class="card-body">
-      <h5 class="card-title">Quyền sử dụng <code>/vinhdanh</code></h5>
-      <p class="text-muted small">Chọn role được phép gõ lệnh vinh danh. Để trống = chỉ Admin / ManageGuild dùng được.</p>
-      <div id="roleChips"></div>
+      <p class="text-muted small">
+        ℹ️ Quyền sử dụng <code>/vinhdanh</code> dùng chung với cấu hình
+        <strong>"Quyền dùng slash command"</strong> trong tab Cấu hình.
+      </p>
 
-      <hr/>
       <h5 class="card-title">Channel mặc định</h5>
       <p class="text-muted small">Channel được đề xuất khi user không chọn channel cụ thể.</p>
       <select id="channelSelect" class="form-select" style="max-width: 400px">
@@ -63,25 +63,44 @@
 
       <hr/>
       <h5 class="card-title">🏅 Tuỳ chỉnh emoji huy chương (Top 3)</h5>
-      <p class="text-muted small mb-2">
-        Dán <strong>Discord custom emoji</strong> dạng <code>&lt;:name:id&gt;</code> hoặc unicode emoji.<br>
-        Cách lấy: trong Discord chat, gõ <code>\:tên_emoji:</code> (dấu \ phía trước) rồi gửi → copy chuỗi <code>&lt;:name:123456&gt;</code>.<br>
+      <p class="text-muted small mb-3">
+        Upload ảnh để bot tự đăng ký thành <strong>Application Emoji</strong> trên Discord (không cần tạo emoji thủ công).<br>
+        File: PNG/JPG/GIF/WEBP, &le; 256KB, kích thước khuyên dùng 128×128.<br>
         Bỏ trống = dùng mặc định 🥇🥈🥉.
       </p>
-      <div class="row g-2" style="max-width: 720px">
+      <div class="row g-3" style="max-width: 720px">
         <div class="col-md-4">
           <label class="form-label small">🥇 Quán quân</label>
-          <input id="goldEmoji" class="form-control" placeholder="vd: <:gold:1234567890>" />
+          <div id="goldEmojiPreview" class="mb-1" style="min-height:48px"></div>
+          <input type="file" id="goldEmojiFile" class="form-control form-control-sm" accept="image/png,image/jpeg,image/gif,image/webp" />
+          <div class="d-flex gap-1 mt-1">
+            <button class="btn btn-sm btn-outline-primary upload-emoji-btn" data-slot="gold">Upload</button>
+            <button class="btn btn-sm btn-outline-danger remove-emoji-btn" data-slot="gold">Xoá</button>
+          </div>
+          <input type="hidden" id="goldEmoji" />
         </div>
         <div class="col-md-4">
           <label class="form-label small">🥈 Á quân</label>
-          <input id="silverEmoji" class="form-control" placeholder="vd: <:silver:1234567890>" />
+          <div id="silverEmojiPreview" class="mb-1" style="min-height:48px"></div>
+          <input type="file" id="silverEmojiFile" class="form-control form-control-sm" accept="image/png,image/jpeg,image/gif,image/webp" />
+          <div class="d-flex gap-1 mt-1">
+            <button class="btn btn-sm btn-outline-primary upload-emoji-btn" data-slot="silver">Upload</button>
+            <button class="btn btn-sm btn-outline-danger remove-emoji-btn" data-slot="silver">Xoá</button>
+          </div>
+          <input type="hidden" id="silverEmoji" />
         </div>
         <div class="col-md-4">
           <label class="form-label small">🥉 Hạng ba</label>
-          <input id="bronzeEmoji" class="form-control" placeholder="vd: <:bronze:1234567890>" />
+          <div id="bronzeEmojiPreview" class="mb-1" style="min-height:48px"></div>
+          <input type="file" id="bronzeEmojiFile" class="form-control form-control-sm" accept="image/png,image/jpeg,image/gif,image/webp" />
+          <div class="d-flex gap-1 mt-1">
+            <button class="btn btn-sm btn-outline-primary upload-emoji-btn" data-slot="bronze">Upload</button>
+            <button class="btn btn-sm btn-outline-danger remove-emoji-btn" data-slot="bronze">Xoá</button>
+          </div>
+          <input type="hidden" id="bronzeEmoji" />
         </div>
       </div>
+      <div id="emojiUploadStatus" class="small mt-2"></div>
 
       <div class="mt-3">
         <button id="saveBtn" class="btn btn-primary">💾 Lưu cấu hình</button>
@@ -111,15 +130,27 @@
           <input id="pTitle" class="form-control" value="BẢNG VÀNG THÁNG 5/2026" />
         </div>
         <div class="col-md-4">
-          <label class="form-label">🥇 Quán quân — Tên hiển thị</label>
+          <label class="form-label">🥇 Quán quân — User ID</label>
+          <input id="pId1" class="form-control" placeholder="Discord User ID" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">🥈 Á quân — User ID</label>
+          <input id="pId2" class="form-control" placeholder="Discord User ID" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">🥉 Hạng ba — User ID</label>
+          <input id="pId3" class="form-control" placeholder="Discord User ID" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">🥇 Tên hiển thị</label>
           <input id="pName1" class="form-control" value="ChampionName" />
         </div>
         <div class="col-md-4">
-          <label class="form-label">🥈 Á quân — Tên hiển thị</label>
+          <label class="form-label">🥈 Tên hiển thị</label>
           <input id="pName2" class="form-control" value="RunnerUpName" />
         </div>
         <div class="col-md-4">
-          <label class="form-label">🥉 Hạng ba — Tên hiển thị</label>
+          <label class="form-label">🥉 Tên hiển thị</label>
           <input id="pName3" class="form-control" value="ThirdPlaceName" />
         </div>
         <div class="col-md-4">
@@ -134,13 +165,15 @@
           <label class="form-label">Lý do #3</label>
           <textarea id="pReason3" class="form-control" rows="2">Hỗ trợ newbie tận tâm</textarea>
         </div>
-        <div class="col-md-8">
-          <label class="form-label">Banner URL</label>
-          <input id="pBanner" class="form-control" value="https://picsum.photos/seed/hof/1200/400" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Avatar #1 URL (optional)</label>
-          <input id="pAvatar" class="form-control" value="https://i.pravatar.cc/256?img=12" />
+        <div class="col-12">
+          <label class="form-label">📷 Banner — Upload ảnh</label>
+          <div class="d-flex gap-2 align-items-center">
+            <input type="file" id="pBannerFile" class="form-control" accept="image/*" style="max-width:360px" />
+            <button id="pBannerUpload" type="button" class="btn btn-outline-primary btn-sm">Upload</button>
+            <span id="pBannerStatus" class="small"></span>
+          </div>
+          <input type="hidden" id="pBanner" value="" />
+          <div id="pBannerPreview" class="mt-2"></div>
         </div>
       </div>
 
@@ -160,15 +193,17 @@
         </div>
         <div class="col-12">
           <label class="form-label">Danh sách user ID (1-10, mỗi dòng 1 ID)</label>
-          <textarea id="tMembers" class="form-control" rows="5">100000000000000001
-100000000000000002
-100000000000000003
-100000000000000004
-100000000000000005</textarea>
+          <textarea id="tMembers" class="form-control" rows="5"></textarea>
         </div>
         <div class="col-12">
-          <label class="form-label">Banner URL</label>
-          <input id="tBanner" class="form-control" value="https://picsum.photos/seed/team/1200/400" />
+          <label class="form-label">📷 Banner — Upload ảnh</label>
+          <div class="d-flex gap-2 align-items-center">
+            <input type="file" id="tBannerFile" class="form-control" accept="image/*" style="max-width:360px" />
+            <button id="tBannerUpload" type="button" class="btn btn-outline-primary btn-sm">Upload</button>
+            <span id="tBannerStatus" class="small"></span>
+          </div>
+          <input type="hidden" id="tBanner" value="" />
+          <div id="tBannerPreview" class="mt-2"></div>
         </div>
       </div>
 
