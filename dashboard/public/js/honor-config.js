@@ -294,28 +294,35 @@
   }
 
   // ============================================================
-  // Send test — gui that den 1 channel (khong luu DB)
+  // Send vinh danh — gui that den channel + luu DB + react
   // ============================================================
   async function sendTest() {
     const channelId = el('testChannel').value
     if (!channelId) {
-      el('sendStatus').innerHTML = '<span class="text-danger">❌ Chọn channel test trước</span>'
+      el('sendStatus').innerHTML = '<span class="text-danger">❌ Chọn channel trước</span>'
       return
     }
+    if (!confirm('Gửi thông báo vinh danh thật tới channel đã chọn? Sẽ lưu vào lịch sử.')) return
+
     const type = el('pType').value
     const payload = type === 'team' ? buildTeamPayload() : buildTop3Payload()
     payload.channel_id = channelId
 
     el('sendStatus').innerHTML = '<span class="text-muted">⏳ Đang gửi...</span>'
     try {
-      const r = await api('/honor/send-test', { method: 'POST', body: JSON.stringify(payload) })
+      const r = await api('/honor/send', { method: 'POST', body: JSON.stringify(payload) })
       const data = await r.json()
       if (!r.ok) {
         el('sendStatus').innerHTML = `<span class="text-danger">❌ ${escapeHtml(data.error || 'Lỗi không xác định')}</span>`
         return
       }
-      const link = `https://discord.com/channels/@me/${data.channel_id}/${data.message_id}`
-      el('sendStatus').innerHTML = `<span class="text-success">✅ Đã gửi! <a href="${link}" target="_blank">Xem</a></span>`
+      el('sendStatus').innerHTML = `<span class="text-success">✅ Đã gửi & lưu lịch sử!</span>`
+      // Reload history tab tuong ung
+      currentHistoryTab = type === 'team' ? 'team' : 'top3'
+      document.querySelectorAll('#historyTabs a').forEach(a => {
+        a.classList.toggle('active', a.dataset.tab === currentHistoryTab)
+      })
+      loadHistory()
     } catch (err) {
       el('sendStatus').innerHTML = `<span class="text-danger">❌ ${escapeHtml(err.message)}</span>`
     }

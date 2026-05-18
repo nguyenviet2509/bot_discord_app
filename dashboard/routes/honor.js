@@ -139,20 +139,34 @@ router.post('/preview', (req, res) => {
   }
 })
 
-// POST /api/honor/send-test — gui that den 1 channel cu the (KHONG luu DB)
-// Body: { type, channel_id, ...payload }
-router.post('/send-test', async (req, res) => {
-  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua co' })
-  const { type, channel_id, ...payload } = req.body
+// Helper: react 1 emoji vao message qua Discord REST API
+async function reactMessage(channelId, messageId, emoji) {
+  // Discord API: PUT /channels/{c}/messages/{m}/reactions/{emoji}/@me
+  // Custom emoji format: name:id (no <>). Unicode: URL-encode.
+  let encoded
+  const customMatch = String(emoji).match(/^<a?:([^:]+):(\d+)>$/)
+  if (customMatch) encoded = `${customMatch[1]}:${customMatch[2]}`
+  else encoded = encodeURIComponent(emoji)
+  const url = `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encoded}/@me`
+  return fetch(url, { method: 'PUT', headers: { Authorization: `Bot ${BOT_TOKEN()}` } })
+}
+
+// POST /api/honor/send — gui vinh danh that tu dashboard (luu DB + react)
+// Body: { type, channel_id, save_to_history?, created_by?, ...payload }
+router.post('/send', async (req, res) => {
+  if (!BOT_TOKEN()) return res.status(500).json({ error: 'BOT_TOKEN chua co' })
+  const { type, channel_id, save_to_history = true, created_by, ...payload } = req.body
   if (!channel_id) return res.status(400).json({ error: 'Thieu channel_id' })
   try {
     const built = type === 'team'
       ? buildHonorTeamEmbed(payload)
       : buildHonorEmbed(withMedalEmojis(payload))
+
+    // 1. Gui message
     const url = `https://discord.com/api/v10/channels/${channel_id}/messages`
     const r = await fetch(url, {
       method: 'POST',
-      headers: { Authorization: `Bot ${process.env.BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bot ${BOT_TOKEN()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: built.content, embeds: built.embeds }),
     })
     if (!r.ok) {
@@ -160,6 +174,48 @@ router.post('/send-test', async (req, res) => {
       return res.status(r.status).json({ error: `Discord ${r.status}: ${errText.slice(0, 300)}` })
     }
     const sent = await r.json()
+
+    // 2. Auto-react (best-effort)
+    reactMessage(channel_id, sent.id, '🎉').catch(() => {})
+    reactMessage(channel_id, sent.id, '👏').catch(() => {})
+
+    // 3. Persist DB
+    if (save_to_history) {
+      try {
+        if (type === 'team') {
+          const id = dbHonor.insertHonorTeamRecord({
+            guild_id: GUILD_ID(),
+            channel_id,
+            title: payload.title,
+            team_name: payload.teamName,
+            reason: payload.reason,
+            banner_url: payload.bannerUrl,
+            member_ids: (payload.members || []).map(m => m.id),
+            created_by: created_by || 'dashboard',
+          })
+          dbHonor.updateHonorTeamMessageId(id, sent.id)
+        } else {
+          const id = dbHonor.insertHonorRecord({
+            guild_id: GUILD_ID(),
+            channel_id,
+            title: payload.title,
+            banner_url: payload.bannerUrl,
+            user1_id: payload.user1?.id || '',
+            user1_reason: payload.user1?.reason || '',
+            user2_id: payload.user2?.id || '',
+            user2_reason: payload.user2?.reason || '',
+            user3_id: payload.user3?.id || '',
+            user3_reason: payload.user3?.reason || '',
+            created_by: created_by || 'dashboard',
+          })
+          dbHonor.updateHonorMessageId(id, sent.id)
+        }
+      } catch (persistErr) {
+        console.error('[honor/send] persist DB failed:', persistErr)
+        // Khong fail toan bo request — message da gui xong
+      }
+    }
+
     res.json({ success: true, message_id: sent.id, channel_id })
   } catch (err) {
     res.status(400).json({ error: err.message })
