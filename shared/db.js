@@ -231,6 +231,22 @@ function initDb() {
       default_channel_id TEXT,
       updated_at INTEGER DEFAULT (unixepoch())
     );
+
+    -- Vinh danh team (1-10 thanh vien) — Team Roster layout
+    CREATE TABLE IF NOT EXISTS honor_team_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      message_id TEXT,
+      title TEXT NOT NULL,
+      team_name TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      banner_url TEXT,
+      member_ids TEXT NOT NULL,
+      created_by TEXT NOT NULL,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_honor_team_guild ON honor_team_history(guild_id, created_at DESC);
   `)
   // Safe migration for existing databases
   try { database.exec(`ALTER TABLE users ADD COLUMN username TEXT`) } catch (_) {}

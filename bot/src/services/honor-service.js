@@ -1,6 +1,7 @@
 // Service vinh danh: lưu pending data tạm, build embed, gửi, react, persist DB
 const dbHonor = require('../../../shared/db-honor')
 const { buildHonorEmbed } = require('../../../shared/build-honor-embed')
+const { buildHonorTeamEmbed } = require('../../../shared/build-honor-team-embed')
 
 // ============================================================
 // Pending cache — luu options tu slash command de modal submit lay lai
@@ -58,10 +59,26 @@ async function publishHonor({ channel, payload, dbRecord }) {
   return { messageId: message.id, recordId: id }
 }
 
+// Publish team — tuong tu publishHonor nhung dung bang honor_team_history
+async function publishHonorTeam({ channel, payload, dbRecord }) {
+  const { content, embeds } = payload
+  const message = await channel.send({ content, embeds })
+
+  const id = dbHonor.insertHonorTeamRecord(dbRecord)
+  dbHonor.updateHonorTeamMessageId(id, message.id)
+
+  try { await message.react('🎉') } catch (_) {}
+  try { await message.react('👏') } catch (_) {}
+
+  return { messageId: message.id, recordId: id }
+}
+
 module.exports = {
   setPending,
   takePending,
   hasHonorPermission,
   publishHonor,
+  publishHonorTeam,
   buildHonorEmbed,
+  buildHonorTeamEmbed,
 }

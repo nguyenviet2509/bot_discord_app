@@ -2,6 +2,7 @@
 const express = require('express')
 const dbHonor = require('../../shared/db-honor')
 const { buildHonorEmbed } = require('../../shared/build-honor-embed')
+const { buildHonorTeamEmbed } = require('../../shared/build-honor-team-embed')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
@@ -33,11 +34,45 @@ router.get('/history', (req, res) => {
   res.json(records)
 })
 
+// GET /api/honor/team-history?limit=10
+router.get('/team-history', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50)
+  const records = dbHonor.listHonorTeamHistory(GUILD_ID(), limit)
+  res.json(records)
+})
+
 // POST /api/honor/preview — render thu embed cho dashboard preview
+// Body: { type: 'top3'|'team', ...payload }
 router.post('/preview', (req, res) => {
   try {
-    const payload = buildHonorEmbed(req.body)
-    res.json(payload)
+    const { type, ...payload } = req.body
+    const result = type === 'team' ? buildHonorTeamEmbed(payload) : buildHonorEmbed(payload)
+    res.json(result)
+  } catch (err) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// POST /api/honor/send-test — gui that den 1 channel cu the (KHONG luu DB)
+// Body: { type, channel_id, ...payload }
+router.post('/send-test', async (req, res) => {
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua co' })
+  const { type, channel_id, ...payload } = req.body
+  if (!channel_id) return res.status(400).json({ error: 'Thieu channel_id' })
+  try {
+    const built = type === 'team' ? buildHonorTeamEmbed(payload) : buildHonorEmbed(payload)
+    const url = `https://discord.com/api/v10/channels/${channel_id}/messages`
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bot ${process.env.BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: built.content, embeds: built.embeds }),
+    })
+    if (!r.ok) {
+      const errText = await r.text()
+      return res.status(r.status).json({ error: `Discord ${r.status}: ${errText.slice(0, 300)}` })
+    }
+    const sent = await r.json()
+    res.json({ success: true, message_id: sent.id, channel_id })
   } catch (err) {
     res.status(400).json({ error: err.message })
   }

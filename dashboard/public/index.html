@@ -97,10 +97,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21v-2a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>Chào mừng thành viên</span>
       </div>
-      <a href="/honor-config.html" class="nav-item" style="text-decoration:none">
+      <div @click="tab='honor'" :class="tab==='honor' ? 'active' : ''" class="nav-item">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         <span>Vinh danh</span>
-      </a>
+      </div>
       <div @click="tab='settings'" :class="tab==='settings' ? 'active' : ''" class="nav-item">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M19.07 4.93 4.93 19.07"/><path d="M12 2v2M12 20v2M4.93 4.93 6.34 6.34M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07 6.34 17.66M17.66 6.34l1.41-1.41"/></svg>
         <span>Cấu hình</span>
@@ -1790,6 +1790,17 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- HONOR TAB: iframe embed honor-config.html (giu SPA, khong dieu huong) -->
+    <div x-show="tab === 'honor'" class="h-screen">
+      <iframe
+        src="/honor-config.html"
+        class="w-full h-full border-0"
+        style="height: 100vh; width: 100%; border: 0;"
+        loading="lazy"
+        title="Vinh danh">
+      </iframe>
     </div>
 
   </main>

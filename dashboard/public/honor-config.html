@@ -71,7 +71,16 @@
       <h5 class="card-title">🔍 Xem trước embed</h5>
       <p class="text-muted small">Nhập dữ liệu mẫu để xem embed trông thế nào trước khi gửi thật.</p>
 
-      <div class="row g-2 mb-2">
+      <div class="mb-3">
+        <label class="form-label">Loại vinh danh</label>
+        <select id="pType" class="form-select" style="max-width: 320px">
+          <option value="top3">👤 Cá nhân (Top 3)</option>
+          <option value="team">👥 Team (1-10 thành viên)</option>
+        </select>
+      </div>
+
+      <!-- Top 3 form -->
+      <div id="formTop3" class="row g-2 mb-2">
         <div class="col-12">
           <label class="form-label">Tiêu đề</label>
           <input id="pTitle" class="form-control" value="BẢNG VÀNG THÁNG 5/2026" />
@@ -109,7 +118,46 @@
           <input id="pAvatar" class="form-control" value="https://i.pravatar.cc/256?img=12" />
         </div>
       </div>
-      <button id="previewBtn" class="btn btn-outline-primary mb-3">🔄 Render Preview</button>
+
+      <!-- Team form -->
+      <div id="formTeam" class="row g-2 mb-2" style="display:none">
+        <div class="col-md-6">
+          <label class="form-label">Tiêu đề</label>
+          <input id="tTitle" class="form-control" value="BẢNG VÀNG TEAM THÁNG 5/2026" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Tên team</label>
+          <input id="tTeamName" class="form-control" value="Biệt đội Bug Hunter" />
+        </div>
+        <div class="col-12">
+          <label class="form-label">Lý do vinh danh team</label>
+          <textarea id="tReason" class="form-control" rows="2">Team săn lỗi xuất sắc nhất tháng, đóng góp 87 báo cáo hợp lệ</textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Danh sách user ID (1-10, mỗi dòng 1 ID)</label>
+          <textarea id="tMembers" class="form-control" rows="5">100000000000000001
+100000000000000002
+100000000000000003
+100000000000000004
+100000000000000005</textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Banner URL</label>
+          <input id="tBanner" class="form-control" value="https://picsum.photos/seed/team/1200/400" />
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+        <button id="previewBtn" class="btn btn-outline-primary">🔄 Render Preview</button>
+        <div class="flex-grow-1" style="max-width: 320px">
+          <label class="form-label small mb-1">Channel test</label>
+          <select id="testChannel" class="form-select form-select-sm">
+            <option value="">— Chọn channel để gửi test —</option>
+          </select>
+        </div>
+        <button id="sendTestBtn" class="btn btn-success">📤 Gửi test</button>
+        <span id="sendStatus" class="ms-2 small"></span>
+      </div>
 
       <div id="previewBox" class="preview-pane">
         <em class="text-muted">Bấm "Render Preview" để xem...</em>
@@ -121,6 +169,10 @@
   <div class="card mb-5">
     <div class="card-body">
       <h5 class="card-title">📜 Lịch sử vinh danh gần đây</h5>
+      <ul class="nav nav-tabs mb-3" id="historyTabs">
+        <li class="nav-item"><a class="nav-link active" data-tab="top3" href="#">👤 Cá nhân</a></li>
+        <li class="nav-item"><a class="nav-link" data-tab="team" href="#">👥 Team</a></li>
+      </ul>
       <div id="historyBox"><em class="text-muted">Đang tải...</em></div>
     </div>
   </div>
