@@ -24,10 +24,28 @@ let _whitelist = { channels: [], roles: [] }
 let _logsPage = 1
 
 // ============ Helpers ============
+function getToken() {
+  // Iframe trong index.html dung cung origin -> localStorage.token van truy cap duoc.
+  return localStorage.getItem('token')
+}
+
 async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' }
+  const token = getToken()
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  }
   if (body !== undefined) opts.body = JSON.stringify(body)
   const r = await fetch(API + path, opts)
+  if (r.status === 401) {
+    localStorage.removeItem('token')
+    // Iframe -> chuyen parent window ve login
+    try { window.top.location.href = '/login.html' } catch (_) { window.location.href = '/login.html' }
+    throw new Error('Unauthorized')
+  }
   if (!r.ok) {
     let err = `HTTP ${r.status}`
     try { err = (await r.json()).error || err } catch (_) {}
