@@ -104,10 +104,9 @@ function ensurePermissionAndChannel(interaction) {
   if (!guild) {
     return { error: '❌ Lệnh này chỉ dùng trong server.' }
   }
-  const settings = dbHonor.getHonorSettings(guild.id)
-  if (!honorService.hasHonorPermission(interaction.member, settings)) {
-    return { error: '🚫 Bạn không có quyền dùng lệnh vinh danh. Liên hệ admin để được cấp role.' }
-  }
+  // Quyen su dung /vinhdanh: tan dung global gate trong interaction-create
+  // (db.getSettings.allowed_role_ids) + ManageGuild permission tu setDefaultMemberPermissions.
+  // Khong can check rieng nua.
   const banner = interaction.options.getAttachment('banner', true)
   if (!banner.contentType || !banner.contentType.startsWith('image/')) {
     return { error: '❌ File banner phải là ảnh (image/*).' }

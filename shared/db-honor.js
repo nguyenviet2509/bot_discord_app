@@ -12,7 +12,7 @@ function getHonorSettings(guildId) {
   if (!row) {
     return {
       guild_id: guildId, allowed_role_ids: [], default_channel_id: null,
-      gold_emoji: null, silver_emoji: null, bronze_emoji: null,
+      gold_emoji: null, silver_emoji: null, bronze_emoji: null, last_banner_url: null,
     }
   }
   let allowed = []
@@ -20,18 +20,19 @@ function getHonorSettings(guildId) {
   return { ...row, allowed_role_ids: allowed }
 }
 
-function upsertHonorSettings({ guild_id, allowed_role_ids, default_channel_id, gold_emoji, silver_emoji, bronze_emoji }) {
+function upsertHonorSettings({ guild_id, allowed_role_ids, default_channel_id, gold_emoji, silver_emoji, bronze_emoji, last_banner_url }) {
   const allowedJson = JSON.stringify(Array.isArray(allowed_role_ids) ? allowed_role_ids : [])
   return getDb()
     .prepare(`
-      INSERT INTO honor_settings (guild_id, allowed_role_ids, default_channel_id, gold_emoji, silver_emoji, bronze_emoji, updated_at)
-      VALUES (@guild_id, @allowed_role_ids, @default_channel_id, @gold_emoji, @silver_emoji, @bronze_emoji, unixepoch())
+      INSERT INTO honor_settings (guild_id, allowed_role_ids, default_channel_id, gold_emoji, silver_emoji, bronze_emoji, last_banner_url, updated_at)
+      VALUES (@guild_id, @allowed_role_ids, @default_channel_id, @gold_emoji, @silver_emoji, @bronze_emoji, @last_banner_url, unixepoch())
       ON CONFLICT(guild_id) DO UPDATE SET
         allowed_role_ids = excluded.allowed_role_ids,
         default_channel_id = excluded.default_channel_id,
         gold_emoji = excluded.gold_emoji,
         silver_emoji = excluded.silver_emoji,
         bronze_emoji = excluded.bronze_emoji,
+        last_banner_url = excluded.last_banner_url,
         updated_at = unixepoch()
     `)
     .run({
@@ -41,6 +42,7 @@ function upsertHonorSettings({ guild_id, allowed_role_ids, default_channel_id, g
       gold_emoji: gold_emoji || null,
       silver_emoji: silver_emoji || null,
       bronze_emoji: bronze_emoji || null,
+      last_banner_url: last_banner_url || null,
     })
 }
 

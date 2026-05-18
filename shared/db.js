@@ -291,6 +291,7 @@ function initDb() {
   try { database.exec(`ALTER TABLE honor_settings ADD COLUMN gold_emoji TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE honor_settings ADD COLUMN silver_emoji TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE honor_settings ADD COLUMN bronze_emoji TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE honor_settings ADD COLUMN last_banner_url TEXT`) } catch (_) {}
 
   // Schema cho module system & mini-game PvP (tach file rieng)
   require('./db-mini-game').initMiniGameSchema(database)
