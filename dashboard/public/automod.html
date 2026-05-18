@@ -3,142 +3,168 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Auto-Mod Lite</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+  <title>Auto-Mod</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background:#f5f6fa; font-family:'Inter',system-ui,sans-serif; margin:0; }
-    .container-narrow { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-    .main-content { padding: 24px 0; }
-    .sticky-header { position: sticky; top:0; z-index:50; background:#fff; border-bottom:1px solid #e2e8f0; padding:18px 0; }
-    .page-title { font-size:20px; font-weight:700; color:#1e293b; }
-    .page-sub { font-size:13px; color:#94a3b8; margin-top:2px; }
-    .card { box-shadow: 0 1px 3px rgba(0,0,0,.08); border:none; }
-    .rule-row { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #eef0f3; }
-    .rule-row:last-child { border:none; }
-    .rule-name { width:170px; font-weight:600; }
-    .rule-params { flex:1; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .chip { display:inline-flex; align-items:center; gap:4px; background:#eef0ff; color:#4338ca; padding:4px 10px; border-radius:999px; font-size:12px; margin:2px; }
-    .chip .x { cursor:pointer; opacity:.6; }
-    .chip .x:hover { opacity:1; }
-    .badge-rule { background:#e0e7ff; color:#3730a3; font-size:11px; padding:2px 6px; border-radius:4px; }
-    .badge-action { background:#fef3c7; color:#92400e; font-size:11px; padding:2px 6px; border-radius:4px; }
-    .badge-action.kick { background:#fee2e2; color:#991b1b; }
-    .badge-action.mute-1h, .badge-action.mute-1d { background:#fed7aa; color:#9a3412; }
-    table.logs td { vertical-align: middle; font-size: 13px; }
-    .bar { height: 18px; background:#4338ca; border-radius:3px; }
-    .stat-row { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
-    .stat-label { width:140px; font-size:13px; }
-    .stat-count { width:40px; font-size:13px; color:#475569; }
-    .nav-tabs .nav-link { color:#475569; }
-    .nav-tabs .nav-link.active { font-weight:600; }
+    * { font-family: 'Inter', -apple-system, sans-serif; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
+    .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; transition: border-color .15s; outline: none; }
+    .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; }
+    .btn-refresh:hover:not(:disabled) { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
+    .btn-danger-soft { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1.5px solid #fecaca; border-radius: 10px; font-size: 13px; font-weight: 500; color: #b91c1c; background: white; cursor: pointer; transition: all .15s; }
+    .btn-danger-soft:hover { background: #fef2f2; }
+    .tab-btn { padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #475569; background: transparent; border: none; cursor: pointer; transition: all .15s; }
+    .tab-btn:hover { background: #f1f5f9; }
+    .tab-btn.active { background: #eef2ff; color: #4338ca; font-weight: 600; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; background: #eef2ff; color: #4338ca; padding: 5px 12px; border-radius: 999px; font-size: 13px; margin: 3px; }
+    .chip .x { cursor: pointer; opacity: .6; font-weight: 700; }
+    .chip .x:hover { opacity: 1; color: #dc2626; }
+    .badge-rule { background: #e0e7ff; color: #3730a3; font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+    .badge-action { background: #fef3c7; color: #92400e; font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+    .badge-action.kick { background: #fee2e2; color: #991b1b; }
+    .badge-action.mute-1h, .badge-action.mute-1d { background: #fed7aa; color: #9a3412; }
+    .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 999px; transition: .2s; }
+    .toggle-slider:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    input:checked + .toggle-slider { background: #6366f1; }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .stat-bar { height: 22px; background: linear-gradient(90deg, #6366f1, #818cf8); border-radius: 6px; }
+    table.logs th { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .03em; padding: 12px 10px; border-bottom: 1.5px solid #e2e8f0; text-align: left; }
+    table.logs td { padding: 12px 10px; font-size: 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    table.logs tr:hover td { background: #fafbfc; }
   </style>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen">
 
-<div class="sticky-header">
-  <div class="container-narrow d-flex justify-content-between align-items-center">
-    <div>
-      <h1 class="page-title m-0">🛡️ Auto-Mod Lite</h1>
-      <p class="page-sub m-0">Tự động xử phạt spam, link mời, từ cấm, mass-mention, lặp tin</p>
-    </div>
-    <span id="saveStatus" class="small text-muted"></span>
+<!-- Sticky header -->
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+  <div>
+    <h1 class="text-xl font-bold text-slate-800">Auto-Mod</h1>
+    <p class="text-sm text-slate-400 mt-0.5">Tự động xử phạt spam, link mời, từ cấm, mass-mention, lặp tin theo ladder warn → mute → kick</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <span id="saveStatus" class="text-sm"></span>
+    <button id="reloadBtn" class="btn-refresh">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+      <span>Làm mới</span>
+    </button>
   </div>
 </div>
 
-<div class="container-narrow main-content">
+<div class="p-8 max-w-6xl mx-auto">
 
-  <ul class="nav nav-tabs mb-3" id="tabs">
-    <li class="nav-item"><button class="nav-link active" data-tab="config">Quy tắc</button></li>
-    <li class="nav-item"><button class="nav-link" data-tab="whitelist">Whitelist</button></li>
-    <li class="nav-item"><button class="nav-link" data-tab="ladder">Ladder phạt</button></li>
-    <li class="nav-item"><button class="nav-link" data-tab="logs">Logs</button></li>
-    <li class="nav-item"><button class="nav-link" data-tab="stats">Thống kê</button></li>
-  </ul>
+  <!-- Tab navigation -->
+  <div class="flex items-center gap-2 mb-6 bg-white p-2 rounded-2xl shadow-sm" id="tabs">
+    <button class="tab-btn active" data-tab="config">Quy tắc</button>
+    <button class="tab-btn" data-tab="whitelist">Whitelist</button>
+    <button class="tab-btn" data-tab="ladder">Ladder phạt</button>
+    <button class="tab-btn" data-tab="logs">Logs</button>
+    <button class="tab-btn" data-tab="stats">Thống kê</button>
+  </div>
 
   <!-- TAB: Rules -->
   <div class="tab-pane" id="tab-config">
-    <div class="card"><div class="card-body">
-      <h5>Bật/tắt và cấu hình từng quy tắc</h5>
-      <p class="text-muted small">Bật quy tắc nào sẽ áp dụng cho server. Whitelist channel/role không bị check.</p>
-      <div id="rulesList"></div>
-    </div></div>
+    <div class="card p-7">
+      <h2 class="text-base font-bold text-slate-800 mb-2">Bật/tắt và cấu hình từng quy tắc</h2>
+      <p class="text-sm text-slate-400 mb-5">Bật quy tắc nào sẽ áp dụng cho server. Channel/role trong Whitelist không bị check.</p>
+      <div id="rulesList" class="space-y-4"></div>
+    </div>
   </div>
 
   <!-- TAB: Whitelist -->
-  <div class="tab-pane d-none" id="tab-whitelist">
-    <div class="card mb-3"><div class="card-body">
-      <h5>Channel được miễn</h5>
-      <div class="d-flex gap-2 mb-2">
-        <select id="channelPick" class="form-select" style="max-width:400px"></select>
-        <button class="btn btn-primary" onclick="addWl('channel')">+ Thêm</button>
+  <div class="tab-pane hidden" id="tab-whitelist">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div class="card p-7">
+        <h2 class="text-base font-bold text-slate-800 mb-3">Channel được miễn check</h2>
+        <div class="flex gap-2 mb-4">
+          <select id="channelPick" class="input-field flex-1"></select>
+          <button class="btn-primary" onclick="addWl('channel')">+ Thêm</button>
+        </div>
+        <div id="wlChannels" class="min-h-[40px]"></div>
       </div>
-      <div id="wlChannels"></div>
-    </div></div>
-    <div class="card"><div class="card-body">
-      <h5>Role được miễn</h5>
-      <div class="d-flex gap-2 mb-2">
-        <select id="rolePick" class="form-select" style="max-width:400px"></select>
-        <button class="btn btn-primary" onclick="addWl('role')">+ Thêm</button>
+      <div class="card p-7">
+        <h2 class="text-base font-bold text-slate-800 mb-3">Role được miễn check</h2>
+        <div class="flex gap-2 mb-4">
+          <select id="rolePick" class="input-field flex-1"></select>
+          <button class="btn-primary" onclick="addWl('role')">+ Thêm</button>
+        </div>
+        <div id="wlRoles" class="min-h-[40px]"></div>
       </div>
-      <div id="wlRoles"></div>
-    </div></div>
+    </div>
   </div>
 
   <!-- TAB: Ladder -->
-  <div class="tab-pane d-none" id="tab-ladder">
-    <div class="card"><div class="card-body">
-      <h5>Cấp độ xử phạt</h5>
-      <p class="text-muted small">Áp dụng tuần tự khi user lặp vi phạm. Sau khoảng <em>reset</em>, count quay về 0.</p>
-      <div id="ladderRows"></div>
-      <div class="mt-3">
-        <label class="small">Reset warn sau (giờ):</label>
-        <input id="ladderExpiry" type="number" min="1" max="168" class="form-control" style="max-width:120px" />
+  <div class="tab-pane hidden" id="tab-ladder">
+    <div class="card p-7 max-w-2xl">
+      <h2 class="text-base font-bold text-slate-800 mb-2">Cấp độ xử phạt</h2>
+      <p class="text-sm text-slate-400 mb-5">Áp dụng tuần tự khi user lặp vi phạm. Sau khoảng <em>reset</em>, count quay về 0.</p>
+      <div id="ladderRows" class="space-y-3 mb-5"></div>
+      <div class="flex items-center gap-3 mb-5">
+        <label class="text-sm font-semibold text-slate-700">Reset warn sau:</label>
+        <input id="ladderExpiry" type="number" min="1" max="168" class="input-field" style="max-width:120px" />
+        <span class="text-sm text-slate-500">giờ</span>
       </div>
-      <button class="btn btn-primary mt-3" onclick="saveLadder()">💾 Lưu ladder</button>
-    </div></div>
+      <button class="btn-primary" onclick="saveLadder()">Lưu ladder</button>
+    </div>
   </div>
 
   <!-- TAB: Logs -->
-  <div class="tab-pane d-none" id="tab-logs">
-    <div class="card"><div class="card-body">
-      <div class="d-flex gap-2 mb-3 flex-wrap">
-        <input id="filterUser" placeholder="User ID..." class="form-control" style="max-width:180px" />
-        <select id="filterRule" class="form-select" style="max-width:180px">
+  <div class="tab-pane hidden" id="tab-logs">
+    <div class="card p-7">
+      <div class="flex gap-3 mb-5 flex-wrap items-center">
+        <input id="filterUser" placeholder="User ID..." class="input-field" style="max-width:200px" />
+        <select id="filterRule" class="input-field" style="max-width:200px">
           <option value="">— Tất cả rule —</option>
         </select>
-        <select id="filterAction" class="form-select" style="max-width:160px">
+        <select id="filterAction" class="input-field" style="max-width:180px">
           <option value="">— Tất cả action —</option>
         </select>
-        <button class="btn btn-outline-primary" onclick="loadLogs(1)">Áp dụng</button>
-        <button class="btn btn-outline-secondary" onclick="resetFilter()">Xoá lọc</button>
+        <button class="btn-primary" onclick="loadLogs(1)">Áp dụng</button>
+        <button class="btn-refresh" onclick="resetFilter()">Xóa lọc</button>
       </div>
-      <table class="table logs">
-        <thead><tr>
-          <th>Thời gian</th><th>User</th><th>Rule</th><th>Action</th><th>Nội dung</th><th>Channel</th><th></th>
-        </tr></thead>
-        <tbody id="logsBody"><tr><td colspan="7" class="text-center text-muted">Đang tải...</td></tr></tbody>
-      </table>
-      <div class="d-flex justify-content-between align-items-center">
-        <span id="logsTotal" class="small text-muted"></span>
-        <div>
-          <button class="btn btn-sm btn-outline-secondary" id="prevPage">← Trước</button>
-          <span id="pageInfo" class="mx-2"></span>
-          <button class="btn btn-sm btn-outline-secondary" id="nextPage">Sau →</button>
+      <div class="overflow-x-auto">
+        <table class="logs w-full">
+          <thead>
+            <tr>
+              <th>Thời gian</th><th>User</th><th>Rule</th><th>Action</th><th>Nội dung</th><th>Channel</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="logsBody">
+            <tr><td colspan="7" class="text-center text-slate-400 py-8">Đang tải...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="flex justify-between items-center mt-5 pt-4 border-t border-slate-100">
+        <span id="logsTotal" class="text-sm text-slate-500"></span>
+        <div class="flex items-center gap-2">
+          <button class="btn-refresh" id="prevPage">← Trước</button>
+          <span id="pageInfo" class="text-sm text-slate-600 mx-2"></span>
+          <button class="btn-refresh" id="nextPage">Sau →</button>
         </div>
       </div>
-    </div></div>
+    </div>
   </div>
 
   <!-- TAB: Stats -->
-  <div class="tab-pane d-none" id="tab-stats">
-    <div class="card mb-3"><div class="card-body">
-      <h5>Vi phạm theo rule (7 ngày)</h5>
-      <div id="statsByRule"></div>
-    </div></div>
-    <div class="card"><div class="card-body">
-      <h5>Top user vi phạm (7 ngày)</h5>
-      <div id="statsTop"></div>
-    </div></div>
+  <div class="tab-pane hidden" id="tab-stats">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div class="card p-7">
+        <h2 class="text-base font-bold text-slate-800 mb-4">Vi phạm theo rule (7 ngày)</h2>
+        <div id="statsByRule" class="space-y-3"></div>
+      </div>
+      <div class="card p-7">
+        <h2 class="text-base font-bold text-slate-800 mb-4">Top user vi phạm (7 ngày)</h2>
+        <div id="statsTop"></div>
+      </div>
+    </div>
   </div>
 
 </div>

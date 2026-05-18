@@ -3,30 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cấu hình Vinh Danh</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+  <title>Vinh Danh</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background:#f5f6fa; font-family:'Inter',system-ui,sans-serif; margin:0; padding:0; }
-    .container-narrow { max-width: 980px; margin: 0 auto; padding: 0 24px; }
-    .main-content { padding-top: 24px; padding-bottom: 24px; }
-    .sticky-header {
-      position: sticky; top: 0; z-index: 50;
-      background: #fff; border-bottom: 1px solid #e2e8f0;
-      padding: 18px 0;
-    }
-    .page-title { font-size: 20px; font-weight: 700; color: #1e293b; }
-    .page-sub { font-size: 13px; color: #94a3b8; margin-top: 2px; }
-    .card { box-shadow: 0 1px 3px rgba(0,0,0,.08); border: none; }
-    .role-chip {
-      display:inline-flex; align-items:center; gap:6px;
-      padding: 4px 10px; border-radius: 999px;
-      background: #eef0ff; color:#4338ca; font-size: 13px; margin: 2px;
-      cursor: pointer; user-select: none;
-    }
-    .role-chip.active { background: #4338ca; color: #fff; }
+    * { font-family: 'Inter', -apple-system, sans-serif; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
+    .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; transition: border-color .15s; outline: none; }
+    .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; }
+    .btn-refresh:hover:not(:disabled) { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
+    .btn-success { background: #10b981; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+    .btn-success:hover { background: #059669; }
+    .btn-soft-primary { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: 1.5px solid #c7d2fe; border-radius: 10px; font-size: 13px; font-weight: 500; color: #4338ca; background: white; cursor: pointer; transition: all .15s; }
+    .btn-soft-primary:hover { background: #eef2ff; }
+    .btn-soft-danger { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: 1.5px solid #fecaca; border-radius: 10px; font-size: 13px; font-weight: 500; color: #b91c1c; background: white; cursor: pointer; transition: all .15s; }
+    .btn-soft-danger:hover { background: #fef2f2; }
+    .field-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
+    .tab-link { padding: 9px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #475569; cursor: pointer; transition: all .15s; text-decoration: none; }
+    .tab-link:hover { background: #f1f5f9; }
+    .tab-link.active { background: #eef2ff; color: #4338ca; font-weight: 600; }
     .preview-pane {
-      background: #2b2d31; color: #dbdee1; padding: 16px;
-      border-radius: 8px; font-family: 'gg sans', system-ui, sans-serif;
+      background: #2b2d31; color: #dbdee1; padding: 18px;
+      border-radius: 12px; font-family: 'gg sans', system-ui, sans-serif;
       border-left: 4px solid #ffd700;
     }
     .preview-pane .author { font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 4px; }
@@ -39,216 +43,210 @@
     .preview-pane .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
     .preview-pane .field-name { color: #fff; font-weight: 600; font-size: 13px; }
     .preview-pane .field-val { color: #dbdee1; font-size: 14px; }
-    .preview-pane .banner-img {
-      width: 100%; max-height: 200px; object-fit: cover; border-radius: 4px; margin-top: 8px;
-    }
+    .preview-pane .banner-img { width: 100%; max-height: 240px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
     .preview-pane .footer { color: #949ba4; font-size: 12px; margin-top: 12px; border-top: 1px solid #3f4147; padding-top: 8px; }
     .preview-pane .thumb { width: 80px; height: 80px; border-radius: 50%; float: right; border: 2px solid #ffd700; object-fit: cover; }
-    .history-row { padding: 10px 0; border-bottom: 1px solid #eee; }
+    .history-row { padding: 14px 0; border-bottom: 1px solid #e2e8f0; }
     .history-row:last-child { border: none; }
+    .file-input { width: 100%; padding: 8px 10px; border: 1.5px dashed #cbd5e1; border-radius: 10px; font-size: 13px; background: #f8fafc; cursor: pointer; }
+    .file-input:hover { border-color: #6366f1; background: #eef2ff; }
+    /* Legacy class shims (honor-config.js inject dynamic HTML) */
+    .text-muted { color: #64748b; }
+    .small { font-size: 13px; }
   </style>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen">
 
-<!-- Sticky header — dong bo voi cac tab khac (Level Up, Welcome,...) -->
-<div class="sticky-header">
-  <div class="container-narrow d-flex justify-content-between align-items-center">
-    <div>
-      <h1 class="page-title m-0">🏛️ Cấu hình Vinh Danh</h1>
-      <p class="page-sub m-0">Quản lý emoji huy chương, banner và preview thông báo vinh danh</p>
-    </div>
-    <div class="d-flex align-items-center gap-3">
-      <span id="saveStatus" class="small"></span>
-      <button id="saveBtn" class="btn btn-primary">💾 Lưu cấu hình</button>
-    </div>
+<!-- Sticky header -->
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+  <div>
+    <h1 class="text-xl font-bold text-slate-800">Vinh Danh</h1>
+    <p class="text-sm text-slate-400 mt-0.5">Quản lý emoji huy chương, banner và preview thông báo vinh danh Top 3 / Team</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <span id="saveStatus" class="text-sm"></span>
+    <button id="saveBtn" class="btn-primary">Lưu cấu hình</button>
   </div>
 </div>
 
-<div class="container-narrow main-content">
+<div class="p-8 max-w-6xl mx-auto space-y-5">
 
   <!-- Settings -->
-  <div class="card mb-3">
-    <div class="card-body">
-      <p class="text-muted small">
-        ℹ️ Quyền sử dụng <code>/vinhdanh</code> dùng chung với cấu hình
-        <strong>"Quyền dùng slash command"</strong> trong tab Cấu hình.
-      </p>
-
-      <h5 class="card-title">Channel mặc định</h5>
-      <p class="text-muted small">Channel được đề xuất khi user không chọn channel cụ thể.</p>
-      <select id="channelSelect" class="form-select" style="max-width: 400px">
-        <option value="">— Không chọn (để user tự chọn) —</option>
-      </select>
-
-      <hr/>
-      <h5 class="card-title">🏅 Tuỳ chỉnh emoji huy chương (Top 3)</h5>
-      <p class="text-muted small mb-3">
-        Upload ảnh để bot tự đăng ký thành <strong>Application Emoji</strong> trên Discord (không cần tạo emoji thủ công).<br>
-        File: PNG/JPG/GIF/WEBP, &le; 256KB, kích thước khuyên dùng 128×128.<br>
-        Bỏ trống = dùng mặc định 🥇🥈🥉.
-      </p>
-      <div class="row g-3" style="max-width: 720px">
-        <div class="col-md-4">
-          <label class="form-label small">🥇 Quán quân</label>
-          <div id="goldEmojiPreview" class="mb-1" style="min-height:48px"></div>
-          <input type="file" id="goldEmojiFile" class="form-control form-control-sm" accept="image/png,image/jpeg,image/gif,image/webp" />
-          <div class="d-flex gap-1 mt-1">
-            <button class="btn btn-sm btn-outline-primary upload-emoji-btn" data-slot="gold">Upload</button>
-            <button class="btn btn-sm btn-outline-danger remove-emoji-btn" data-slot="gold">Xoá</button>
-          </div>
-          <input type="hidden" id="goldEmoji" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label small">🥈 Á quân</label>
-          <div id="silverEmojiPreview" class="mb-1" style="min-height:48px"></div>
-          <input type="file" id="silverEmojiFile" class="form-control form-control-sm" accept="image/png,image/jpeg,image/gif,image/webp" />
-          <div class="d-flex gap-1 mt-1">
-            <button class="btn btn-sm btn-outline-primary upload-emoji-btn" data-slot="silver">Upload</button>
-            <button class="btn btn-sm btn-outline-danger remove-emoji-btn" data-slot="silver">Xoá</button>
-          </div>
-          <input type="hidden" id="silverEmoji" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label small">🥉 Hạng ba</label>
-          <div id="bronzeEmojiPreview" class="mb-1" style="min-height:48px"></div>
-          <input type="file" id="bronzeEmojiFile" class="form-control form-control-sm" accept="image/png,image/jpeg,image/gif,image/webp" />
-          <div class="d-flex gap-1 mt-1">
-            <button class="btn btn-sm btn-outline-primary upload-emoji-btn" data-slot="bronze">Upload</button>
-            <button class="btn btn-sm btn-outline-danger remove-emoji-btn" data-slot="bronze">Xoá</button>
-          </div>
-          <input type="hidden" id="bronzeEmoji" />
-        </div>
-      </div>
-      <div id="emojiUploadStatus" class="small mt-2"></div>
+  <div class="card p-7">
+    <div class="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700 mb-5">
+      ℹ️ Quyền sử dụng <code class="bg-white px-1.5 py-0.5 rounded">/vinhdanh</code> dùng chung với cấu hình <strong>"Quyền dùng slash command"</strong> trong tab Cấu hình.
     </div>
+
+    <h2 class="text-base font-bold text-slate-800 mb-2">Channel mặc định</h2>
+    <p class="text-sm text-slate-400 mb-3">Channel được đề xuất khi user không chọn channel cụ thể.</p>
+    <select id="channelSelect" class="input-field" style="max-width:400px">
+      <option value="">— Không chọn (để user tự chọn) —</option>
+    </select>
+
+    <hr class="my-6 border-slate-100" />
+
+    <h2 class="text-base font-bold text-slate-800 mb-2">🏅 Tuỳ chỉnh emoji huy chương (Top 3)</h2>
+    <p class="text-sm text-slate-400 mb-4">
+      Upload ảnh để bot tự đăng ký thành <strong>Application Emoji</strong> trên Discord (không cần tạo thủ công).<br/>
+      File PNG/JPG/GIF/WEBP, ≤ 256KB, khuyên dùng 128×128. Bỏ trống = dùng mặc định 🥇🥈🥉.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-3xl">
+      <div>
+        <label class="field-label">🥇 Quán quân</label>
+        <div id="goldEmojiPreview" class="mb-2" style="min-height:48px"></div>
+        <input type="file" id="goldEmojiFile" class="file-input mb-2" accept="image/png,image/jpeg,image/gif,image/webp" />
+        <div class="flex gap-2">
+          <button class="btn-soft-primary upload-emoji-btn" data-slot="gold">Upload</button>
+          <button class="btn-soft-danger remove-emoji-btn" data-slot="gold">Xoá</button>
+        </div>
+        <input type="hidden" id="goldEmoji" />
+      </div>
+      <div>
+        <label class="field-label">🥈 Á quân</label>
+        <div id="silverEmojiPreview" class="mb-2" style="min-height:48px"></div>
+        <input type="file" id="silverEmojiFile" class="file-input mb-2" accept="image/png,image/jpeg,image/gif,image/webp" />
+        <div class="flex gap-2">
+          <button class="btn-soft-primary upload-emoji-btn" data-slot="silver">Upload</button>
+          <button class="btn-soft-danger remove-emoji-btn" data-slot="silver">Xoá</button>
+        </div>
+        <input type="hidden" id="silverEmoji" />
+      </div>
+      <div>
+        <label class="field-label">🥉 Hạng ba</label>
+        <div id="bronzeEmojiPreview" class="mb-2" style="min-height:48px"></div>
+        <input type="file" id="bronzeEmojiFile" class="file-input mb-2" accept="image/png,image/jpeg,image/gif,image/webp" />
+        <div class="flex gap-2">
+          <button class="btn-soft-primary upload-emoji-btn" data-slot="bronze">Upload</button>
+          <button class="btn-soft-danger remove-emoji-btn" data-slot="bronze">Xoá</button>
+        </div>
+        <input type="hidden" id="bronzeEmoji" />
+      </div>
+    </div>
+    <div id="emojiUploadStatus" class="text-sm mt-3"></div>
   </div>
 
   <!-- Preview -->
-  <div class="card mb-3">
-    <div class="card-body">
-      <h5 class="card-title">🔍 Xem trước embed</h5>
-      <p class="text-muted small">Nhập dữ liệu mẫu để xem embed trông thế nào trước khi gửi thật.</p>
+  <div class="card p-7">
+    <h2 class="text-base font-bold text-slate-800 mb-2">🔍 Xem trước embed</h2>
+    <p class="text-sm text-slate-400 mb-5">Nhập dữ liệu mẫu để xem embed trông thế nào trước khi gửi thật.</p>
 
-      <div class="mb-3">
-        <label class="form-label">Loại vinh danh</label>
-        <select id="pType" class="form-select" style="max-width: 320px">
-          <option value="top3">👤 Cá nhân (Top 3)</option>
-          <option value="team">👥 Team (1-10 thành viên)</option>
+    <div class="mb-5">
+      <label class="field-label">Loại vinh danh</label>
+      <select id="pType" class="input-field" style="max-width:320px">
+        <option value="top3">👤 Cá nhân (Top 3)</option>
+        <option value="team">👥 Team (1-10 thành viên)</option>
+      </select>
+    </div>
+
+    <!-- Top 3 form -->
+    <div id="formTop3" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+      <div class="col-span-1 md:col-span-3">
+        <label class="field-label">Tiêu đề</label>
+        <input id="pTitle" class="input-field" value="BẢNG VÀNG THÁNG 5/2026" />
+      </div>
+      <div>
+        <label class="field-label">🥇 Quán quân — User ID</label>
+        <input id="pId1" class="input-field" placeholder="Discord User ID" />
+      </div>
+      <div>
+        <label class="field-label">🥈 Á quân — User ID</label>
+        <input id="pId2" class="input-field" placeholder="Discord User ID" />
+      </div>
+      <div>
+        <label class="field-label">🥉 Hạng ba — User ID</label>
+        <input id="pId3" class="input-field" placeholder="Discord User ID" />
+      </div>
+      <div>
+        <label class="field-label">🥇 Tên hiển thị</label>
+        <input id="pName1" class="input-field" value="ChampionName" />
+      </div>
+      <div>
+        <label class="field-label">🥈 Tên hiển thị</label>
+        <input id="pName2" class="input-field" value="RunnerUpName" />
+      </div>
+      <div>
+        <label class="field-label">🥉 Tên hiển thị</label>
+        <input id="pName3" class="input-field" value="ThirdPlaceName" />
+      </div>
+      <div>
+        <label class="field-label">Lý do #1</label>
+        <textarea id="pReason1" class="input-field" rows="2">Đóng góp xuất sắc nhất cộng đồng</textarea>
+      </div>
+      <div>
+        <label class="field-label">Lý do #2</label>
+        <textarea id="pReason2" class="input-field" rows="2">Dẫn dắt mini-game cả tháng</textarea>
+      </div>
+      <div>
+        <label class="field-label">Lý do #3</label>
+        <textarea id="pReason3" class="input-field" rows="2">Hỗ trợ newbie tận tâm</textarea>
+      </div>
+      <div class="col-span-1 md:col-span-3">
+        <label class="field-label">📷 Banner — Upload ảnh</label>
+        <div class="flex gap-2 items-center flex-wrap">
+          <input type="file" id="pBannerFile" class="file-input" accept="image/*" style="max-width:360px" />
+          <button id="pBannerUpload" type="button" class="btn-soft-primary">Upload</button>
+          <span id="pBannerStatus" class="text-sm"></span>
+        </div>
+        <input type="hidden" id="pBanner" value="" />
+        <div id="pBannerPreview" class="mt-3"></div>
+      </div>
+    </div>
+
+    <!-- Team form -->
+    <div id="formTeam" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5" style="display:none">
+      <div>
+        <label class="field-label">Tiêu đề</label>
+        <input id="tTitle" class="input-field" value="BẢNG VÀNG TEAM THÁNG 5/2026" />
+      </div>
+      <div>
+        <label class="field-label">Tên team</label>
+        <input id="tTeamName" class="input-field" value="Biệt đội Bug Hunter" />
+      </div>
+      <div class="col-span-1 md:col-span-2">
+        <label class="field-label">Lý do vinh danh team</label>
+        <textarea id="tReason" class="input-field" rows="2">Team săn lỗi xuất sắc nhất tháng, đóng góp 87 báo cáo hợp lệ</textarea>
+      </div>
+      <div class="col-span-1 md:col-span-2">
+        <label class="field-label">Danh sách user ID (1-10, mỗi dòng 1 ID)</label>
+        <textarea id="tMembers" class="input-field" rows="5"></textarea>
+      </div>
+      <div class="col-span-1 md:col-span-2">
+        <label class="field-label">📷 Banner — Upload ảnh</label>
+        <div class="flex gap-2 items-center flex-wrap">
+          <input type="file" id="tBannerFile" class="file-input" accept="image/*" style="max-width:360px" />
+          <button id="tBannerUpload" type="button" class="btn-soft-primary">Upload</button>
+          <span id="tBannerStatus" class="text-sm"></span>
+        </div>
+        <input type="hidden" id="tBanner" value="" />
+        <div id="tBannerPreview" class="mt-3"></div>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-3 items-end mb-5 pt-4 border-t border-slate-100">
+      <button id="previewBtn" class="btn-soft-primary">🔄 Render Preview</button>
+      <div style="max-width:320px">
+        <label class="field-label">Channel test</label>
+        <select id="testChannel" class="input-field">
+          <option value="">— Chọn channel để gửi test —</option>
         </select>
       </div>
+      <button id="sendTestBtn" class="btn-success">📤 Gửi vinh danh</button>
+      <span id="sendStatus" class="text-sm"></span>
+    </div>
 
-      <!-- Top 3 form -->
-      <div id="formTop3" class="row g-2 mb-2">
-        <div class="col-12">
-          <label class="form-label">Tiêu đề</label>
-          <input id="pTitle" class="form-control" value="BẢNG VÀNG THÁNG 5/2026" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">🥇 Quán quân — User ID</label>
-          <input id="pId1" class="form-control" placeholder="Discord User ID" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">🥈 Á quân — User ID</label>
-          <input id="pId2" class="form-control" placeholder="Discord User ID" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">🥉 Hạng ba — User ID</label>
-          <input id="pId3" class="form-control" placeholder="Discord User ID" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">🥇 Tên hiển thị</label>
-          <input id="pName1" class="form-control" value="ChampionName" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">🥈 Tên hiển thị</label>
-          <input id="pName2" class="form-control" value="RunnerUpName" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">🥉 Tên hiển thị</label>
-          <input id="pName3" class="form-control" value="ThirdPlaceName" />
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Lý do #1</label>
-          <textarea id="pReason1" class="form-control" rows="2">Đóng góp xuất sắc nhất cộng đồng</textarea>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Lý do #2</label>
-          <textarea id="pReason2" class="form-control" rows="2">Dẫn dắt mini-game cả tháng</textarea>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Lý do #3</label>
-          <textarea id="pReason3" class="form-control" rows="2">Hỗ trợ newbie tận tâm</textarea>
-        </div>
-        <div class="col-12">
-          <label class="form-label">📷 Banner — Upload ảnh</label>
-          <div class="d-flex gap-2 align-items-center">
-            <input type="file" id="pBannerFile" class="form-control" accept="image/*" style="max-width:360px" />
-            <button id="pBannerUpload" type="button" class="btn btn-outline-primary btn-sm">Upload</button>
-            <span id="pBannerStatus" class="small"></span>
-          </div>
-          <input type="hidden" id="pBanner" value="" />
-          <div id="pBannerPreview" class="mt-2"></div>
-        </div>
-      </div>
-
-      <!-- Team form -->
-      <div id="formTeam" class="row g-2 mb-2" style="display:none">
-        <div class="col-md-6">
-          <label class="form-label">Tiêu đề</label>
-          <input id="tTitle" class="form-control" value="BẢNG VÀNG TEAM THÁNG 5/2026" />
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Tên team</label>
-          <input id="tTeamName" class="form-control" value="Biệt đội Bug Hunter" />
-        </div>
-        <div class="col-12">
-          <label class="form-label">Lý do vinh danh team</label>
-          <textarea id="tReason" class="form-control" rows="2">Team săn lỗi xuất sắc nhất tháng, đóng góp 87 báo cáo hợp lệ</textarea>
-        </div>
-        <div class="col-12">
-          <label class="form-label">Danh sách user ID (1-10, mỗi dòng 1 ID)</label>
-          <textarea id="tMembers" class="form-control" rows="5"></textarea>
-        </div>
-        <div class="col-12">
-          <label class="form-label">📷 Banner — Upload ảnh</label>
-          <div class="d-flex gap-2 align-items-center">
-            <input type="file" id="tBannerFile" class="form-control" accept="image/*" style="max-width:360px" />
-            <button id="tBannerUpload" type="button" class="btn btn-outline-primary btn-sm">Upload</button>
-            <span id="tBannerStatus" class="small"></span>
-          </div>
-          <input type="hidden" id="tBanner" value="" />
-          <div id="tBannerPreview" class="mt-2"></div>
-        </div>
-      </div>
-
-      <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
-        <button id="previewBtn" class="btn btn-outline-primary">🔄 Render Preview</button>
-        <div class="flex-grow-1" style="max-width: 320px">
-          <label class="form-label small mb-1">Channel test</label>
-          <select id="testChannel" class="form-select form-select-sm">
-            <option value="">— Chọn channel để gửi test —</option>
-          </select>
-        </div>
-        <button id="sendTestBtn" class="btn btn-success">📤 Gửi vinh danh</button>
-        <span id="sendStatus" class="ms-2 small"></span>
-      </div>
-
-      <div id="previewBox" class="preview-pane">
-        <em class="text-muted">Bấm "Render Preview" để xem...</em>
-      </div>
+    <div id="previewBox" class="preview-pane">
+      <em class="text-slate-400">Bấm "Render Preview" để xem...</em>
     </div>
   </div>
 
   <!-- History -->
-  <div class="card mb-3">
-    <div class="card-body">
-      <h5 class="card-title">📜 Lịch sử vinh danh gần đây</h5>
-      <ul class="nav nav-tabs mb-3" id="historyTabs">
-        <li class="nav-item"><a class="nav-link active" data-tab="top3" href="#">👤 Cá nhân</a></li>
-        <li class="nav-item"><a class="nav-link" data-tab="team" href="#">👥 Team</a></li>
-      </ul>
-      <div id="historyBox"><em class="text-muted">Đang tải...</em></div>
+  <div class="card p-7">
+    <h2 class="text-base font-bold text-slate-800 mb-4">📜 Lịch sử vinh danh gần đây</h2>
+    <div class="flex items-center gap-1 mb-4 bg-slate-100 p-1 rounded-xl w-fit" id="historyTabs">
+      <a class="tab-link active" data-tab="top3" href="#">👤 Cá nhân</a>
+      <a class="tab-link" data-tab="team" href="#">👥 Team</a>
     </div>
+    <div id="historyBox"><em class="text-sm text-slate-400">Đang tải...</em></div>
   </div>
 
 </div>

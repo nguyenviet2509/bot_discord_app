@@ -72,12 +72,15 @@ document.querySelectorAll('#tabs button').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'))
     btn.classList.add('active')
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('d-none'))
-    document.getElementById('tab-' + btn.dataset.tab).classList.remove('d-none')
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'))
+    document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden')
     if (btn.dataset.tab === 'logs') loadLogs(1)
     if (btn.dataset.tab === 'stats') loadStats()
   })
 })
+
+// Reload button - reload toan bo data
+document.getElementById('reloadBtn').addEventListener('click', () => init())
 
 // ============ Rules tab ============
 function renderRules() {
@@ -85,15 +88,21 @@ function renderRules() {
   c.innerHTML = RULES.map(r => {
     const cfg = _config[r.key] || { enabled: false, params: {} }
     return `
-      <div class="rule-row" data-rule="${r.key}">
-        <div class="form-check form-switch" style="width:70px">
-          <input class="form-check-input rule-toggle" type="checkbox" ${cfg.enabled ? 'checked' : ''} />
+      <div class="rule-row border border-slate-200 rounded-xl p-5 bg-slate-50" data-rule="${r.key}">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <label class="toggle-switch">
+              <input class="rule-toggle" type="checkbox" ${cfg.enabled ? 'checked' : ''} />
+              <span class="toggle-slider"></span>
+            </label>
+            <div>
+              <div class="font-semibold text-slate-800">${escapeHtml(r.label)}</div>
+              <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(r.desc)}</div>
+            </div>
+          </div>
+          <button class="btn-primary save-rule" style="padding:6px 14px;font-size:13px">Lưu</button>
         </div>
-        <div class="rule-name">
-          ${r.label}<br/><small class="text-muted">${r.desc}</small>
-        </div>
-        <div class="rule-params">${renderParams(r.key, cfg.params)}</div>
-        <button class="btn btn-sm btn-primary save-rule">Lưu</button>
+        <div class="rule-params flex flex-wrap gap-2 items-center text-sm text-slate-700">${renderParams(r.key, cfg.params)}</div>
       </div>`
   }).join('')
 
@@ -101,32 +110,33 @@ function renderRules() {
 }
 
 function renderParams(rule, params) {
+  const sty = 'width:90px'
   switch (rule) {
     case 'anti-spam':
       return `
-        <label>Max:</label>
-        <input type="number" class="form-control form-control-sm p-input" data-k="maxMessages" value="${params.maxMessages || 5}" style="width:80px"/>
-        <label>tin /</label>
-        <input type="number" class="form-control form-control-sm p-input" data-k="windowSec" value="${params.windowSec || 5}" style="width:80px"/>
-        <label>giây</label>`
+        <span>Tối đa</span>
+        <input type="number" class="input-field p-input" data-k="maxMessages" value="${params.maxMessages || 5}" style="${sty}"/>
+        <span>tin /</span>
+        <input type="number" class="input-field p-input" data-k="windowSec" value="${params.windowSec || 5}" style="${sty}"/>
+        <span>giây</span>`
     case 'anti-mass-mention':
       return `
-        <label>Max:</label>
-        <input type="number" class="form-control form-control-sm p-input" data-k="maxMentions" value="${params.maxMentions || 5}" style="width:80px"/>
-        <label>mention/tin</label>`
+        <span>Tối đa</span>
+        <input type="number" class="input-field p-input" data-k="maxMentions" value="${params.maxMentions || 5}" style="${sty}"/>
+        <span>mention / tin</span>`
     case 'anti-repeat':
       return `
-        <label>Lặp:</label>
-        <input type="number" class="form-control form-control-sm p-input" data-k="maxRepeats" value="${params.maxRepeats || 3}" style="width:80px"/>
-        <label>lần</label>`
+        <span>Lặp</span>
+        <input type="number" class="input-field p-input" data-k="maxRepeats" value="${params.maxRepeats || 3}" style="${sty}"/>
+        <span>lần</span>`
     case 'bad-word':
       return `
-        <div style="flex:1">
-          <textarea class="form-control form-control-sm p-input" data-k="words" rows="2"
-            placeholder="Mỗi từ 1 dòng, hoặc cách nhau bằng dấu phẩy">${escapeHtml((params.words || []).join(', '))}</textarea>
+        <div class="w-full">
+          <textarea class="input-field p-input" data-k="words" rows="2"
+            placeholder="Mỗi từ cách nhau bằng dấu phẩy hoặc xuống dòng">${escapeHtml((params.words || []).join(', '))}</textarea>
         </div>`
     default:
-      return `<small class="text-muted">Không có tham số</small>`
+      return `<span class="text-slate-400 text-xs italic">Không có tham số</span>`
   }
 }
 
@@ -157,7 +167,7 @@ function renderWhitelist() {
         const ch = _channels.find(c => c.id === id)
         return `<span class="chip">#${escapeHtml(ch ? ch.name : id)} <span class="x" onclick="rmWl('channel','${id}')">✕</span></span>`
       }).join('')
-    : '<small class="text-muted">Chưa có channel nào</small>'
+    : '<span class="text-sm text-slate-400 italic">Chưa có channel nào</span>'
 
   const rList = document.getElementById('wlRoles')
   rList.innerHTML = _whitelist.roles.length
@@ -165,7 +175,7 @@ function renderWhitelist() {
         const r = _roles.find(x => x.id === id)
         return `<span class="chip">@${escapeHtml(r ? r.name : id)} <span class="x" onclick="rmWl('role','${id}')">✕</span></span>`
       }).join('')
-    : '<small class="text-muted">Chưa có role nào</small>'
+    : '<span class="text-sm text-slate-400 italic">Chưa có role nào</span>'
 }
 
 async function addWl(type) {
@@ -193,15 +203,14 @@ async function rmWl(type, id) {
 let _ladder = { steps: [], expirySec: 86400 }
 function renderLadder() {
   const c = document.getElementById('ladderRows')
-  // Hien thi 4 bac (warn 1-4+)
-  const labels = ['Vi phạm lần 1', 'Vi phạm lần 2', 'Vi phạm lần 3', 'Vi phạm lần 4+']
+  const labels = ['Vi phạm lần 1', 'Vi phạm lần 2', 'Vi phạm lần 3', 'Vi phạm lần 4 trở đi']
   c.innerHTML = labels.map((lbl, i) => {
     const cur = _ladder.steps[i] || _ladder.steps[_ladder.steps.length - 1] || 'warn'
     return `
-      <div class="d-flex align-items-center gap-2 mb-2">
-        <div style="width:160px">${lbl}:</div>
-        <select class="form-select ladder-step" data-i="${i}" style="max-width:240px">
-          ${ACTIONS.map(a => `<option value="${a.value}" ${a.value === cur ? 'selected' : ''}>${a.label}</option>`).join('')}
+      <div class="flex items-center gap-3">
+        <div class="w-44 text-sm font-semibold text-slate-700">${lbl}</div>
+        <select class="input-field ladder-step" data-i="${i}" style="max-width:280px">
+          ${ACTIONS.map(a => `<option value="${a.value}" ${a.value === cur ? 'selected' : ''}>${escapeHtml(a.label)}</option>`).join('')}
         </select>
       </div>`
   }).join('')
@@ -248,17 +257,17 @@ async function loadLogs(page) {
 function renderLogs({ rows, total, page, pageSize }) {
   const tbody = document.getElementById('logsBody')
   if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Chưa có log</td></tr>'
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-slate-400 py-8">Chưa có log vi phạm</td></tr>'
   } else {
     tbody.innerHTML = rows.map(r => `
       <tr>
-        <td><small>${new Date(r.created_at * 1000).toLocaleString('vi-VN')}</small></td>
-        <td><code>${escapeHtml(r.user_id)}</code></td>
+        <td class="text-slate-500">${new Date(r.created_at * 1000).toLocaleString('vi-VN')}</td>
+        <td><code class="text-xs bg-slate-100 px-2 py-0.5 rounded">${escapeHtml(r.user_id)}</code></td>
         <td><span class="badge-rule">${escapeHtml(r.rule)}</span></td>
         <td><span class="badge-action ${r.action}">${escapeHtml(r.action)}</span></td>
-        <td><small>${escapeHtml((r.message_excerpt || '').slice(0, 60))}${r.message_excerpt && r.message_excerpt.length > 60 ? '...' : ''}</small></td>
-        <td><small>${escapeHtml(r.channel_id || '')}</small></td>
-        <td><button class="btn btn-sm btn-outline-danger" onclick="clearWarns('${r.user_id}')">Reset warn</button></td>
+        <td class="text-slate-600">${escapeHtml((r.message_excerpt || '').slice(0, 60))}${r.message_excerpt && r.message_excerpt.length > 60 ? '…' : ''}</td>
+        <td class="text-slate-500"><code class="text-xs">${escapeHtml(r.channel_id || '')}</code></td>
+        <td><button class="btn-danger-soft" onclick="clearWarns('${r.user_id}')">Reset warn</button></td>
       </tr>`).join('')
   }
   const maxPage = Math.max(1, Math.ceil(total / pageSize))
@@ -286,16 +295,25 @@ async function loadStats() {
     const maxByRule = Math.max(1, ...data.byRule.map(r => r.total))
     document.getElementById('statsByRule').innerHTML = data.byRule.length
       ? data.byRule.map(r => `
-          <div class="stat-row">
-            <div class="stat-label">${escapeHtml(r.rule)}</div>
-            <div class="bar" style="width:${(r.total / maxByRule) * 70}%"></div>
-            <div class="stat-count">${r.total}</div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm font-semibold text-slate-700">${escapeHtml(r.rule)}</span>
+              <span class="text-sm text-slate-500">${r.total} vi phạm</span>
+            </div>
+            <div class="stat-bar" style="width:${Math.max(8, (r.total / maxByRule) * 100)}%"></div>
           </div>`).join('')
-      : '<small class="text-muted">Chưa có vi phạm trong 7 ngày</small>'
+      : '<div class="text-sm text-slate-400 italic">Chưa có vi phạm trong 7 ngày</div>'
 
     document.getElementById('statsTop').innerHTML = data.topOffenders.length
-      ? '<ol>' + data.topOffenders.map(o => `<li><code>${escapeHtml(o.user_id)}</code> — ${o.total} vi phạm</li>`).join('') + '</ol>'
-      : '<small class="text-muted">Chưa có user vi phạm</small>'
+      ? '<ol class="space-y-2">' + data.topOffenders.map((o, i) => `
+          <li class="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div class="flex items-center gap-3">
+              <span class="text-slate-400 font-mono text-sm">#${i + 1}</span>
+              <code class="text-sm bg-slate-100 px-2 py-0.5 rounded">${escapeHtml(o.user_id)}</code>
+            </div>
+            <span class="text-sm text-slate-600 font-semibold">${o.total} vi phạm</span>
+          </li>`).join('') + '</ol>'
+      : '<div class="text-sm text-slate-400 italic">Chưa có user vi phạm</div>'
   } catch (e) {
     document.getElementById('statsByRule').innerHTML = `<div class="text-danger">Lỗi: ${escapeHtml(e.message)}</div>`
   }
