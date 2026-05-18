@@ -9,27 +9,38 @@ function getHonorSettings(guildId) {
   const row = getDb()
     .prepare('SELECT * FROM honor_settings WHERE guild_id = ?')
     .get(guildId)
-  if (!row) return { guild_id: guildId, allowed_role_ids: [], default_channel_id: null }
+  if (!row) {
+    return {
+      guild_id: guildId, allowed_role_ids: [], default_channel_id: null,
+      gold_emoji: null, silver_emoji: null, bronze_emoji: null,
+    }
+  }
   let allowed = []
   try { allowed = row.allowed_role_ids ? JSON.parse(row.allowed_role_ids) : [] } catch (_) { allowed = [] }
   return { ...row, allowed_role_ids: allowed }
 }
 
-function upsertHonorSettings({ guild_id, allowed_role_ids, default_channel_id }) {
+function upsertHonorSettings({ guild_id, allowed_role_ids, default_channel_id, gold_emoji, silver_emoji, bronze_emoji }) {
   const allowedJson = JSON.stringify(Array.isArray(allowed_role_ids) ? allowed_role_ids : [])
   return getDb()
     .prepare(`
-      INSERT INTO honor_settings (guild_id, allowed_role_ids, default_channel_id, updated_at)
-      VALUES (@guild_id, @allowed_role_ids, @default_channel_id, unixepoch())
+      INSERT INTO honor_settings (guild_id, allowed_role_ids, default_channel_id, gold_emoji, silver_emoji, bronze_emoji, updated_at)
+      VALUES (@guild_id, @allowed_role_ids, @default_channel_id, @gold_emoji, @silver_emoji, @bronze_emoji, unixepoch())
       ON CONFLICT(guild_id) DO UPDATE SET
         allowed_role_ids = excluded.allowed_role_ids,
         default_channel_id = excluded.default_channel_id,
+        gold_emoji = excluded.gold_emoji,
+        silver_emoji = excluded.silver_emoji,
+        bronze_emoji = excluded.bronze_emoji,
         updated_at = unixepoch()
     `)
     .run({
       guild_id,
       allowed_role_ids: allowedJson,
       default_channel_id: default_channel_id || null,
+      gold_emoji: gold_emoji || null,
+      silver_emoji: silver_emoji || null,
+      bronze_emoji: bronze_emoji || null,
     })
 }
 

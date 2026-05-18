@@ -287,6 +287,11 @@ function initDb() {
   try { database.exec(`ALTER TABLE posts ADD COLUMN image_url TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE welcome_template ADD COLUMN image_url TEXT`) } catch (_) {}
 
+  // Honor: custom emoji overrides (Discord server emoji `<:name:id>` hoac fallback unicode)
+  try { database.exec(`ALTER TABLE honor_settings ADD COLUMN gold_emoji TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE honor_settings ADD COLUMN silver_emoji TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE honor_settings ADD COLUMN bronze_emoji TEXT`) } catch (_) {}
+
   // Schema cho module system & mini-game PvP (tach file rieng)
   require('./db-mini-game').initMiniGameSchema(database)
 

@@ -242,6 +242,14 @@ async function handleTop3Submit(interaction, nonce) {
     return interaction.editReply({ content: '❌ Không tìm thấy channel đích.' })
   }
 
+  // Load custom emoji overrides tu honor_settings
+  const honorSettings = dbHonor.getHonorSettings(guild.id)
+  const medalEmojis = {
+    gold: honorSettings.gold_emoji || undefined,
+    silver: honorSettings.silver_emoji || undefined,
+    bronze: honorSettings.bronze_emoji || undefined,
+  }
+
   const payload = honorService.buildHonorEmbed({
     title,
     guildName: guild.name,
@@ -250,6 +258,7 @@ async function handleTop3Submit(interaction, nonce) {
     user2: { id: u2.id, name: n2, avatarUrl: u2.displayAvatarURL({ size: 256 }), reason: reason2 },
     user3: { id: u3.id, name: n3, avatarUrl: u3.displayAvatarURL({ size: 256 }), reason: reason3 },
     bannerUrl: pending.bannerUrl,
+    medalEmojis,
   })
 
   const dbRecord = {

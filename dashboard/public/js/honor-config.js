@@ -80,6 +80,9 @@
     const body = {
       allowed_role_ids: [...state.selectedRoleIds],
       default_channel_id: el('channelSelect').value || null,
+      gold_emoji: el('goldEmoji').value.trim() || null,
+      silver_emoji: el('silverEmoji').value.trim() || null,
+      bronze_emoji: el('bronzeEmoji').value.trim() || null,
     }
     const r = await api('/honor/settings', { method: 'PUT', body: JSON.stringify(body) })
     if (r.ok) {
@@ -118,9 +121,29 @@
     }
   }
 
+  // Render markdown subset cua Discord (cho preview): #, ##, >, **bold**, *italic*
+  function renderMd(text) {
+    if (!text) return ''
+    const lines = String(text).split('\n').map(line => {
+      const safe = escapeHtml(line)
+      if (/^# /.test(line)) return `<h1>${escapeHtml(line.slice(2))}</h1>`
+      if (/^## /.test(line)) return `<h2>${escapeHtml(line.slice(3))}</h2>`
+      if (/^&gt; /.test(safe) || /^> /.test(line)) return `<blockquote>${inlineMd(line.replace(/^> /, ''))}</blockquote>`
+      return inlineMd(line) + '<br>'
+    })
+    return lines.join('')
+  }
+  function inlineMd(s) {
+    return escapeHtml(s)
+      .replace(/\\\*/g, '&#42;')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/&#42;/g, '*')
+  }
+
   function renderEmbedBox(embed) {
     const thumb = embed.thumbnail?.url ? `<img class="thumb" src="${embed.thumbnail.url}" alt="" onerror="this.style.display='none'">` : ''
-    const fieldsHtml = (embed.fields || []).map((f, i) => `
+    const fieldsHtml = (embed.fields || []).map((f) => `
       <div>
         <div class="field-name">${escapeHtml(f.name)}</div>
         <div class="field-val">${escapeHtml(f.value).replace(/\n/g, '<br>')}</div>
@@ -130,7 +153,7 @@
       ${thumb}
       <div class="author">${escapeHtml(embed.author?.name || '')}</div>
       <div class="title">${escapeHtml(embed.title)}</div>
-      <div class="desc">${escapeHtml(embed.description || '').replace(/\n/g, '<br>')}</div>
+      <div class="desc">${renderMd(embed.description || '')}</div>
       <div class="fields">${fieldsHtml}</div>
       ${embed.image?.url ? `<img class="banner-img" src="${escapeHtml(embed.image.url)}" onerror="this.style.display='none'">` : ''}
       <div class="footer">${escapeHtml(embed.footer?.text || '')}</div>
@@ -249,6 +272,11 @@
       const settings = await rSettings.json()
       state.selectedRoleIds = new Set(settings.allowed_role_ids || [])
       state.defaultChannelId = settings.default_channel_id || null
+
+      // Pre-fill 3 emoji input
+      el('goldEmoji').value = settings.gold_emoji || ''
+      el('silverEmoji').value = settings.silver_emoji || ''
+      el('bronzeEmoji').value = settings.bronze_emoji || ''
 
       renderRoleChips()
       renderChannelSelect()

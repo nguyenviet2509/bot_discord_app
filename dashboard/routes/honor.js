@@ -15,7 +15,7 @@ router.get('/settings', (req, res) => {
 
 // PUT /api/honor/settings — luu cau hinh
 router.put('/settings', (req, res) => {
-  const { allowed_role_ids, default_channel_id } = req.body
+  const { allowed_role_ids, default_channel_id, gold_emoji, silver_emoji, bronze_emoji } = req.body
   if (allowed_role_ids !== undefined && !Array.isArray(allowed_role_ids)) {
     return res.status(400).json({ error: 'allowed_role_ids phải là mảng' })
   }
@@ -23,6 +23,9 @@ router.put('/settings', (req, res) => {
     guild_id: GUILD_ID(),
     allowed_role_ids: allowed_role_ids || [],
     default_channel_id: default_channel_id || null,
+    gold_emoji: gold_emoji || null,
+    silver_emoji: silver_emoji || null,
+    bronze_emoji: bronze_emoji || null,
   })
   res.json({ success: true })
 })
@@ -41,12 +44,25 @@ router.get('/team-history', (req, res) => {
   res.json(records)
 })
 
+// Helper: inject custom medal emojis tu settings vao payload (chi cho type=top3)
+function withMedalEmojis(payload) {
+  const s = dbHonor.getHonorSettings(GUILD_ID())
+  const medalEmojis = {
+    gold: payload.medalEmojis?.gold || s.gold_emoji || undefined,
+    silver: payload.medalEmojis?.silver || s.silver_emoji || undefined,
+    bronze: payload.medalEmojis?.bronze || s.bronze_emoji || undefined,
+  }
+  return { ...payload, medalEmojis }
+}
+
 // POST /api/honor/preview — render thu embed cho dashboard preview
 // Body: { type: 'top3'|'team', ...payload }
 router.post('/preview', (req, res) => {
   try {
     const { type, ...payload } = req.body
-    const result = type === 'team' ? buildHonorTeamEmbed(payload) : buildHonorEmbed(payload)
+    const result = type === 'team'
+      ? buildHonorTeamEmbed(payload)
+      : buildHonorEmbed(withMedalEmojis(payload))
     res.json(result)
   } catch (err) {
     res.status(400).json({ error: err.message })
@@ -60,7 +76,9 @@ router.post('/send-test', async (req, res) => {
   const { type, channel_id, ...payload } = req.body
   if (!channel_id) return res.status(400).json({ error: 'Thieu channel_id' })
   try {
-    const built = type === 'team' ? buildHonorTeamEmbed(payload) : buildHonorEmbed(payload)
+    const built = type === 'team'
+      ? buildHonorTeamEmbed(payload)
+      : buildHonorEmbed(withMedalEmojis(payload))
     const url = `https://discord.com/api/v10/channels/${channel_id}/messages`
     const r = await fetch(url, {
       method: 'POST',

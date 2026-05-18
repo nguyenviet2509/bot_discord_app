@@ -24,6 +24,9 @@
     .preview-pane .author { font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 4px; }
     .preview-pane .title { color: #fff; font-weight: 700; font-size: 16px; margin-bottom: 8px; }
     .preview-pane .desc { color: #dbdee1; margin-bottom: 12px; }
+    .preview-pane .desc h1 { font-size: 24px; font-weight: 700; color: #fff; margin: 8px 0; }
+    .preview-pane .desc h2 { font-size: 20px; font-weight: 700; color: #fff; margin: 6px 0; }
+    .preview-pane .desc blockquote { border-left: 4px solid #4f545c; padding-left: 12px; margin: 6px 0; color: #b9bbbe; font-style: italic; }
     .preview-pane .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
     .preview-pane .field-name { color: #fff; font-weight: 600; font-size: 13px; }
     .preview-pane .field-val { color: #dbdee1; font-size: 14px; }
@@ -57,6 +60,28 @@
       <select id="channelSelect" class="form-select" style="max-width: 400px">
         <option value="">— Không chọn (để user tự chọn) —</option>
       </select>
+
+      <hr/>
+      <h5 class="card-title">🏅 Tuỳ chỉnh emoji huy chương (Top 3)</h5>
+      <p class="text-muted small mb-2">
+        Dán <strong>Discord custom emoji</strong> dạng <code>&lt;:name:id&gt;</code> hoặc unicode emoji.<br>
+        Cách lấy: trong Discord chat, gõ <code>\:tên_emoji:</code> (dấu \ phía trước) rồi gửi → copy chuỗi <code>&lt;:name:123456&gt;</code>.<br>
+        Bỏ trống = dùng mặc định 🥇🥈🥉.
+      </p>
+      <div class="row g-2" style="max-width: 720px">
+        <div class="col-md-4">
+          <label class="form-label small">🥇 Quán quân</label>
+          <input id="goldEmoji" class="form-control" placeholder="vd: <:gold:1234567890>" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">🥈 Á quân</label>
+          <input id="silverEmoji" class="form-control" placeholder="vd: <:silver:1234567890>" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">🥉 Hạng ba</label>
+          <input id="bronzeEmoji" class="form-control" placeholder="vd: <:bronze:1234567890>" />
+        </div>
+      </div>
 
       <div class="mt-3">
         <button id="saveBtn" class="btn btn-primary">💾 Lưu cấu hình</button>

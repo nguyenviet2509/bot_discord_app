@@ -1,10 +1,13 @@
-// Build payload "Vinh danh Top 3" theo layout Mock 4 — Champion Spotlight
-// Dung chung cho bot (gui that) va dashboard (preview).
-// Output: { content, embeds } — paste truc tiep vao channel.send() hoac interaction.reply()
+// Build payload "Vinh danh Top 3" — Champion Spotlight (Mock 4)
+// Title hien thi dang H1 markdown (`# ...`) trong description de chu to nhat Discord cho phep.
+// Emoji huy chuong (gold/silver/bronze) co the override bang Discord custom emoji `<:name:id>`.
 
 const GOLD = 0xffd700
 
-// Escape ky tu markdown trong reason de tranh user inject (vd **, __, `, |)
+// Mac dinh: unicode emoji. Override qua payload.medalEmojis = { gold, silver, bronze }
+const DEFAULT_MEDALS = { gold: '🥇', silver: '🥈', bronze: '🥉' }
+
+// Escape ky tu markdown trong reason de tranh user inject
 function escapeMd(text) {
   if (!text) return ''
   return String(text).replace(/([\\*_`~|>])/g, '\\$1')
@@ -26,16 +29,16 @@ function ensureUser(u, name) {
 }
 
 /**
- * Build payload "Vinh danh" Champion Spotlight.
  * @param {Object} p
- * @param {string} p.title              - Tieu de (vd "BANG VANG THANG 5/2026")
- * @param {string} p.guildName          - Ten guild (footer)
- * @param {string} [p.guildIconUrl]     - Icon guild cho author
- * @param {{id, name, avatarUrl?, reason}} p.user1 - quan quan
- * @param {{id, name, avatarUrl?, reason}} p.user2 - a quan
- * @param {{id, name, avatarUrl?, reason}} p.user3 - hang ba
- * @param {string} p.bannerUrl          - URL anh banner
- * @returns {{ content: string, embeds: Array }}
+ * @param {string} p.title
+ * @param {string} p.guildName
+ * @param {string} [p.guildIconUrl]
+ * @param {{id, name, avatarUrl?, reason}} p.user1
+ * @param {{id, name, avatarUrl?, reason}} p.user2
+ * @param {{id, name, avatarUrl?, reason}} p.user3
+ * @param {string} p.bannerUrl
+ * @param {{gold?, silver?, bronze?}} [p.medalEmojis]  - Override emoji huy chuong
+ * @returns {{ content, embeds }}
  */
 function buildHonorEmbed(p) {
   const title = ensureString(p.title, 'title')
@@ -45,23 +48,33 @@ function buildHonorEmbed(p) {
   const u2 = ensureUser(p.user2, 'user2')
   const u3 = ensureUser(p.user3, 'user3')
 
+  const medals = {
+    gold: (p.medalEmojis?.gold || DEFAULT_MEDALS.gold),
+    silver: (p.medalEmojis?.silver || DEFAULT_MEDALS.silver),
+    bronze: (p.medalEmojis?.bronze || DEFAULT_MEDALS.bronze),
+  }
+
+  // H1 trong description = text to nhat Discord cho phep render
+  const description = [
+    `# 🏛️ ${title}`,
+    ``,
+    `> *"${escapeMd(u1.reason)}"*`,
+  ].join('\n')
+
   const embed = {
-    author: {
-      name: `🏛️ ${title}`,
-      ...(p.guildIconUrl ? { icon_url: p.guildIconUrl } : {}),
-    },
-    title: `🥇 QUÁN QUÂN — ${u1.name}`,
-    description: `> *"${escapeMd(u1.reason)}"*`,
+    ...(p.guildIconUrl ? { author: { name: guildName, icon_url: p.guildIconUrl } } : {}),
+    title: `${medals.gold} QUÁN QUÂN — ${u1.name}`,
+    description,
     color: GOLD,
     ...(u1.avatarUrl ? { thumbnail: { url: u1.avatarUrl } } : {}),
     fields: [
       {
-        name: '🥈 Á QUÂN',
+        name: `${medals.silver} Á QUÂN`,
         value: `**${u2.name}**\n${escapeMd(u2.reason)}`,
         inline: true,
       },
       {
-        name: '🥉 HẠNG BA',
+        name: `${medals.bronze} HẠNG BA`,
         value: `**${u3.name}**\n${escapeMd(u3.reason)}`,
         inline: true,
       },
@@ -76,4 +89,4 @@ function buildHonorEmbed(p) {
   return { content, embeds: [embed] }
 }
 
-module.exports = { buildHonorEmbed, escapeMd }
+module.exports = { buildHonorEmbed, escapeMd, DEFAULT_MEDALS }
