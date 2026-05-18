@@ -123,9 +123,27 @@ function ensurePermissionAndChannel(interaction) {
 // execute — dispatch theo subcommand
 // ============================================================
 async function execute(interaction) {
-  const sub = interaction.options.getSubcommand()
-  if (sub === 'ca-nhan') return executeCaNhan(interaction)
-  if (sub === 'team') return executeTeam(interaction)
+  const sub = interaction.options.getSubcommand(false)
+  if (!sub) {
+    console.warn('[vinhdanh] No subcommand received — Discord da cache shape cu? Can restart bot + refresh Discord client.')
+    return interaction.reply({
+      content: '⚠️ Lệnh này vừa được cập nhật. Vui lòng:\n1. Reload Discord (Ctrl+R)\n2. Gõ lại `/vinhdanh` để chọn `ca-nhan` hoặc `team`',
+      ephemeral: true,
+    })
+  }
+  try {
+    if (sub === 'ca-nhan') return await executeCaNhan(interaction)
+    if (sub === 'team') return await executeTeam(interaction)
+    return interaction.reply({ content: `❌ Subcommand không hỗ trợ: ${sub}`, ephemeral: true })
+  } catch (err) {
+    console.error(`[vinhdanh ${sub}] error:`, err)
+    const msg = { content: `❌ Lỗi khi thực hiện /vinhdanh ${sub}: ${err.message}`, ephemeral: true }
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp(msg).catch(() => {})
+    } else {
+      await interaction.reply(msg).catch(() => {})
+    }
+  }
 }
 
 // ============================================================
