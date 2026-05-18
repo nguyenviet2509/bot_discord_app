@@ -74,6 +74,13 @@ function readCreateFields(interaction) {
 async function handleModalSubmit(interaction) {
   const id = interaction.customId
 
+  // Vinh danh modal -> delegate ve command vinh-danh.js
+  if (id.startsWith('honor:modal:')) {
+    const cmd = interaction.client.commands.get('vinhdanh')
+    if (cmd?.handleModalSubmit) return cmd.handleModalSubmit(interaction)
+    return
+  }
+
   // Tao bai (text-only hoac da co anh tu /post-image)
   if (id === 'post:create-modal') {
     await interaction.deferReply({ ephemeral: true })

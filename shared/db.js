@@ -204,6 +204,33 @@ function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_posts_guild_status ON posts(guild_id, status);
     CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(guild_id, author_id);
+
+    -- Vinh danh Top 3 (Hall of Fame)
+    CREATE TABLE IF NOT EXISTS honor_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      message_id TEXT,
+      title TEXT NOT NULL,
+      banner_url TEXT,
+      user1_id TEXT NOT NULL,
+      user1_reason TEXT NOT NULL,
+      user2_id TEXT NOT NULL,
+      user2_reason TEXT NOT NULL,
+      user3_id TEXT NOT NULL,
+      user3_reason TEXT NOT NULL,
+      created_by TEXT NOT NULL,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_honor_history_guild ON honor_history(guild_id, created_at DESC);
+
+    -- Cau hinh vinh danh: role duoc phep + channel mac dinh
+    CREATE TABLE IF NOT EXISTS honor_settings (
+      guild_id TEXT PRIMARY KEY,
+      allowed_role_ids TEXT NOT NULL DEFAULT '[]',
+      default_channel_id TEXT,
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
   `)
   // Safe migration for existing databases
   try { database.exec(`ALTER TABLE users ADD COLUMN username TEXT`) } catch (_) {}
