@@ -161,8 +161,9 @@
     if (!text) return ''
     const lines = String(text).split('\n').map(line => {
       const safe = escapeHtml(line)
-      if (/^# /.test(line)) return `<h1>${escapeHtml(line.slice(2))}</h1>`
+      if (/^### /.test(line)) return `<h3>${escapeHtml(line.slice(4))}</h3>`
       if (/^## /.test(line)) return `<h2>${escapeHtml(line.slice(3))}</h2>`
+      if (/^# /.test(line)) return `<h1>${escapeHtml(line.slice(2))}</h1>`
       if (/^&gt; /.test(safe) || /^> /.test(line)) return `<blockquote>${inlineMd(line.replace(/^> /, ''))}</blockquote>`
       return inlineMd(line) + '<br>'
     })

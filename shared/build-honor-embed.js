@@ -55,14 +55,12 @@ function buildHonorEmbed(p) {
   }
 
   // Layout:
-  //   # BẢNG VÀNG (H1 to nhat)
-  //   {medal emoji standalone} -> Discord render jumbo neu chi co emoji
-  //   **QUÁN QUÂN — Name** (bold, 1 dòng)
+  //   ## BẢNG VÀNG (H2 — be hon H1 nhung van lon hon cac thanh phan khac)
+  //   ### {medal} QUÁN QUÂN — Name (H3 inline emoji + ten, cung 1 dong)
   //   > quote reason
   const description = [
-    `# 🏛️ ${title}`,
-    `${medals.gold}`,
-    `**QUÁN QUÂN — ${u1.name}**`,
+    `## ${title}`,
+    `### ${medals.gold} QUÁN QUÂN — ${u1.name}`,
     `> *"${escapeMd(u1.reason)}"*`,
   ].join('\n')
 

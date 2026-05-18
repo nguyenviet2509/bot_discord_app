@@ -56,11 +56,10 @@ function buildHonorTeamEmbed(p) {
     })
   }
 
-  // Layout: H1 BẢNG VÀNG -> 🎖️ standalone (jumbo) -> bold team name -> quote
+  // Layout: H2 title -> H3 🎖️ team name (cung 1 dong) -> quote
   const description = [
-    `# 🏛️ ${title}`,
-    `🎖️`,
-    `**${teamName}**`,
+    `## ${title}`,
+    `### 🎖️ ${teamName}`,
     `> *"${escapeMd(reason)}"*`,
   ].join('\n')
 
