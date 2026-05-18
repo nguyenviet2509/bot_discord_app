@@ -296,6 +296,9 @@ function initDb() {
   // Schema cho module system & mini-game PvP (tach file rieng)
   require('./db-mini-game').initMiniGameSchema(database)
 
+  // Schema cho module Auto-Mod Lite (tach file rieng)
+  require('./db-automod').initAutomodSchema(database)
+
   return database
 }
 

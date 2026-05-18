@@ -43,6 +43,7 @@ app.use('/api/moderation', auth, require('./routes/moderation'))
 app.use('/api/analytics', auth, require('./routes/analytics'))
 app.use('/api/scheduled-messages', auth, require('./routes/scheduled-messages'))
 app.use('/api/honor', auth, require('./routes/honor'))
+app.use('/api/automod', auth, require('./routes/automod'))
 
 // SPA fallback
 app.get('*', (req, res) => {

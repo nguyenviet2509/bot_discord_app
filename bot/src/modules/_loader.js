@@ -18,6 +18,7 @@ function loadModules(client) {
   const modulesRoot = __dirname
   client._modules = new Map()
   client._moduleButtonHandlers = []
+  client._moduleMessageHandlers = []
 
   if (!fs.existsSync(modulesRoot)) {
     console.log('[Modules] modules/ folder khong ton tai, bo qua')
@@ -76,7 +77,11 @@ function loadModules(client) {
     if (fs.existsSync(regPath)) {
       const register = require(regPath)
       try {
-        register(client, { manifest, buttonHandlers: client._moduleButtonHandlers })
+        register(client, {
+          manifest,
+          buttonHandlers: client._moduleButtonHandlers,
+          messageHandlers: client._moduleMessageHandlers,
+        })
       } catch (err) {
         console.error(`[Modules] Loi register module ${manifest.key}:`, err)
       }
@@ -86,7 +91,7 @@ function loadModules(client) {
     console.log(`[Modules] ✓ Loaded "${manifest.name}" (${manifest.key}) - commands: ${loadedCmds.join(', ') || '(none)'}`)
   }
 
-  console.log(`[Modules] Total: ${client._modules.size} module(s), ${client._moduleButtonHandlers.length} button handler(s)`)
+  console.log(`[Modules] Total: ${client._modules.size} module(s), ${client._moduleButtonHandlers.length} button handler(s), ${client._moduleMessageHandlers.length} message handler(s)`)
 }
 
 module.exports = loadModules

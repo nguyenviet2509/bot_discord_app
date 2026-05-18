@@ -16,6 +16,25 @@ module.exports = {
     if (message.author.bot) return
     if (!message.guild) return
 
+    // ============ AUTO-MOD PIPELINE ============
+    // Chay rules detect (mark message._automodViolation neu vi pham), roi goi action engine.
+    // Phai chay TRUOC analytics/XP de tin vi pham khong duoc tinh.
+    if (client._moduleMessageHandlers && client._moduleMessageHandlers.length) {
+      for (const handler of client._moduleMessageHandlers) {
+        try { await handler(message) } catch (e) { console.error('[messageHandler]', e.message) }
+      }
+      if (message._automodViolation) {
+        try {
+          const { applyAction } = require('../modules/auto-mod/action-engine')
+          await applyAction(message, message._automodViolation)
+        } catch (e) {
+          console.error('[auto-mod action]', e.message)
+        }
+        return // Tin da bi xoa, khong chay tiep XP/link
+      }
+    }
+    // ============ END AUTO-MOD ============
+
     // Analytics counters (chay cho moi message khong filter length)
     try {
       const now = new Date()
