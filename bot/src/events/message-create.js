@@ -40,6 +40,8 @@ module.exports = {
       const now = new Date()
       db.incrementActivity(message.guild.id, now.getDay(), now.getHours())
       db.incrementChannelStat(message.guild.id, message.channel.id, message.channel?.name || null)
+      // Tang tong so tin nhan cua user (dem moi tin, khong filter length/cooldown)
+      db.incrementUserMessageCount(message.author.id, message.guild.id)
       // Xoa user khoi silent list (vi ho da chat)
       db.removeSilentMember(message.guild.id, message.author.id)
     } catch (err) {

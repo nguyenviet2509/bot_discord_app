@@ -395,13 +395,14 @@
                 <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Thành viên</th>
                 <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Level</th>
                 <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">XP</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Tin nhắn</th>
                 <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Hoạt động cuối</th>
                 <th class="px-6 py-4 w-36"></th>
               </tr>
             </thead>
             <tbody>
               <template x-if="filtered.length === 0">
-                <tr><td colspan="6" class="text-center py-16 text-slate-400 text-sm">Không tìm thấy thành viên</td></tr>
+                <tr><td colspan="7" class="text-center py-16 text-slate-400 text-sm">Không tìm thấy thành viên</td></tr>
               </template>
               <template x-for="(m, i) in paged" :key="m.id">
                 <tr class="border-t border-slate-50 hover:bg-indigo-50/30 transition-colors">
@@ -425,6 +426,7 @@
                     </span>
                   </td>
                   <td class="px-6 py-4 text-sm font-semibold text-slate-700" x-text="m.xp.toLocaleString() + ' XP'"></td>
+                  <td class="px-6 py-4 text-sm font-semibold text-slate-700" x-text="(m.message_count || 0).toLocaleString()"></td>
                   <td class="px-6 py-4 text-sm text-slate-400" x-text="timeAgo(m.last_message_at)"></td>
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-2">

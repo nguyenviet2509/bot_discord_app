@@ -26,6 +26,7 @@ function initDb() {
       xp INTEGER NOT NULL DEFAULT 0,
       level INTEGER NOT NULL DEFAULT 0,
       last_message_at INTEGER,
+      message_count INTEGER NOT NULL DEFAULT 0,
       updated_at INTEGER DEFAULT (unixepoch()),
       username TEXT,
       avatar TEXT,
@@ -254,6 +255,7 @@ function initDb() {
   try { database.exec(`ALTER TABLE users ADD COLUMN nickname TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN global_name TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE users ADD COLUMN flair_enabled INTEGER DEFAULT 1`) } catch (_) {}
+  try { database.exec(`ALTER TABLE users ADD COLUMN message_count INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
   // Tier badge overrides per-guild per-tier
   // mode='emoji' -> badge la Unicode emoji, gan vao nickname
   // mode='role'  -> role_id la Discord role co icon, bot assign role khi member len tier
@@ -816,6 +818,16 @@ function getAllUsers(guildId) {
     .all(guildId)
 }
 
+function incrementUserMessageCount(userId, guildId) {
+  return getDb()
+    .prepare(`
+      INSERT INTO users (id, guild_id, message_count, updated_at)
+      VALUES (?, ?, 1, unixepoch())
+      ON CONFLICT(id, guild_id) DO UPDATE SET message_count = message_count + 1
+    `)
+    .run(userId, guildId)
+}
+
 function resetUserXp(userId, guildId) {
   return getDb()
     .prepare(`
@@ -1002,6 +1014,7 @@ module.exports = {
   getUserRank,
   getLeaderboard,
   getAllUsers,
+  incrementUserMessageCount,
   resetUserXp,
   deleteUser,
   saveLink,
