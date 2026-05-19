@@ -416,6 +416,8 @@ document.addEventListener('alpine:init', () => {
     draggedId: null,
     dragOverGroup: undefined, // undefined = none, null = ungrouped zone, number = group id
     statusFilter: 'all', // 'all' | 'enabled' | 'disabled'
+    pageSize: 10,
+    pageByGroup: {}, // { [gid|'ungrouped']: currentPage (1-based) }
     levelUpChannelId: '', // tu /settings, dung lam goi y khi tao leaderboard
     // ---- Mention picker (tag thanh vien vao noi dung) ----
     mentionMembers: [],          // cache danh sach member tu /api/members
@@ -468,9 +470,36 @@ document.addEventListener('alpine:init', () => {
         if (gid && byGroup.has(gid)) byGroup.get(gid).items.push(m)
         else ungrouped.items.push(m)
       })
+      // Sap xep tin nhan trong moi nhom: moi nhat -> cu nhat (id auto-increment desc)
+      byGroup.forEach(g => g.items.sort((a, b) => b.id - a.id))
+      ungrouped.items.sort((a, b) => b.id - a.id)
       const out = Array.from(byGroup.values())
       if (ungrouped.items.length > 0) out.push(ungrouped)
       return out
+    },
+
+    // ---- Phan trang theo group ----
+    _gkey(gid) { return gid == null ? 'ungrouped' : String(gid) },
+    pageOf(grp) {
+      const k = this._gkey(grp.id)
+      const total = this.totalPages(grp)
+      let p = this.pageByGroup[k] || 1
+      if (p > total) p = total
+      if (p < 1) p = 1
+      return p
+    },
+    totalPages(grp) {
+      return Math.max(1, Math.ceil(grp.items.length / this.pageSize))
+    },
+    pagedItems(grp) {
+      const p = this.pageOf(grp)
+      const start = (p - 1) * this.pageSize
+      return grp.items.slice(start, start + this.pageSize)
+    },
+    setPage(grp, n) {
+      const total = this.totalPages(grp)
+      const next = Math.min(Math.max(1, n), total)
+      this.pageByGroup[this._gkey(grp.id)] = next
     },
 
     get statusCounts() {

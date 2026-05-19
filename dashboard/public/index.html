@@ -539,7 +539,7 @@
               </div>
               <div x-show="grp.items.length === 0" class="text-sm text-slate-400 italic py-4 px-2">Chưa có tin nhắn nào trong nhóm này</div>
               <div x-show="grp.items.length > 0" class="space-y-3">
-                <template x-for="m in grp.items" :key="m.id">
+                <template x-for="m in pagedItems(grp)" :key="m.id">
                   <div class="card p-5 flex items-start gap-4 cursor-move"
                     draggable="true"
                     @dragstart="onDragStart($event, m)"
@@ -576,6 +576,20 @@
                     </div>
                   </div>
                 </template>
+              </div>
+              <!-- Pagination controls (chi hien khi > pageSize) -->
+              <div x-show="grp.items.length > pageSize" class="flex items-center justify-center gap-1 mt-4 flex-wrap">
+                <button @click="setPage(grp, pageOf(grp) - 1)" :disabled="pageOf(grp) <= 1"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed">‹ Trước</button>
+                <template x-for="n in totalPages(grp)" :key="n">
+                  <button @click="setPage(grp, n)"
+                    :class="pageOf(grp) === n ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold min-w-[32px]"
+                    x-text="n"></button>
+                </template>
+                <button @click="setPage(grp, pageOf(grp) + 1)" :disabled="pageOf(grp) >= totalPages(grp)"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed">Sau ›</button>
+                <span class="ml-2 text-xs text-slate-500" x-text="`Trang ${pageOf(grp)}/${totalPages(grp)} · ${grp.items.length} tin`"></span>
               </div>
             </div>
           </template>
