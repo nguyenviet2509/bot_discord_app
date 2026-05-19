@@ -76,15 +76,33 @@ function updateHonorMessageId(id, messageId) {
     .run(messageId, id)
 }
 
-function listHonorHistory(guildId, limit = 10) {
+function listHonorHistory(guildId, limit = 10, offset = 0) {
   return getDb()
     .prepare(`
       SELECT * FROM honor_history
       WHERE guild_id = ?
       ORDER BY created_at DESC
-      LIMIT ?
+      LIMIT ? OFFSET ?
     `)
-    .all(guildId, limit)
+    .all(guildId, limit, offset)
+}
+
+function countHonorHistory(guildId) {
+  const row = getDb()
+    .prepare('SELECT COUNT(*) AS n FROM honor_history WHERE guild_id = ?')
+    .get(guildId)
+  return row?.n || 0
+}
+
+// Xoa 1 hoac nhieu record vinh danh ca nhan. Tra ve so dong da xoa.
+function deleteHonorRecords(ids, guildId) {
+  const arr = (Array.isArray(ids) ? ids : [ids]).map(Number).filter(Number.isFinite)
+  if (arr.length === 0) return 0
+  const placeholders = arr.map(() => '?').join(',')
+  const info = getDb()
+    .prepare(`DELETE FROM honor_history WHERE guild_id = ? AND id IN (${placeholders})`)
+    .run(guildId, ...arr)
+  return info.changes
 }
 
 function getHonorRecord(id) {
@@ -132,16 +150,34 @@ function parseMemberIds(row) {
   return { ...row, member_ids: ids }
 }
 
-function listHonorTeamHistory(guildId, limit = 10) {
+function listHonorTeamHistory(guildId, limit = 10, offset = 0) {
   const rows = getDb()
     .prepare(`
       SELECT * FROM honor_team_history
       WHERE guild_id = ?
       ORDER BY created_at DESC
-      LIMIT ?
+      LIMIT ? OFFSET ?
     `)
-    .all(guildId, limit)
+    .all(guildId, limit, offset)
   return rows.map(parseMemberIds)
+}
+
+function countHonorTeamHistory(guildId) {
+  const row = getDb()
+    .prepare('SELECT COUNT(*) AS n FROM honor_team_history WHERE guild_id = ?')
+    .get(guildId)
+  return row?.n || 0
+}
+
+// Xoa 1 hoac nhieu record vinh danh team. Tra ve so dong da xoa.
+function deleteHonorTeamRecords(ids, guildId) {
+  const arr = (Array.isArray(ids) ? ids : [ids]).map(Number).filter(Number.isFinite)
+  if (arr.length === 0) return 0
+  const placeholders = arr.map(() => '?').join(',')
+  const info = getDb()
+    .prepare(`DELETE FROM honor_team_history WHERE guild_id = ? AND id IN (${placeholders})`)
+    .run(guildId, ...arr)
+  return info.changes
 }
 
 function getHonorTeamRecord(id) {
@@ -183,10 +219,14 @@ module.exports = {
   insertHonorRecord,
   updateHonorMessageId,
   listHonorHistory,
+  countHonorHistory,
+  deleteHonorRecords,
   getHonorRecord,
   insertHonorTeamRecord,
   updateHonorTeamMessageId,
   listHonorTeamHistory,
+  countHonorTeamHistory,
+  deleteHonorTeamRecords,
   getHonorTeamRecord,
   listHonorAllHistory,
 }

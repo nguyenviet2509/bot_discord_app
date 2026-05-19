@@ -317,8 +317,9 @@
         return
       }
       el('sendStatus').innerHTML = `<span class="text-success">✅ Đã gửi & lưu lịch sử!</span>`
-      // Reload history tab tuong ung
+      // Reload history tab tuong ung, ve trang 1 de thay record vua tao
       currentHistoryTab = type === 'team' ? 'team' : 'top3'
+      historyPage[currentHistoryTab] = 1
       document.querySelectorAll('#historyTabs a').forEach(a => {
         a.classList.toggle('active', a.dataset.tab === currentHistoryTab)
       })
@@ -333,37 +334,176 @@
   }
 
   // ============================================================
-  // History — 2 tab: top3 va team
+  // History — 2 tab: top3 va team, co phan trang + xoa
   // ============================================================
   let currentHistoryTab = 'top3'
+  const HISTORY_PAGE_SIZE = 10
+  // Trang hien tai cho moi tab (giu state khi switch tab)
+  const historyPage = { top3: 1, team: 1 }
+  // Selection ids per tab (Set)
+  const historySel = { top3: new Set(), team: new Set() }
 
   async function loadHistory() {
-    const endpoint = currentHistoryTab === 'team' ? '/honor/team-history?limit=10' : '/honor/history?limit=10'
+    const tab = currentHistoryTab
+    const page = historyPage[tab]
+    const endpoint = tab === 'team'
+      ? `/honor/team-history?page=${page}&pageSize=${HISTORY_PAGE_SIZE}`
+      : `/honor/history?page=${page}&pageSize=${HISTORY_PAGE_SIZE}`
     const r = await api(endpoint)
-    const records = await r.json()
-    if (!records.length) {
-      el('historyBox').innerHTML = `<em class="text-muted">Chưa có lần vinh danh ${currentHistoryTab === 'team' ? 'team' : 'cá nhân'} nào.</em>`
+    const data = await r.json()
+    const items = Array.isArray(data) ? data : (data.items || [])
+    const total = Array.isArray(data) ? items.length : (data.total || 0)
+    const totalPages = Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE))
+
+    // Neu trang hien tai vuot qua tong (vd: vua xoa) → ve trang cuoi va load lai
+    if (page > totalPages) {
+      historyPage[tab] = totalPages
+      return loadHistory()
+    }
+
+    // Don selection tren trang khong con ton tai
+    const visibleIds = new Set(items.map(it => it.id))
+    historySel[tab] = new Set([...historySel[tab]].filter(id => visibleIds.has(id)))
+
+    if (!items.length) {
+      el('historyBox').innerHTML = `<em class="text-sm text-slate-400">Chưa có lần vinh danh ${tab === 'team' ? 'team' : 'cá nhân'} nào.</em>`
       return
     }
-    el('historyBox').innerHTML = records.map(r => {
-      const date = new Date(r.created_at * 1000).toLocaleString('vi-VN')
-      const link = r.message_id ? `https://discord.com/channels/${r.guild_id}/${r.channel_id}/${r.message_id}` : null
+
+    const rowsHtml = items.map(rec => {
+      const date = new Date(rec.created_at * 1000).toLocaleString('vi-VN')
+      const link = rec.message_id ? `https://discord.com/channels/${rec.guild_id}/${rec.channel_id}/${rec.message_id}` : null
       let body
-      if (currentHistoryTab === 'team') {
-        const ids = Array.isArray(r.member_ids) ? r.member_ids : []
-        body = `<small>🎖️ <strong>${escapeHtml(r.team_name)}</strong> · ${ids.length} thành viên</small><br>
+      if (tab === 'team') {
+        const ids = Array.isArray(rec.member_ids) ? rec.member_ids : []
+        body = `<small>🎖️ <strong>${escapeHtml(rec.team_name)}</strong> · ${ids.length} thành viên</small><br>
                 <small>${ids.map(id => `<code>${id}</code>`).join(' · ')}</small>`
       } else {
-        body = `<small>🥇 <code>${r.user1_id}</code> · 🥈 <code>${r.user2_id}</code> · 🥉 <code>${r.user3_id}</code></small>`
+        body = `<small>🥇 <code>${rec.user1_id}</code> · 🥈 <code>${rec.user2_id}</code> · 🥉 <code>${rec.user3_id}</code></small>`
       }
+      const checked = historySel[tab].has(rec.id) ? 'checked' : ''
       return `
-        <div class="history-row">
-          <strong>📅 ${date}</strong> — <em>${escapeHtml(r.title)}</em><br>
-          ${body}<br>
-          <small>Bởi <code>${r.created_by}</code>${link ? ` · <a href="${link}" target="_blank">Xem trên Discord</a>` : ''}</small>
+        <div class="history-row flex items-start gap-3">
+          <input type="checkbox" class="history-check mt-1 accent-indigo-600 cursor-pointer" data-id="${rec.id}" ${checked} />
+          <div class="flex-1 min-w-0">
+            <strong>📅 ${date}</strong> — <em>${escapeHtml(rec.title)}</em><br>
+            ${body}<br>
+            <small>Bởi <code>${escapeHtml(rec.created_by)}</code>${link ? ` · <a href="${link}" target="_blank">Xem trên Discord</a>` : ''}</small>
+          </div>
+          <button type="button" class="history-del-one text-xs px-2 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-semibold whitespace-nowrap" data-id="${rec.id}">🗑 Xóa</button>
         </div>
       `
     }).join('')
+
+    const allChecked = items.every(it => historySel[tab].has(it.id))
+    const selCount = historySel[tab].size
+
+    // Toolbar (select-all + bulk delete) + danh sach + pagination
+    el('historyBox').innerHTML = `
+      <div class="flex items-center gap-3 mb-2 pb-2 border-b border-slate-200">
+        <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <input type="checkbox" id="historySelectAll" class="accent-indigo-600 cursor-pointer" ${allChecked ? 'checked' : ''} />
+          Chọn tất cả trang này
+        </label>
+        <span class="text-xs text-slate-500" id="historySelInfo">${selCount ? `Đã chọn ${selCount}` : ''}</span>
+        <div class="flex-1"></div>
+        <button id="historyBulkDel" type="button" class="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed" ${selCount ? '' : 'disabled'}>🗑 Xóa đã chọn (${selCount})</button>
+      </div>
+      ${rowsHtml}
+      <div class="flex items-center justify-center gap-1 mt-4 flex-wrap" id="historyPager">
+        ${renderPager(page, totalPages, total)}
+      </div>
+    `
+
+    bindHistoryRowEvents()
+  }
+
+  function renderPager(page, totalPages, total) {
+    if (totalPages <= 1) {
+      return `<span class="text-xs text-slate-500">Tổng ${total} bản ghi</span>`
+    }
+    let buttons = `<button class="history-page-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed" data-page="${page - 1}" ${page <= 1 ? 'disabled' : ''}>‹ Trước</button>`
+    for (let n = 1; n <= totalPages; n++) {
+      const cls = n === page ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+      buttons += `<button class="history-page-btn px-3 py-1.5 rounded-lg text-xs font-semibold min-w-[32px] ${cls}" data-page="${n}">${n}</button>`
+    }
+    buttons += `<button class="history-page-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed" data-page="${page + 1}" ${page >= totalPages ? 'disabled' : ''}>Sau ›</button>`
+    buttons += `<span class="ml-2 text-xs text-slate-500">Trang ${page}/${totalPages} · ${total} bản ghi</span>`
+    return buttons
+  }
+
+  function bindHistoryRowEvents() {
+    const tab = currentHistoryTab
+    // Checkbox tung dong
+    document.querySelectorAll('#historyBox .history-check').forEach(cb => {
+      cb.onchange = () => {
+        const id = Number(cb.dataset.id)
+        if (cb.checked) historySel[tab].add(id)
+        else historySel[tab].delete(id)
+        updateBulkBar()
+      }
+    })
+    // Chon tat ca
+    const selAll = el('historySelectAll')
+    if (selAll) {
+      selAll.onchange = () => {
+        document.querySelectorAll('#historyBox .history-check').forEach(cb => {
+          const id = Number(cb.dataset.id)
+          if (selAll.checked) historySel[tab].add(id)
+          else historySel[tab].delete(id)
+          cb.checked = selAll.checked
+        })
+        updateBulkBar()
+      }
+    }
+    // Bulk delete
+    const bulkBtn = el('historyBulkDel')
+    if (bulkBtn) bulkBtn.onclick = () => deleteHistory([...historySel[tab]])
+    // Delete tung row
+    document.querySelectorAll('#historyBox .history-del-one').forEach(btn => {
+      btn.onclick = () => deleteHistory([Number(btn.dataset.id)])
+    })
+    // Pagination
+    document.querySelectorAll('#historyBox .history-page-btn').forEach(btn => {
+      btn.onclick = () => {
+        const n = Number(btn.dataset.page)
+        if (!Number.isFinite(n) || n < 1) return
+        historyPage[tab] = n
+        loadHistory()
+      }
+    })
+  }
+
+  function updateBulkBar() {
+    const tab = currentHistoryTab
+    const count = historySel[tab].size
+    const btn = el('historyBulkDel')
+    const info = el('historySelInfo')
+    if (btn) {
+      btn.disabled = count === 0
+      btn.textContent = `🗑 Xóa đã chọn (${count})`
+    }
+    if (info) info.textContent = count ? `Đã chọn ${count}` : ''
+  }
+
+  async function deleteHistory(ids) {
+    if (!ids || !ids.length) return
+    const tab = currentHistoryTab
+    const label = tab === 'team' ? 'team' : 'cá nhân'
+    const msg = ids.length === 1
+      ? `Xóa 1 lịch sử vinh danh ${label}? (Tin nhắn Discord không bị xóa)`
+      : `Xóa ${ids.length} lịch sử vinh danh ${label}? (Tin nhắn Discord không bị xóa)`
+    if (!confirm(msg)) return
+    const endpoint = tab === 'team' ? '/honor/team-history' : '/honor/history'
+    try {
+      const r = await api(endpoint, { method: 'DELETE', body: JSON.stringify({ ids }) })
+      const data = await r.json()
+      if (!r.ok) { alert(data.error || 'Xóa thất bại'); return }
+      ids.forEach(id => historySel[tab].delete(id))
+      loadHistory()
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   function bindHistoryTabs() {

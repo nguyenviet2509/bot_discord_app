@@ -100,18 +100,40 @@ router.get('/user-avatar', async (req, res) => {
   }
 })
 
-// GET /api/honor/history?limit=10
+// GET /api/honor/history?page=1&pageSize=10  (cu: ?limit=10 van dung duoc)
 router.get('/history', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50)
-  const records = dbHonor.listHonorHistory(GUILD_ID(), limit)
-  res.json(records)
+  const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || parseInt(req.query.limit, 10) || 10, 1), 50)
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1)
+  const offset = (page - 1) * pageSize
+  const total = dbHonor.countHonorHistory(GUILD_ID())
+  const items = dbHonor.listHonorHistory(GUILD_ID(), pageSize, offset)
+  res.json({ items, total, page, pageSize })
 })
 
-// GET /api/honor/team-history?limit=10
+// GET /api/honor/team-history?page=1&pageSize=10
 router.get('/team-history', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50)
-  const records = dbHonor.listHonorTeamHistory(GUILD_ID(), limit)
-  res.json(records)
+  const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || parseInt(req.query.limit, 10) || 10, 1), 50)
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1)
+  const offset = (page - 1) * pageSize
+  const total = dbHonor.countHonorTeamHistory(GUILD_ID())
+  const items = dbHonor.listHonorTeamHistory(GUILD_ID(), pageSize, offset)
+  res.json({ items, total, page, pageSize })
+})
+
+// DELETE /api/honor/history — body { ids: [..] }  (xoa 1 hoac nhieu record ca nhan)
+router.delete('/history', (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids : []
+  if (!ids.length) return res.status(400).json({ error: 'Thieu ids' })
+  const deleted = dbHonor.deleteHonorRecords(ids, GUILD_ID())
+  res.json({ success: true, deleted })
+})
+
+// DELETE /api/honor/team-history — body { ids: [..] }
+router.delete('/team-history', (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids : []
+  if (!ids.length) return res.status(400).json({ error: 'Thieu ids' })
+  const deleted = dbHonor.deleteHonorTeamRecords(ids, GUILD_ID())
+  res.json({ success: true, deleted })
 })
 
 // Helper: inject custom medal emojis tu settings vao payload (chi cho type=top3)
