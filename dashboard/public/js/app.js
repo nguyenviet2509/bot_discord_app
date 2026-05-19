@@ -883,6 +883,8 @@ document.addEventListener('alpine:init', () => {
   // Moderation Section
   // ============================================================
   Alpine.data('moderationSection', () => ({
+    subTab: 'actions',
+    // ----- Actions -----
     actions: [],
     activeBans: [],
     total: 0,
@@ -894,10 +896,33 @@ document.addEventListener('alpine:init', () => {
     unbanning: null,
     toast: null,
     _searchTimer: null,
+    // ----- Commands -----
+    cmdItems: [],
+    cmdStats: { totals: {}, top_commands: [], top_users: [] },
+    cmdTotal: 0,
+    cmdPage: 1,
+    cmdLimit: 50,
+    cmdRange: '7d',
+    cmdFilterName: '',
+    cmdFilterUser: '',
+    cmdFilterUserTag: '',
+    cmdSearch: '',
+    cmdLoading: false,
+    _cmdSearchTimer: null,
 
     async init() {
       if (!checkAuth()) return
       await this.load()
+    },
+
+    setSubTab(t) {
+      this.subTab = t
+      if (t === 'commands' && this.cmdItems.length === 0) this.loadCommands()
+    },
+
+    reload() {
+      if (this.subTab === 'actions') return this.load()
+      return this.loadCommands()
     },
 
     async load() {
@@ -917,8 +942,31 @@ document.addEventListener('alpine:init', () => {
       this.loading = false
     },
 
+    async loadCommands() {
+      this.cmdLoading = true
+      const params = new URLSearchParams({
+        page: this.cmdPage,
+        limit: this.cmdLimit,
+        range: this.cmdRange,
+      })
+      if (this.cmdFilterName) params.set('command_name', this.cmdFilterName)
+      if (this.cmdFilterUser) params.set('user_id', this.cmdFilterUser)
+      if (this.cmdSearch)     params.set('search', this.cmdSearch)
+      const data = await api('GET', `/moderation/command-usage?${params}`)
+      if (data) {
+        this.cmdItems = data.items || []
+        this.cmdTotal = data.total || 0
+        this.cmdStats = data.stats || { totals: {}, top_commands: [], top_users: [] }
+      }
+      this.cmdLoading = false
+    },
+
     get totalPages() {
       return Math.max(1, Math.ceil(this.total / this.limit))
+    },
+
+    get cmdTotalPages() {
+      return Math.max(1, Math.ceil(this.cmdTotal / this.cmdLimit))
     },
 
     onSearchInput() {
@@ -929,6 +977,27 @@ document.addEventListener('alpine:init', () => {
     onFilterChange() { this.page = 1; this.load() },
     prevPage() { if (this.page > 1) { this.page--; this.load() } },
     nextPage() { if (this.page < this.totalPages) { this.page++; this.load() } },
+
+    onCmdSearchInput() {
+      clearTimeout(this._cmdSearchTimer)
+      this._cmdSearchTimer = setTimeout(() => { this.cmdPage = 1; this.loadCommands() }, 350)
+    },
+    onCmdFilterChange() { this.cmdPage = 1; this.loadCommands() },
+    cmdPrev() { if (this.cmdPage > 1) { this.cmdPage--; this.loadCommands() } },
+    cmdNext() { if (this.cmdPage < this.cmdTotalPages) { this.cmdPage++; this.loadCommands() } },
+
+    rangeLabel(r) {
+      return { '24h': '24 giờ qua', '7d': '7 ngày qua', '30d': '30 ngày qua', 'all': 'Tất cả thời gian' }[r] || r
+    },
+
+    formatOptions(json) {
+      if (!json) return ''
+      try {
+        const arr = JSON.parse(json)
+        if (!Array.isArray(arr) || !arr.length) return ''
+        return arr.map(o => `${o.name}: ${o.value}`).join(' · ')
+      } catch (_) { return json }
+    },
 
     async unban(ban) {
       if (!confirm(`Gỡ ban ${ban.user_tag || ban.user_id}?`)) return

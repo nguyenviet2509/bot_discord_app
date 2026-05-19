@@ -162,6 +162,23 @@ function initDb() {
     CREATE INDEX IF NOT EXISTS idx_mod_guild_created ON mod_actions(guild_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_mod_user ON mod_actions(guild_id, user_id, action_type);
 
+    CREATE TABLE IF NOT EXISTS command_usage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      command_name TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      user_tag TEXT,
+      user_avatar TEXT,
+      channel_id TEXT,
+      options_json TEXT,
+      success INTEGER NOT NULL DEFAULT 1,
+      error_message TEXT,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_cmd_guild_created ON command_usage(guild_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_cmd_user ON command_usage(guild_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_cmd_name ON command_usage(guild_id, command_name);
+
     CREATE TABLE IF NOT EXISTS temp_bans (
       guild_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
@@ -763,6 +780,89 @@ function getActiveBans(guildId) {
 }
 
 // ============================================================
+// Command Usage (log moi lan slash command duoc su dung)
+// ============================================================
+function logCommandUsage(data) {
+  return getDb()
+    .prepare(`
+      INSERT INTO command_usage (
+        guild_id, command_name, user_id, user_tag, user_avatar,
+        channel_id, options_json, success, error_message
+      ) VALUES (
+        @guild_id, @command_name, @user_id, @user_tag, @user_avatar,
+        @channel_id, @options_json, @success, @error_message
+      )
+    `)
+    .run({
+      user_tag: null, user_avatar: null,
+      channel_id: null, options_json: null,
+      success: 1, error_message: null,
+      ...data,
+    })
+}
+
+function getCommandUsage(guildId, { command_name, user_id, search, limit = 100, offset = 0 } = {}) {
+  let query = 'SELECT * FROM command_usage WHERE guild_id = @guild_id'
+  const params = { guild_id: guildId, limit, offset }
+  if (command_name) { query += ' AND command_name = @command_name'; params.command_name = command_name }
+  if (user_id)      { query += ' AND user_id = @user_id'; params.user_id = user_id }
+  if (search) {
+    query += ' AND (user_tag LIKE @search OR user_id LIKE @search OR command_name LIKE @search OR options_json LIKE @search)'
+    params.search = `%${search}%`
+  }
+  query += ' ORDER BY created_at DESC LIMIT @limit OFFSET @offset'
+  return getDb().prepare(query).all(params)
+}
+
+function countCommandUsage(guildId, { command_name, user_id, search } = {}) {
+  let query = 'SELECT COUNT(*) as total FROM command_usage WHERE guild_id = @guild_id'
+  const params = { guild_id: guildId }
+  if (command_name) { query += ' AND command_name = @command_name'; params.command_name = command_name }
+  if (user_id)      { query += ' AND user_id = @user_id'; params.user_id = user_id }
+  if (search) {
+    query += ' AND (user_tag LIKE @search OR user_id LIKE @search OR command_name LIKE @search OR options_json LIKE @search)'
+    params.search = `%${search}%`
+  }
+  return (getDb().prepare(query).get(params) || {}).total || 0
+}
+
+// Thong ke: top command + top user trong khoang thoi gian (sinceSec=0 => tat ca)
+function getCommandUsageStats(guildId, sinceSec = 0) {
+  const db = getDb()
+  const topCommands = db.prepare(`
+    SELECT command_name, COUNT(*) as count,
+           SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as errors,
+           MAX(created_at) as last_used_at
+    FROM command_usage
+    WHERE guild_id = ? AND created_at >= ?
+    GROUP BY command_name
+    ORDER BY count DESC
+    LIMIT 50
+  `).all(guildId, sinceSec)
+
+  const topUsers = db.prepare(`
+    SELECT user_id, user_tag, user_avatar, COUNT(*) as count,
+           MAX(created_at) as last_used_at
+    FROM command_usage
+    WHERE guild_id = ? AND created_at >= ?
+    GROUP BY user_id
+    ORDER BY count DESC
+    LIMIT 20
+  `).all(guildId, sinceSec)
+
+  const totals = db.prepare(`
+    SELECT COUNT(*) as total,
+           SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as errors,
+           COUNT(DISTINCT user_id) as unique_users,
+           COUNT(DISTINCT command_name) as unique_commands
+    FROM command_usage
+    WHERE guild_id = ? AND created_at >= ?
+  `).get(guildId, sinceSec) || {}
+
+  return { top_commands: topCommands, top_users: topUsers, totals }
+}
+
+// ============================================================
 // Temp Bans (ban co thoi han)
 // ============================================================
 function addTempBan(guildId, userId, unbanAt, reason) {
@@ -1035,6 +1135,10 @@ module.exports = {
   getModActions,
   countModActions,
   getActiveBans,
+  logCommandUsage,
+  getCommandUsage,
+  countCommandUsage,
+  getCommandUsageStats,
   logMemberEvent,
   incrementActivity,
   incrementChannelStat,

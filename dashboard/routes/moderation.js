@@ -59,4 +59,31 @@ router.post('/unban', async (req, res) => {
   }
 })
 
+// ============================================================
+// Command Usage (thong ke su dung slash command)
+// ============================================================
+// GET /command-usage?command_name=&user_id=&search=&page=&limit=&range=24h|7d|30d|all
+router.get('/command-usage', (req, res) => {
+  const { command_name, user_id, search, page = '1', limit = '50', range = '7d' } = req.query
+  const limitNum = Math.min(Number(limit) || 50, 200)
+  const pageNum = Math.max(Number(page) || 1, 1)
+  const offset = (pageNum - 1) * limitNum
+
+  const rangeMap = { '24h': 86400, '7d': 86400 * 7, '30d': 86400 * 30, 'all': 0 }
+  const rangeSec = rangeMap[range] ?? rangeMap['7d']
+  const sinceSec = rangeSec === 0 ? 0 : Math.floor(Date.now() / 1000) - rangeSec
+
+  const guildId = GUILD_ID()
+  const filters = { command_name, user_id, search, limit: limitNum, offset }
+  const items = db.getCommandUsage(guildId, filters)
+  const total = db.countCommandUsage(guildId, filters)
+  const stats = db.getCommandUsageStats(guildId, sinceSec)
+
+  res.json({
+    items, total, page: pageNum, limit: limitNum,
+    range, since: sinceSec,
+    stats,
+  })
+})
+
 module.exports = router

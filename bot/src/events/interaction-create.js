@@ -46,15 +46,41 @@ async function handleSlashCommand(interaction, client) {
     }
   }
 
+  let execError = null
   try {
     await command.execute(interaction)
   } catch (err) {
+    execError = err
     console.error(`[Command Error] /${interaction.commandName}:`, err)
     const msg = { content: '❌ Có lỗi xảy ra khi thực hiện lệnh này.', ephemeral: true }
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp(msg).catch(() => {})
     } else {
       await interaction.reply(msg).catch(() => {})
+    }
+  }
+
+  // Log command usage (best-effort, khong block command flow)
+  if (interaction.guild) {
+    try {
+      const opts = (interaction.options?.data || []).map(o => {
+        const v = o.value
+        const val = typeof v === 'string' && v.length > 80 ? v.slice(0, 80) + '…' : v
+        return { name: o.name, value: val }
+      })
+      db.logCommandUsage({
+        guild_id: interaction.guild.id,
+        command_name: interaction.commandName,
+        user_id: interaction.user.id,
+        user_tag: interaction.user.tag || interaction.user.username,
+        user_avatar: interaction.user.displayAvatarURL?.({ size: 64 }) || null,
+        channel_id: interaction.channelId || null,
+        options_json: opts.length ? JSON.stringify(opts) : null,
+        success: execError ? 0 : 1,
+        error_message: execError ? String(execError.message || execError).slice(0, 300) : null,
+      })
+    } catch (logErr) {
+      console.error('[CommandUsage log]', logErr)
     }
   }
 }

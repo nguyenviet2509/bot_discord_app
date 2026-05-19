@@ -957,34 +957,82 @@
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 class="text-xl font-bold text-slate-800">Quản lý Moderation</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Lịch sử kick / ban / unban / mute / unmute</p>
+          <p class="text-sm text-slate-400 mt-0.5">
+            <span x-show="subTab==='actions'">Lịch sử kick / ban / unban / mute / unmute</span>
+            <span x-show="subTab==='commands'">Thống kê sử dụng slash command</span>
+          </p>
         </div>
         <div class="flex items-center gap-3 flex-wrap">
-          <select x-model="filterType" @change="onFilterChange()"
-            class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 min-w-[140px]">
-            <option value="">Tất cả</option>
-            <option value="kick">Kick</option>
-            <option value="ban">Ban</option>
-            <option value="unban">Unban</option>
-            <option value="mute">Mute</option>
-            <option value="unmute">Unmute</option>
-          </select>
-          <div class="relative">
-            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input x-model="search" @input="onSearchInput()" type="text" placeholder="Tìm user/lý do..."
-              class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-60 bg-slate-50" />
-          </div>
-          <button @click="load()" :disabled="loading" class="btn-refresh">
-            <svg :class="loading ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
-            <span x-text="loading ? 'Đang tải...' : 'Làm mới'"></span>
+          <!-- Filters: ACTIONS sub-tab -->
+          <template x-if="subTab==='actions'">
+            <div class="flex items-center gap-3 flex-wrap">
+              <select x-model="filterType" @change="onFilterChange()"
+                class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 min-w-[140px]">
+                <option value="">Tất cả</option>
+                <option value="kick">Kick</option>
+                <option value="ban">Ban</option>
+                <option value="unban">Unban</option>
+                <option value="mute">Mute</option>
+                <option value="unmute">Unmute</option>
+              </select>
+              <div class="relative">
+                <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input x-model="search" @input="onSearchInput()" type="text" placeholder="Tìm user/lý do..."
+                  class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-60 bg-slate-50" />
+              </div>
+            </div>
+          </template>
+          <!-- Filters: COMMANDS sub-tab -->
+          <template x-if="subTab==='commands'">
+            <div class="flex items-center gap-3 flex-wrap">
+              <select x-model="cmdRange" @change="onCmdFilterChange()"
+                class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 min-w-[120px]">
+                <option value="24h">24 giờ qua</option>
+                <option value="7d">7 ngày qua</option>
+                <option value="30d">30 ngày qua</option>
+                <option value="all">Tất cả</option>
+              </select>
+              <select x-model="cmdFilterName" @change="onCmdFilterChange()"
+                class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 min-w-[160px]">
+                <option value="">Mọi lệnh</option>
+                <template x-for="c in cmdStats.top_commands" :key="c.command_name">
+                  <option :value="c.command_name" x-text="'/' + c.command_name + ' (' + c.count + ')'"></option>
+                </template>
+              </select>
+              <div class="relative">
+                <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input x-model="cmdSearch" @input="onCmdSearchInput()" type="text" placeholder="Tìm user/lệnh/option..."
+                  class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-60 bg-slate-50" />
+              </div>
+            </div>
+          </template>
+          <button @click="reload()" :disabled="loading || cmdLoading" class="btn-refresh">
+            <svg :class="(loading || cmdLoading) ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+            <span x-text="(loading || cmdLoading) ? 'Đang tải...' : 'Làm mới'"></span>
           </button>
         </div>
       </div>
       <div class="p-8">
+        <!-- Sub-tab nav -->
+        <div class="flex items-center gap-2 mb-6 border-b border-slate-100 pb-3">
+          <button @click="setSubTab('actions')"
+            :class="subTab==='actions' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+            class="px-4 py-2 rounded-lg text-sm font-semibold border transition">
+            🛡️ Lịch sử Mod Action
+          </button>
+          <button @click="setSubTab('commands')"
+            :class="subTab==='commands' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+            class="px-4 py-2 rounded-lg text-sm font-semibold border transition">
+            ⌨️ Sử dụng Command
+          </button>
+        </div>
+
         <div x-show="toast" x-cloak
           :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
           class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
 
+        <!-- ACTIONS SUB-TAB -->
+        <div x-show="subTab==='actions'">
         <!-- Stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div class="card p-5">
@@ -1089,6 +1137,145 @@
             <button @click="nextPage()" :disabled="page>=totalPages" class="btn-refresh">Sau</button>
           </div>
         </div>
+        </div><!-- /actions sub-tab -->
+
+        <!-- COMMANDS SUB-TAB -->
+        <div x-show="subTab==='commands'">
+          <!-- Stats -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="card p-5">
+              <div class="text-xs font-bold text-slate-400 uppercase">Tổng lượt dùng</div>
+              <div class="text-2xl font-bold text-indigo-600 mt-1" x-text="(cmdStats.totals?.total || 0).toLocaleString()"></div>
+              <div class="text-xs text-slate-400 mt-1" x-text="rangeLabel(cmdRange)"></div>
+            </div>
+            <div class="card p-5">
+              <div class="text-xs font-bold text-slate-400 uppercase">User dùng lệnh</div>
+              <div class="text-2xl font-bold text-slate-800 mt-1" x-text="(cmdStats.totals?.unique_users || 0).toLocaleString()"></div>
+            </div>
+            <div class="card p-5">
+              <div class="text-xs font-bold text-slate-400 uppercase">Lệnh khác nhau</div>
+              <div class="text-2xl font-bold text-slate-800 mt-1" x-text="(cmdStats.totals?.unique_commands || 0).toLocaleString()"></div>
+            </div>
+            <div class="card p-5">
+              <div class="text-xs font-bold text-slate-400 uppercase">Lỗi</div>
+              <div class="text-2xl font-bold text-rose-600 mt-1" x-text="(cmdStats.totals?.errors || 0).toLocaleString()"></div>
+            </div>
+          </div>
+
+          <!-- Top commands & top users -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+            <div class="card p-5">
+              <h2 class="text-base font-bold text-slate-800 mb-3">⌨️ Lệnh dùng nhiều nhất</h2>
+              <div x-show="!cmdStats.top_commands?.length" class="text-sm text-slate-400 py-6 text-center">Chưa có dữ liệu</div>
+              <div class="space-y-1.5">
+                <template x-for="(c, i) in (cmdStats.top_commands || []).slice(0, 10)" :key="c.command_name">
+                  <div class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer"
+                       @click="cmdFilterName = c.command_name; onCmdFilterChange()">
+                    <div class="text-xs font-bold text-slate-400 w-6" x-text="'#' + (i + 1)"></div>
+                    <div class="flex-1 min-w-0">
+                      <div class="font-mono text-sm font-semibold text-indigo-600 truncate" x-text="'/' + c.command_name"></div>
+                      <div class="text-xs text-slate-400">
+                        <span x-text="c.count + ' lượt'"></span>
+                        <span x-show="c.errors > 0" class="text-rose-500"> · <span x-text="c.errors + ' lỗi'"></span></span>
+                        <span> · <span x-text="timeAgo(c.last_used_at)"></span></span>
+                      </div>
+                    </div>
+                    <!-- Bar -->
+                    <div class="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div class="h-full bg-indigo-500 rounded-full"
+                           :style="'width:' + Math.max(4, Math.round((c.count / Math.max(1, cmdStats.top_commands[0].count)) * 100)) + '%'"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div class="card p-5">
+              <h2 class="text-base font-bold text-slate-800 mb-3">👤 User dùng lệnh nhiều nhất</h2>
+              <div x-show="!cmdStats.top_users?.length" class="text-sm text-slate-400 py-6 text-center">Chưa có dữ liệu</div>
+              <div class="space-y-1.5">
+                <template x-for="(u, i) in (cmdStats.top_users || []).slice(0, 10)" :key="u.user_id">
+                  <div class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-slate-50">
+                    <div class="text-xs font-bold text-slate-400 w-6" x-text="'#' + (i + 1)"></div>
+                    <img x-show="u.user_avatar" :src="u.user_avatar" class="w-7 h-7 rounded-full" />
+                    <div class="flex-1 min-w-0">
+                      <div class="text-sm font-semibold text-slate-800 truncate" x-text="u.user_tag || ('User ' + u.user_id)"></div>
+                      <div class="text-xs text-slate-400">
+                        <span x-text="u.count + ' lệnh'"></span>
+                        <span> · <span x-text="timeAgo(u.last_used_at)"></span></span>
+                      </div>
+                    </div>
+                    <button class="text-xs text-indigo-600 hover:underline"
+                            @click="cmdFilterUser = u.user_id; cmdFilterUserTag = u.user_tag; onCmdFilterChange()">Lọc</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active user filter chip -->
+          <div x-show="cmdFilterUser" class="mb-4 flex items-center gap-2">
+            <span class="text-sm text-slate-500">Đang lọc theo user:</span>
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-semibold">
+              <span x-text="cmdFilterUserTag || cmdFilterUser"></span>
+              <button @click="cmdFilterUser=''; cmdFilterUserTag=''; onCmdFilterChange()" class="text-indigo-500 hover:text-indigo-700">✕</button>
+            </span>
+          </div>
+
+          <!-- Usage table -->
+          <div class="card overflow-hidden">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-slate-100 bg-slate-50/60">
+                  <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Lệnh</th>
+                  <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">User</th>
+                  <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Tham số</th>
+                  <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Trạng thái</th>
+                  <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Khi nào</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in cmdItems" :key="row.id">
+                  <tr class="border-b border-slate-50 hover:bg-slate-50/50">
+                    <td class="px-6 py-3">
+                      <span class="font-mono text-sm font-semibold text-indigo-600" x-text="'/' + row.command_name"></span>
+                    </td>
+                    <td class="px-6 py-3">
+                      <div class="flex items-center gap-2">
+                        <img x-show="row.user_avatar" :src="row.user_avatar" class="w-7 h-7 rounded-full" />
+                        <div class="text-sm">
+                          <div class="font-semibold text-slate-800" x-text="row.user_tag || 'Unknown'"></div>
+                          <div class="text-xs text-slate-400 font-mono" x-text="row.user_id"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-3 text-xs text-slate-600 max-w-md">
+                      <span x-show="row.options_json" class="font-mono" x-text="formatOptions(row.options_json)"></span>
+                      <span x-show="!row.options_json" class="text-slate-300">—</span>
+                    </td>
+                    <td class="px-6 py-3">
+                      <span x-show="row.success" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">✓ OK</span>
+                      <span x-show="!row.success" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold" :title="row.error_message">✕ Lỗi</span>
+                    </td>
+                    <td class="px-6 py-3 text-xs text-slate-500" x-text="timeAgo(row.created_at)"></td>
+                  </tr>
+                </template>
+                <tr x-show="!cmdLoading && cmdItems.length === 0">
+                  <td colspan="5" class="px-6 py-16 text-center text-slate-400 text-sm">Không có dữ liệu</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div x-show="cmdItems.length > 0" class="flex items-center justify-between mt-4">
+            <p class="text-sm text-slate-500" x-text="'Trang ' + cmdPage + ' / ' + cmdTotalPages + ' (' + cmdTotal.toLocaleString() + ' lượt)'"></p>
+            <div class="flex gap-2">
+              <button @click="cmdPrev()" :disabled="cmdPage<=1" class="btn-refresh">Trước</button>
+              <button @click="cmdNext()" :disabled="cmdPage>=cmdTotalPages" class="btn-refresh">Sau</button>
+            </div>
+          </div>
+        </div><!-- /commands sub-tab -->
       </div>
     </div>
 
