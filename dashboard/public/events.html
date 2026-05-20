@@ -203,8 +203,20 @@
             <textarea class="input-field" rows="3" x-model="eventForm.announce_content" placeholder="Có thể chứa @everyone, @role, mention..."></textarea>
           </div>
           <div>
-            <label class="field-label">Ảnh (URL http/https hoặc /uploads/...)</label>
-            <input class="input-field" x-model="eventForm.announce_image_url" placeholder="https://..." />
+            <label class="field-label">Ảnh thông báo</label>
+            <div class="flex items-center gap-3">
+              <input class="input-field flex-1" x-model="eventForm.announce_image_url" placeholder="https://... hoặc /uploads/..." />
+              <label class="btn-refresh whitespace-nowrap cursor-pointer" :class="uploading ? 'opacity-50 cursor-wait' : ''">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span x-text="uploading ? 'Đang tải...' : 'Upload từ máy'"></span>
+                <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" @change="uploadImage($event)" :disabled="uploading" />
+              </label>
+              <button @click="eventForm.announce_image_url = ''" class="btn-refresh" type="button" x-show="eventForm.announce_image_url" title="Xóa ảnh">×</button>
+            </div>
+            <div x-show="eventForm.announce_image_url" class="mt-2">
+              <img :src="eventForm.announce_image_url" class="max-h-40 rounded-lg border border-slate-200" @error="$el.style.display='none'" @load="$el.style.display=''" />
+            </div>
+            <p class="text-xs text-slate-400 mt-1">JPEG/PNG/GIF/WEBP, tối đa 5MB. Hoặc dán URL trực tiếp.</p>
           </div>
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" x-model="eventForm.announce_use_embed" class="w-4 h-4" />

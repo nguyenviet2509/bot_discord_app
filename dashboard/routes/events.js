@@ -14,10 +14,37 @@
 //   PUT    /reorder         (updates: [{id, group_id, sort_order}])
 
 const express = require('express')
+const multer = require('multer')
+const path = require('path')
+const fs = require('fs')
+const crypto = require('crypto')
 const eventsDb = require('../../shared/db-events')
 const { sendEventAnnouncement } = require('../../shared/send-event-announcement')
 
 const router = express.Router()
+
+// Upload anh thong bao (giong pattern scheduled-messages)
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../..')
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads')
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true })
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: UPLOADS_DIR,
+    filename: (req, file, cb) => cb(null, `event-${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`),
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (ok.includes(file.mimetype)) cb(null, true)
+    else cb(new Error('Chi chap nhan JPEG/PNG/GIF/WEBP'))
+  },
+})
+
+router.post('/upload', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Khong co file' })
+  res.json({ url: `/uploads/${req.file.filename}` })
+})
 const GUILD_ID = () => process.env.GUILD_ID
 
 // Cac field announce cho phep tu req.body khi POST/PUT event

@@ -59,6 +59,7 @@ function eventsTab() {
     loading: false,
     saving: false,
     sending: false,
+    uploading: false,
     groups: [],
     showEventModal: false,
     editingEvent: null,
@@ -336,6 +337,45 @@ function eventsTab() {
         this.flash(ev.status ? 'Đã bật' : 'Đã tắt')
       } catch (err) {
         this.flash('Lỗi: ' + err.message, false)
+      }
+    },
+
+    async uploadImage(event) {
+      const file = event.target.files?.[0]
+      if (!file) return
+      if (file.size > 5 * 1024 * 1024) {
+        this.flash('Ảnh quá 5MB', false)
+        event.target.value = ''
+        return
+      }
+      this.uploading = true
+      try {
+        const form = new FormData()
+        form.append('image', file)
+        const token = getToken()
+        const r = await fetch('/api/events/upload', {
+          method: 'POST',
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: form,
+        })
+        if (r.status === 401) {
+          localStorage.removeItem('token')
+          try { window.top.location.href = '/login.html' } catch (_) { window.location.href = '/login.html' }
+          return
+        }
+        if (!r.ok) {
+          let err = `HTTP ${r.status}`
+          try { err = (await r.json()).error || err } catch (_) {}
+          throw new Error(err)
+        }
+        const data = await r.json()
+        this.eventForm.announce_image_url = data.url
+        this.flash('Upload OK')
+      } catch (err) {
+        this.flash('Upload lỗi: ' + err.message, false)
+      } finally {
+        this.uploading = false
+        event.target.value = ''
       }
     },
 
