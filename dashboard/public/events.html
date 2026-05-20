@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý Events</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <style>
+    * { font-family: 'Inter', -apple-system, sans-serif; }
+    body { background: #f1f5f9; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
+    .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; transition: border-color .15s; outline: none; }
+    .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; }
+    .btn-refresh:hover:not(:disabled) { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
+    .btn-soft-primary { background: #eef2ff; color: #4338ca; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; }
+    .btn-soft-primary:hover { background: #e0e7ff; }
+    .btn-soft-danger { background: #fef2f2; color: #b91c1c; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; }
+    .btn-soft-danger:hover { background: #fee2e2; }
+    .field-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .badge-type { background: #e0e7ff; color: #4338ca; }
+    .badge-on { background: #d1fae5; color: #065f46; }
+    .badge-off { background: #e2e8f0; color: #475569; }
+    .group-card { background: white; border-radius: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.04); border: 1px solid #e2e8f0; }
+    .group-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f1f5f9; cursor: default; }
+    .group-drag-handle { color: #94a3b8; cursor: grab; padding: 4px; user-select: none; }
+    .group-drag-handle:active { cursor: grabbing; }
+    .event-card { background: #f8fafc; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: grab; border: 1px solid transparent; transition: border-color .12s; }
+    .event-card:hover { border-color: #c7d2fe; background: #f1f5f9; }
+    .event-card:active { cursor: grabbing; }
+    .event-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; min-height: 24px; }
+    .event-list:empty::before { content: 'Chưa có event nào — kéo thả vào đây'; color: #94a3b8; font-size: 13px; font-style: italic; padding: 8px; }
+    .sortable-ghost { opacity: .35; }
+    .sortable-chosen { background: #eef2ff; }
+    .pagination { display: flex; gap: 8px; align-items: center; padding: 8px 16px; font-size: 13px; color: #475569; justify-content: flex-end; border-top: 1px solid #f1f5f9; }
+    .pagination button { padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; cursor: pointer; font-size: 13px; }
+    .pagination button:disabled { opacity: .4; cursor: not-allowed; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+    .modal { background: white; border-radius: 16px; padding: 24px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .no-drag { background: #f8fafc; }
+  </style>
+</head>
+<body class="min-h-screen" x-data="eventsTab()" x-init="init()">
+
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+  <div>
+    <h1 class="text-xl font-bold text-slate-800">Quản lý Events</h1>
+    <p class="text-sm text-slate-400 mt-0.5">Tổ chức custom events theo nhóm, kéo thả để sắp xếp</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <span x-text="saveStatus" :class="saveStatusClass" class="text-sm"></span>
+    <button @click="loadAll()" :disabled="loading" class="btn-refresh">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Làm mới
+    </button>
+    <button @click="openCreateGroup()" class="btn-refresh">+ Tạo nhóm</button>
+    <button @click="openCreateEvent(null)" class="btn-primary">+ Tạo event</button>
+  </div>
+</div>
+
+<div class="p-8 max-w-6xl mx-auto space-y-5">
+
+  <div class="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700">
+    ℹ️ Kéo biểu tượng <strong>⋮⋮</strong> ở đầu mỗi nhóm để sắp xếp lại nhóm. Kéo thả từng event để chuyển nhóm hoặc đổi thứ tự trong nhóm.
+  </div>
+
+  <div x-show="loading && groups.length === 0" class="text-center text-slate-400 py-12 italic">Đang tải...</div>
+
+  <!-- Group list -->
+  <div x-ref="groupList" class="space-y-4">
+    <template x-for="group in groups" :key="group.id === null ? 'unassigned' : ('g' + group.id)">
+      <div class="group-card" :class="group.id === null ? 'no-drag' : ''" :data-group-id="group.id === null ? '' : group.id">
+
+        <div class="group-header">
+          <span class="group-drag-handle" x-show="group.id !== null" title="Kéo để sắp xếp nhóm">⋮⋮</span>
+          <div class="flex-1 flex items-center gap-3 min-w-0">
+            <span class="text-base font-bold text-slate-800 truncate" x-text="group.name"></span>
+            <span class="text-xs text-slate-400" x-text="`(${group.total} event)`"></span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button @click="openCreateEvent(group.id)" class="btn-soft-primary">+ Event</button>
+            <template x-if="group.id !== null">
+              <button @click="renameGroup(group)" class="btn-soft-primary">Đổi tên</button>
+            </template>
+            <template x-if="group.id !== null">
+              <button @click="deleteGroup(group)" class="btn-soft-danger">Xóa nhóm</button>
+            </template>
+          </div>
+        </div>
+
+        <div class="event-list" :data-event-list="group.id === null ? 'null' : group.id">
+          <template x-for="ev in group.events" :key="'e' + ev.id">
+            <div class="event-card" :data-event-id="ev.id">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-semibold text-sm text-slate-800 truncate" x-text="ev.name"></span>
+                  <span class="badge badge-type" x-text="ev.type"></span>
+                  <span class="badge" :class="ev.status ? 'badge-on' : 'badge-off'" x-text="ev.status ? 'Đang bật' : 'Tắt'"></span>
+                </div>
+                <div class="text-xs text-slate-500 mt-1" x-show="ev.description" x-text="ev.description"></div>
+                <div class="text-xs text-slate-400 mt-1" x-show="ev.start_at || ev.end_at">
+                  <span x-show="ev.start_at" x-text="'Bắt đầu: ' + formatTime(ev.start_at)"></span>
+                  <span x-show="ev.start_at && ev.end_at"> · </span>
+                  <span x-show="ev.end_at" x-text="'Kết thúc: ' + formatTime(ev.end_at)"></span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 ml-3">
+                <button @click="openEditEvent(ev)" class="btn-soft-primary" title="Sửa">Sửa</button>
+                <button @click="toggleStatus(ev)" class="btn-soft-primary" :title="ev.status ? 'Tắt' : 'Bật'" x-text="ev.status ? 'Tắt' : 'Bật'"></button>
+                <button @click="deleteEvent(ev)" class="btn-soft-danger" title="Xóa">Xóa</button>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="pagination" x-show="group.total > group.limit">
+          <button @click="changePage(group, group.page - 1)" :disabled="group.page <= 1">◀</button>
+          <span x-text="`Trang ${group.page} / ${Math.max(1, Math.ceil(group.total / group.limit))}`"></span>
+          <button @click="changePage(group, group.page + 1)" :disabled="group.page >= Math.ceil(group.total / group.limit)">▶</button>
+        </div>
+
+      </div>
+    </template>
+  </div>
+
+  <div x-show="!loading && groups.length === 1 && groups[0].total === 0" class="text-center text-slate-400 py-8 italic">
+    Chưa có nhóm nào. Bấm "+ Tạo nhóm" để bắt đầu.
+  </div>
+</div>
+
+<!-- Modal: Event form -->
+<div class="modal-backdrop" x-show="showEventModal" x-cloak @click.self="showEventModal = false">
+  <div class="modal">
+    <h2 class="text-lg font-bold text-slate-800 mb-4" x-text="editingEvent ? 'Sửa event' : 'Tạo event mới'"></h2>
+    <div class="space-y-4">
+      <div>
+        <label class="field-label">Tên event <span class="text-red-500">*</span></label>
+        <input class="input-field" x-model="eventForm.name" maxlength="100" placeholder="VD: Tặng Nitro mừng 1.000 thành viên" />
+      </div>
+      <div>
+        <label class="field-label">Mô tả</label>
+        <textarea class="input-field" rows="2" x-model="eventForm.description" maxlength="1000" placeholder="Mô tả ngắn về event"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label">Loại event <span class="text-red-500">*</span></label>
+          <input class="input-field" list="event-type-options" x-model="eventForm.type" maxlength="30" placeholder="giveaway / raffle / trivia / ..." />
+          <datalist id="event-type-options">
+            <template x-for="t in typeSuggestions" :key="t">
+              <option :value="t"></option>
+            </template>
+          </datalist>
+          <p class="text-xs text-slate-400 mt-1">Chỉ a-z, 0-9, _, -, tối đa 30 ký tự. Loại mới sẽ tự gợi ý lần sau.</p>
+        </div>
+        <div>
+          <label class="field-label">Nhóm</label>
+          <select class="input-field" x-model="eventForm.group_id">
+            <option :value="null">Chưa phân nhóm</option>
+            <template x-for="g in groups.filter(g => g.id !== null)" :key="g.id">
+              <option :value="g.id" x-text="g.name"></option>
+            </template>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label">Bắt đầu</label>
+          <input type="datetime-local" class="input-field" x-model="eventForm.start_at_str" />
+        </div>
+        <div>
+          <label class="field-label">Kết thúc</label>
+          <input type="datetime-local" class="input-field" x-model="eventForm.end_at_str" />
+        </div>
+      </div>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" x-model="eventForm.status" class="w-4 h-4" />
+        <span class="text-sm text-slate-700">Bật event ngay khi lưu</span>
+      </label>
+    </div>
+    <div class="flex justify-end gap-3 mt-6">
+      <button @click="showEventModal = false" class="btn-refresh">Hủy</button>
+      <button @click="saveEvent()" class="btn-primary" :disabled="saving">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/events.js"></script>
+</body>
+</html>

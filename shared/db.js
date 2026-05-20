@@ -318,6 +318,9 @@ function initDb() {
   // Schema cho module Auto-Mod Lite (tach file rieng)
   require('./db-automod').initAutomodSchema(database)
 
+  // Schema cho module Quan ly Events (tach file rieng)
+  require('./db-events').initEventsSchema(database)
+
   return database
 }
 

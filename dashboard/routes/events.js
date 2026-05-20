@@ -1,0 +1,181 @@
+// REST API cho tab "Quan ly Events".
+// Pattern: guild_id lay tu env (giong cac routes hien co).
+// Endpoints:
+//   GET    /groups
+//   POST   /groups
+//   PUT    /groups/:id      (rename)
+//   DELETE /groups/:id      (detach events -> group_id NULL)
+//   PUT    /groups/reorder  (orderedIds)
+//   GET    /                (?group_id=null|<num>&page&limit)
+//   GET    /types           (?group_id=null|<num>)
+//   POST   /
+//   PUT    /:id             (partial update)
+//   DELETE /:id
+//   PUT    /reorder         (updates: [{id, group_id, sort_order}])
+
+const express = require('express')
+const eventsDb = require('../../shared/db-events')
+
+const router = express.Router()
+const GUILD_ID = () => process.env.GUILD_ID
+
+// Parse group_id query: 'null' string -> null, '' -> null, else Number
+function parseGroupId(raw) {
+  if (raw === undefined || raw === null || raw === '' || raw === 'null') return null
+  const n = Number(raw)
+  if (!Number.isInteger(n) || n <= 0) return undefined // invalid
+  return n
+}
+
+function validateType(t) {
+  if (typeof t !== 'string') return false
+  return eventsDb.TYPE_REGEX.test(t.trim())
+}
+
+// ---- Groups (must be before /:id) ----
+
+router.get('/groups', (req, res) => {
+  res.json(eventsDb.getGroups(GUILD_ID()))
+})
+
+router.post('/groups', (req, res) => {
+  const name = String(req.body?.name || '').trim()
+  if (!name) return res.status(400).json({ error: 'name bat buoc' })
+  if (name.length > 50) return res.status(400).json({ error: 'name toi da 50 ky tu' })
+  const result = eventsDb.createGroup(GUILD_ID(), name)
+  res.json({ id: result.lastInsertRowid })
+})
+
+router.put('/groups/reorder', (req, res) => {
+  const orderedIds = Array.isArray(req.body?.orderedIds) ? req.body.orderedIds.map(Number).filter(Number.isInteger) : null
+  if (!orderedIds) return res.status(400).json({ error: 'orderedIds phai la mang so' })
+  eventsDb.reorderGroups(GUILD_ID(), orderedIds)
+  res.json({ success: true })
+})
+
+router.put('/groups/:id', (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'id khong hop le' })
+  const name = String(req.body?.name || '').trim()
+  if (!name) return res.status(400).json({ error: 'name bat buoc' })
+  if (name.length > 50) return res.status(400).json({ error: 'name toi da 50 ky tu' })
+  eventsDb.updateGroup(id, GUILD_ID(), name)
+  res.json({ success: true })
+})
+
+router.delete('/groups/:id', (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'id khong hop le' })
+  eventsDb.deleteGroup(id, GUILD_ID())
+  res.json({ success: true })
+})
+
+// ---- Types suggestions ----
+router.get('/types', (req, res) => {
+  const gid = parseGroupId(req.query.group_id)
+  if (gid === undefined) return res.status(400).json({ error: 'group_id khong hop le' })
+  res.json(eventsDb.listTypesForGroup(GUILD_ID(), gid))
+})
+
+// ---- Reorder events (cross-group + reorder cung group) ----
+router.put('/reorder', (req, res) => {
+  const updates = Array.isArray(req.body?.updates) ? req.body.updates : null
+  if (!updates) return res.status(400).json({ error: 'updates phai la mang' })
+  // Validate moi item: id int, sort_order so, group_id null hoac int
+  for (const u of updates) {
+    if (!Number.isInteger(Number(u.id))) return res.status(400).json({ error: 'updates[].id sai' })
+    if (!Number.isFinite(Number(u.sort_order))) return res.status(400).json({ error: 'updates[].sort_order sai' })
+    if (u.group_id !== null && u.group_id !== undefined && u.group_id !== '' && !Number.isInteger(Number(u.group_id))) {
+      return res.status(400).json({ error: 'updates[].group_id sai' })
+    }
+  }
+  eventsDb.reorderEvents(GUILD_ID(), updates)
+  res.json({ success: true })
+})
+
+// ---- Events ----
+
+router.get('/', (req, res) => {
+  const gid = parseGroupId(req.query.group_id)
+  if (gid === undefined) return res.status(400).json({ error: 'group_id khong hop le' })
+  const page = Math.max(1, Number(req.query.page) || 1)
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10))
+  res.json(eventsDb.listEvents(GUILD_ID(), gid, page, limit))
+})
+
+router.post('/', (req, res) => {
+  const { name, description, type, status, start_at, end_at, group_id } = req.body || {}
+  const trimName = String(name || '').trim()
+  if (!trimName) return res.status(400).json({ error: 'name bat buoc' })
+  if (trimName.length > 100) return res.status(400).json({ error: 'name toi da 100 ky tu' })
+  if (!validateType(String(type || '').trim())) {
+    return res.status(400).json({ error: 'type khong hop le (chi a-z, 0-9, _ , -, toi da 30 ky tu)' })
+  }
+  if (start_at && end_at && Number(end_at) <= Number(start_at)) {
+    return res.status(400).json({ error: 'end_at phai sau start_at' })
+  }
+  const gid = (group_id === null || group_id === undefined || group_id === '') ? null : Number(group_id)
+  if (gid !== null && (!Number.isInteger(gid) || gid <= 0)) {
+    return res.status(400).json({ error: 'group_id khong hop le' })
+  }
+  const result = eventsDb.createEvent({
+    guild_id: GUILD_ID(),
+    group_id: gid,
+    name: trimName,
+    description: description ? String(description).slice(0, 1000) : null,
+    type: String(type).trim().toLowerCase(),
+    status: !!status,
+    start_at: start_at ? Number(start_at) : null,
+    end_at: end_at ? Number(end_at) : null,
+  })
+  res.json({ id: result.lastInsertRowid })
+})
+
+router.put('/:id', (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'id khong hop le' })
+  const existing = eventsDb.getEventById(id, GUILD_ID())
+  if (!existing) return res.status(404).json({ error: 'Khong tim thay' })
+  const { name, description, type, status, start_at, end_at, group_id } = req.body || {}
+  const fields = {}
+  if (name !== undefined) {
+    const trimName = String(name).trim()
+    if (!trimName) return res.status(400).json({ error: 'name bat buoc' })
+    if (trimName.length > 100) return res.status(400).json({ error: 'name toi da 100 ky tu' })
+    fields.name = trimName
+  }
+  if (description !== undefined) fields.description = description ? String(description).slice(0, 1000) : null
+  if (type !== undefined) {
+    const t = String(type).trim().toLowerCase()
+    if (!validateType(t)) return res.status(400).json({ error: 'type khong hop le' })
+    fields.type = t
+  }
+  if (status !== undefined) fields.status = !!status
+  if (start_at !== undefined) fields.start_at = start_at ? Number(start_at) : null
+  if (end_at !== undefined) fields.end_at = end_at ? Number(end_at) : null
+  // Validate start/end khi ca 2 deu hien dien (sau merge)
+  const finalStart = fields.start_at !== undefined ? fields.start_at : existing.start_at
+  const finalEnd = fields.end_at !== undefined ? fields.end_at : existing.end_at
+  if (finalStart && finalEnd && Number(finalEnd) <= Number(finalStart)) {
+    return res.status(400).json({ error: 'end_at phai sau start_at' })
+  }
+  if (group_id !== undefined) {
+    if (group_id === null || group_id === '') fields.group_id = null
+    else {
+      const gid = Number(group_id)
+      if (!Number.isInteger(gid) || gid <= 0) return res.status(400).json({ error: 'group_id khong hop le' })
+      fields.group_id = gid
+    }
+  }
+  eventsDb.updateEvent(id, GUILD_ID(), fields)
+  res.json({ success: true })
+})
+
+router.delete('/:id', (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'id khong hop le' })
+  eventsDb.deleteEvent(id, GUILD_ID())
+  res.json({ success: true })
+})
+
+module.exports = router
