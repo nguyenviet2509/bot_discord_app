@@ -114,6 +114,9 @@
                 </div>
               </div>
               <div class="flex items-center gap-1 ml-3">
+                <template x-if="ev.announce_channel_id">
+                  <button @click="sendNow(ev)" class="btn-soft-primary" title="Gửi tin nhắn thông báo ngay" style="background:#fef3c7;color:#92400e;">Gửi ngay</button>
+                </template>
                 <button @click="openEditEvent(ev)" class="btn-soft-primary" title="Sửa">Sửa</button>
                 <button @click="toggleStatus(ev)" class="btn-soft-primary" :title="ev.status ? 'Tắt' : 'Bật'" x-text="ev.status ? 'Tắt' : 'Bật'"></button>
                 <button @click="deleteEvent(ev)" class="btn-soft-danger" title="Xóa">Xóa</button>
@@ -185,6 +188,57 @@
         <input type="checkbox" x-model="eventForm.status" class="w-4 h-4" />
         <span class="text-sm text-slate-700">Bật event ngay khi lưu</span>
       </label>
+
+      <!-- Announcement config -->
+      <div class="border-t border-slate-200 pt-4 mt-4">
+        <h3 class="text-sm font-bold text-slate-800 mb-3">Tin nhắn thông báo</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="field-label">Channel gửi (Discord Channel ID)</label>
+            <input class="input-field" x-model="eventForm.announce_channel_id" placeholder="VD: 1234567890123456789" pattern="\d*" />
+            <p class="text-xs text-slate-400 mt-1">Bật developer mode trên Discord → chuột phải channel → Copy ID.</p>
+          </div>
+          <div>
+            <label class="field-label">Nội dung tin nhắn</label>
+            <textarea class="input-field" rows="3" x-model="eventForm.announce_content" placeholder="Có thể chứa @everyone, @role, mention..."></textarea>
+          </div>
+          <div>
+            <label class="field-label">Ảnh (URL http/https hoặc /uploads/...)</label>
+            <input class="input-field" x-model="eventForm.announce_image_url" placeholder="https://..." />
+          </div>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" x-model="eventForm.announce_use_embed" class="w-4 h-4" />
+            <span class="text-sm text-slate-700">Dùng Embed (đẹp hơn, có title/màu)</span>
+          </label>
+          <div class="grid grid-cols-2 gap-3" x-show="eventForm.announce_use_embed">
+            <div>
+              <label class="field-label">Embed title</label>
+              <input class="input-field" x-model="eventForm.announce_embed_title" maxlength="256" />
+            </div>
+            <div>
+              <label class="field-label">Embed color</label>
+              <input type="color" class="input-field h-10 p-1" x-model="eventForm.announce_embed_color" />
+            </div>
+          </div>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" x-model="eventForm.announce_on_enable" class="w-4 h-4" />
+              <span class="text-sm text-slate-700">Tự gửi khi bật (toggle Tắt → Bật)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" x-model="eventForm.announce_on_start" class="w-4 h-4" />
+              <span class="text-sm text-slate-700">Tự gửi khi đến thời điểm bắt đầu (start_at)</span>
+            </label>
+          </div>
+          <div class="flex items-center gap-2 pt-2" x-show="editingEvent">
+            <button @click="sendTest()" class="btn-refresh" :disabled="sending" type="button" style="color:#b45309; border-color:#fcd34d;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Gửi thử
+            </button>
+            <span class="text-xs text-slate-400">Gửi ngay với cấu hình hiện tại (cần lưu trước nếu vừa sửa)</span>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="flex justify-end gap-3 mt-6">
       <button @click="showEventModal = false" class="btn-refresh">Hủy</button>

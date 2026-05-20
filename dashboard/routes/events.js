@@ -15,9 +15,28 @@
 
 const express = require('express')
 const eventsDb = require('../../shared/db-events')
+const { sendEventAnnouncement } = require('../../shared/send-event-announcement')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
+
+// Cac field announce cho phep tu req.body khi POST/PUT event
+function pickAnnounceFields(body) {
+  const out = {}
+  const keys = [
+    'announce_channel_id', 'announce_content', 'announce_use_embed',
+    'announce_embed_title', 'announce_embed_color', 'announce_image_url',
+    'announce_on_enable', 'announce_on_start',
+  ]
+  for (const k of keys) if (body[k] !== undefined) out[k] = body[k]
+  return out
+}
+
+// Validate channel_id la snowflake (chuoi so 17-20 ky tu) hoac null
+function validateChannelId(v) {
+  if (v === null || v === undefined || v === '') return true
+  return /^\d{15,22}$/.test(String(v))
+}
 
 // Parse group_id query: 'null' string -> null, '' -> null, else Number
 function parseGroupId(raw) {
@@ -118,6 +137,10 @@ router.post('/', (req, res) => {
   if (gid !== null && (!Number.isInteger(gid) || gid <= 0)) {
     return res.status(400).json({ error: 'group_id khong hop le' })
   }
+  const announce = pickAnnounceFields(req.body || {})
+  if (announce.announce_channel_id !== undefined && !validateChannelId(announce.announce_channel_id)) {
+    return res.status(400).json({ error: 'announce_channel_id phai la Discord channel ID (chuoi so)' })
+  }
   const result = eventsDb.createEvent({
     guild_id: GUILD_ID(),
     group_id: gid,
@@ -127,11 +150,12 @@ router.post('/', (req, res) => {
     status: !!status,
     start_at: start_at ? Number(start_at) : null,
     end_at: end_at ? Number(end_at) : null,
+    ...announce,
   })
   res.json({ id: result.lastInsertRowid })
 })
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'id khong hop le' })
   const existing = eventsDb.getEventById(id, GUILD_ID())
@@ -167,7 +191,29 @@ router.put('/:id', (req, res) => {
       fields.group_id = gid
     }
   }
+  const announce = pickAnnounceFields(req.body || {})
+  if (announce.announce_channel_id !== undefined && !validateChannelId(announce.announce_channel_id)) {
+    return res.status(400).json({ error: 'announce_channel_id phai la Discord channel ID (chuoi so)' })
+  }
+  Object.assign(fields, announce)
+
+  // Detect status flip 0 -> 1 de auto-send neu announce_on_enable=1
+  const statusFlipOn = existing.status === 0 && fields.status === true
+  const willResetSent = fields.status === false  // tat di -> cho phep gui lai lan sau
+  if (willResetSent) fields.announce_sent_at = null
+
   eventsDb.updateEvent(id, GUILD_ID(), fields)
+
+  // Auto send tren toggle ON
+  if (statusFlipOn) {
+    const updated = eventsDb.getEventById(id, GUILD_ID())
+    if (updated.announce_on_enable && !updated.announce_sent_at && updated.announce_channel_id) {
+      const result = await sendEventAnnouncement(updated)
+      if (result.ok) eventsDb.markAnnouncementSent(id, GUILD_ID())
+      // Khong block response neu send fail — log silent
+      else console.warn(`[events] auto-send-on-enable id=${id} fail: ${result.error}`)
+    }
+  }
   res.json({ success: true })
 })
 
@@ -175,6 +221,21 @@ router.delete('/:id', (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'id khong hop le' })
   eventsDb.deleteEvent(id, GUILD_ID())
+  res.json({ success: true })
+})
+
+// Gui tin nhan thong bao ngay (test / manual)
+// Force: gui kech ca khi da gui truoc do. Khong update announce_sent_at neu force.
+router.post('/:id/send-now', async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'id khong hop le' })
+  const event = eventsDb.getEventById(id, GUILD_ID())
+  if (!event) return res.status(404).json({ error: 'Khong tim thay event' })
+  const force = !!req.body?.force
+  const result = await sendEventAnnouncement(event)
+  if (!result.ok) return res.status(result.status || 500).json({ error: result.error })
+  // Chi mark sent neu khong phai force (force = test, khong block auto sau nay)
+  if (!force) eventsDb.markAnnouncementSent(id, GUILD_ID())
   res.json({ success: true })
 })
 

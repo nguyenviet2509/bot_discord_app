@@ -40,6 +40,19 @@ const TYPE_REGEX = /^[a-z0-9_-]{1,30}$/i
 
 function initEventsSchema(database) {
   database.exec(SCHEMA_SQL)
+  // Safe migrations cho announce columns (existing DB)
+  const migrations = [
+    `ALTER TABLE events ADD COLUMN announce_channel_id TEXT`,
+    `ALTER TABLE events ADD COLUMN announce_content TEXT`,
+    `ALTER TABLE events ADD COLUMN announce_use_embed INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE events ADD COLUMN announce_embed_title TEXT`,
+    `ALTER TABLE events ADD COLUMN announce_embed_color TEXT DEFAULT '#6366f1'`,
+    `ALTER TABLE events ADD COLUMN announce_image_url TEXT`,
+    `ALTER TABLE events ADD COLUMN announce_sent_at INTEGER`,
+    `ALTER TABLE events ADD COLUMN announce_on_enable INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE events ADD COLUMN announce_on_start INTEGER NOT NULL DEFAULT 0`,
+  ]
+  for (const sql of migrations) { try { database.exec(sql) } catch (_) {} }
 }
 
 // Lazy resolver tranh circular require
@@ -128,8 +141,11 @@ function getEventById(id, guildId) {
   return db().prepare('SELECT * FROM events WHERE id = ? AND guild_id = ?').get(id, guildId)
 }
 
-function createEvent({ guild_id, group_id, name, description, type, status, start_at, end_at }) {
-  // Sort_order = max trong group dich + 1
+function createEvent({
+  guild_id, group_id, name, description, type, status, start_at, end_at,
+  announce_channel_id, announce_content, announce_use_embed, announce_embed_title, announce_embed_color, announce_image_url,
+  announce_on_enable, announce_on_start,
+}) {
   const isNull = group_id === null || group_id === undefined
   const maxRow = isNull
     ? db().prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM events WHERE guild_id = ? AND group_id IS NULL').get(guild_id)
@@ -137,8 +153,12 @@ function createEvent({ guild_id, group_id, name, description, type, status, star
   const nextOrder = (maxRow?.m ?? -1) + 1
   return db()
     .prepare(`
-      INSERT INTO events (guild_id, group_id, name, description, type, status, start_at, end_at, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events (
+        guild_id, group_id, name, description, type, status, start_at, end_at, sort_order,
+        announce_channel_id, announce_content, announce_use_embed, announce_embed_title, announce_embed_color, announce_image_url,
+        announce_on_enable, announce_on_start
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       guild_id,
@@ -149,7 +169,15 @@ function createEvent({ guild_id, group_id, name, description, type, status, star
       status ? 1 : 0,
       start_at || null,
       end_at || null,
-      nextOrder
+      nextOrder,
+      announce_channel_id || null,
+      announce_content || null,
+      announce_use_embed ? 1 : 0,
+      announce_embed_title || null,
+      announce_embed_color || null,
+      announce_image_url || null,
+      announce_on_enable ? 1 : 0,
+      announce_on_start ? 1 : 0
     )
 }
 
@@ -165,6 +193,15 @@ function updateEvent(id, guildId, fields) {
   if (fields.end_at !== undefined)      { sets.push('end_at = @end_at'); params.end_at = fields.end_at || null }
   if (fields.group_id !== undefined)    { sets.push('group_id = @group_id'); params.group_id = (fields.group_id === null || fields.group_id === '') ? null : Number(fields.group_id) }
   if (fields.sort_order !== undefined)  { sets.push('sort_order = @sort_order'); params.sort_order = Number(fields.sort_order) }
+  if (fields.announce_channel_id !== undefined) { sets.push('announce_channel_id = @announce_channel_id'); params.announce_channel_id = fields.announce_channel_id || null }
+  if (fields.announce_content !== undefined)    { sets.push('announce_content = @announce_content'); params.announce_content = fields.announce_content || null }
+  if (fields.announce_use_embed !== undefined)  { sets.push('announce_use_embed = @announce_use_embed'); params.announce_use_embed = fields.announce_use_embed ? 1 : 0 }
+  if (fields.announce_embed_title !== undefined){ sets.push('announce_embed_title = @announce_embed_title'); params.announce_embed_title = fields.announce_embed_title || null }
+  if (fields.announce_embed_color !== undefined){ sets.push('announce_embed_color = @announce_embed_color'); params.announce_embed_color = fields.announce_embed_color || null }
+  if (fields.announce_image_url !== undefined)  { sets.push('announce_image_url = @announce_image_url'); params.announce_image_url = fields.announce_image_url || null }
+  if (fields.announce_on_enable !== undefined)  { sets.push('announce_on_enable = @announce_on_enable'); params.announce_on_enable = fields.announce_on_enable ? 1 : 0 }
+  if (fields.announce_on_start !== undefined)   { sets.push('announce_on_start = @announce_on_start'); params.announce_on_start = fields.announce_on_start ? 1 : 0 }
+  if (fields.announce_sent_at !== undefined)    { sets.push('announce_sent_at = @announce_sent_at'); params.announce_sent_at = fields.announce_sent_at || null }
   if (sets.length === 0) return { changes: 0 }
   sets.push('updated_at = unixepoch()')
   return db()
@@ -197,6 +234,27 @@ function reorderEvents(guildId, updates) {
   tx()
 }
 
+function markAnnouncementSent(id, guildId) {
+  return db()
+    .prepare('UPDATE events SET announce_sent_at = unixepoch(), updated_at = unixepoch() WHERE id = ? AND guild_id = ?')
+    .run(id, guildId)
+}
+
+// Events da den start_at va chua gui auto-on-start (status=1, announce_on_start=1, announce_sent_at IS NULL)
+function getDueEventAnnouncements(nowSec) {
+  return db()
+    .prepare(`
+      SELECT * FROM events
+      WHERE status = 1
+        AND announce_on_start = 1
+        AND announce_sent_at IS NULL
+        AND announce_channel_id IS NOT NULL
+        AND start_at IS NOT NULL
+        AND start_at <= ?
+    `)
+    .all(nowSec)
+}
+
 // Distinct types trong 1 group + builtin → suggestions cho combobox
 function listTypesForGroup(guildId, groupId) {
   const isNull = groupId === null || groupId === undefined
@@ -225,4 +283,6 @@ module.exports = {
   deleteEvent,
   reorderEvents,
   listTypesForGroup,
+  markAnnouncementSent,
+  getDueEventAnnouncements,
 }

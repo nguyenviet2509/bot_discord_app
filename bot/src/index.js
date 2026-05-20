@@ -4,6 +4,8 @@ const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord
 const path = require('path')
 const fs = require('fs')
 const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction, getDueScheduledMessages, markScheduledMessageSent } = require('../../shared/db')
+const eventsDb = require('../../shared/db-events')
+const { sendEventAnnouncement } = require('../../shared/send-event-announcement')
 const { scanSilentMembers } = require('../../shared/scan-silent-members')
 const { buildPayload } = require('../../shared/build-scheduled-payload')
 const { buildLeaderboardText, mergeContentWithLeaderboard } = require('../../shared/build-leaderboard-text')
@@ -95,6 +97,28 @@ client.once('ready', async () => {
         console.log(`[SchedMsg] Sent id=${msg.id} → channel ${msg.channel_id}`)
       } catch (err) {
         console.error(`[SchedMsg] Failed id=${msg.id}:`, err.message)
+      }
+    }
+  }, 60_000)
+
+  // Event announcements worker: gui auto khi start_at toi
+  setInterval(async () => {
+    const nowSec = Math.floor(Date.now() / 1000)
+    let due = []
+    try { due = eventsDb.getDueEventAnnouncements(nowSec) } catch (err) {
+      console.error('[Events] getDue failed:', err.message); return
+    }
+    for (const ev of due) {
+      try {
+        const r = await sendEventAnnouncement(ev)
+        if (r.ok) {
+          eventsDb.markAnnouncementSent(ev.id, ev.guild_id)
+          console.log(`[Events] Auto-sent announcement id=${ev.id} → channel ${ev.announce_channel_id}`)
+        } else {
+          console.warn(`[Events] Auto-send id=${ev.id} fail: ${r.error}`)
+        }
+      } catch (err) {
+        console.error(`[Events] Auto-send id=${ev.id} error:`, err.message)
       }
     }
   }, 60_000)

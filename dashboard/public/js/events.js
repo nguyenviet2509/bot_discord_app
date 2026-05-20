@@ -58,6 +58,7 @@ function eventsTab() {
   return {
     loading: false,
     saving: false,
+    sending: false,
     groups: [],
     showEventModal: false,
     editingEvent: null,
@@ -256,6 +257,14 @@ function eventsTab() {
         group_id: ev.group_id === null || ev.group_id === undefined ? null : ev.group_id,
         start_at_str: unixToInputStr(ev.start_at),
         end_at_str: unixToInputStr(ev.end_at),
+        announce_channel_id: ev.announce_channel_id || '',
+        announce_content: ev.announce_content || '',
+        announce_image_url: ev.announce_image_url || '',
+        announce_use_embed: !!ev.announce_use_embed,
+        announce_embed_title: ev.announce_embed_title || '',
+        announce_embed_color: ev.announce_embed_color || '#6366f1',
+        announce_on_enable: !!ev.announce_on_enable,
+        announce_on_start: !!ev.announce_on_start,
       }
       await this.refreshTypeSuggestions(this.eventForm.group_id)
       this.showEventModal = true
@@ -282,6 +291,10 @@ function eventsTab() {
       const endAt = inputStrToUnix(f.end_at_str)
       if (startAt && endAt && endAt <= startAt) return this.flash('Kết thúc phải sau bắt đầu', false)
 
+      // Validate channel_id la snowflake
+      const cid = (f.announce_channel_id || '').trim()
+      if (cid && !/^\d{15,22}$/.test(cid)) return this.flash('Channel ID phải là chuỗi số Discord', false)
+
       const payload = {
         name,
         description: f.description || '',
@@ -290,6 +303,14 @@ function eventsTab() {
         start_at: startAt,
         end_at: endAt,
         group_id: f.group_id === null || f.group_id === '' ? null : Number(f.group_id),
+        announce_channel_id: cid || null,
+        announce_content: f.announce_content || null,
+        announce_image_url: f.announce_image_url || null,
+        announce_use_embed: !!f.announce_use_embed,
+        announce_embed_title: f.announce_embed_title || null,
+        announce_embed_color: f.announce_embed_color || null,
+        announce_on_enable: !!f.announce_on_enable,
+        announce_on_start: !!f.announce_on_start,
       }
       this.saving = true
       try {
@@ -315,6 +336,33 @@ function eventsTab() {
         this.flash(ev.status ? 'Đã bật' : 'Đã tắt')
       } catch (err) {
         this.flash('Lỗi: ' + err.message, false)
+      }
+    },
+
+    async sendNow(ev) {
+      if (!ev.announce_channel_id) return this.flash('Event chưa có channel thông báo', false)
+      if (!confirm(`Gửi tin nhắn thông báo của "${ev.name}" ngay?`)) return
+      this.sending = true
+      try {
+        await api('POST', `/api/events/${ev.id}/send-now`, { force: false })
+        this.flash('Đã gửi thông báo')
+      } catch (err) {
+        this.flash('Lỗi gửi: ' + err.message, false)
+      } finally {
+        this.sending = false
+      }
+    },
+
+    async sendTest() {
+      if (!this.editingEvent) return this.flash('Lưu event trước khi gửi thử', false)
+      this.sending = true
+      try {
+        await api('POST', `/api/events/${this.editingEvent.id}/send-now`, { force: true })
+        this.flash('Đã gửi thử')
+      } catch (err) {
+        this.flash('Lỗi gửi thử: ' + err.message, false)
+      } finally {
+        this.sending = false
       }
     },
 
@@ -351,6 +399,14 @@ function emptyEventForm() {
     group_id: null,
     start_at_str: '',
     end_at_str: '',
+    announce_channel_id: '',
+    announce_content: '',
+    announce_image_url: '',
+    announce_use_embed: false,
+    announce_embed_title: '',
+    announce_embed_color: '#6366f1',
+    announce_on_enable: false,
+    announce_on_start: false,
   }
 }
 
