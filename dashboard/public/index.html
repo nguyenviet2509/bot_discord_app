@@ -28,10 +28,10 @@
     .reward-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.09); }
     .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; transition: border-color .15s; outline: none; }
     .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
-    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; white-space: nowrap; }
     .btn-primary:hover { background: #4f46e5; }
     .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
-    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; white-space: nowrap; }
     .btn-refresh:hover:not(:disabled) { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
     .btn-refresh:disabled { opacity: .55; cursor: not-allowed; }
     .btn-refresh .spin { animation: spin 1s linear infinite; }
@@ -66,7 +66,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
         </div>
         <div>
-          <div class="text-white font-bold text-sm leading-tight">Level Bot</div>
+          <div class="text-white font-bold text-xs md:text-sm leading-tight">Level Bot</div>
           <div class="text-indigo-400 text-xs mt-0.5">Admin Dashboard</div>
         </div>
       </div>
@@ -148,8 +148,8 @@
     <div x-show="tab === 'rewards'" x-data="rewardsSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Rewards</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Phần thưởng tự động khi thành viên đạt level</p>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Rewards</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Phần thưởng tự động khi thành viên đạt level</p>
         </div>
         <div class="flex items-center gap-3">
           <button @click="load()" :disabled="loading" class="btn-refresh" title="Làm mới">
@@ -157,21 +157,21 @@
             <span x-text="loading ? 'Đang tải...' : 'Làm mới'"></span>
           </button>
           <button @click="openAdd()" class="btn-primary flex items-center gap-2 shadow-sm shadow-indigo-200">
-            <span class="text-lg leading-none font-light">+</span> Thêm reward
+            <span class="text-xs md:text-lg leading-none font-light">+</span> Thêm reward
           </button>
         </div>
       </div>
       <div class="p-4 md:p-8">
         <div x-show="toast" x-cloak
           :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
-          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
-        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Đang tải...</div>
+          class="mb-6 px-4 py-3 border rounded-xl text-xs md:text-sm font-medium" x-text="toast?.msg"></div>
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-xs md:text-sm">Đang tải...</div>
         <div x-show="!loading && rewards.length === 0" class="text-center py-24">
           <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
           </div>
           <p class="text-slate-600 font-semibold mb-1">Chưa có reward nào</p>
-          <p class="text-slate-400 text-sm mb-6">Thêm reward để thưởng cho thành viên tích cực</p>
+          <p class="text-slate-400 text-xs md:text-sm mb-6">Thêm reward để thưởng cho thành viên tích cực</p>
           <button @click="openAdd()" class="btn-primary">+ Thêm reward đầu tiên</button>
         </div>
         <div x-show="!loading && rewards.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -224,29 +224,29 @@
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="modal = false"></div>
         <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 md:p-7 z-10">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-lg font-bold text-slate-800" x-text="editId ? 'Sửa Reward' : 'Thêm Reward'"></h2>
-            <button @click="modal = false" class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-light">&times;</button>
+            <h2 class="text-xs md:text-lg font-bold text-slate-800" x-text="editId ? 'Sửa Reward' : 'Thêm Reward'"></h2>
+            <button @click="modal = false" class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 text-sm md:text-xl font-light">&times;</button>
           </div>
           <div class="space-y-4">
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Level yêu cầu</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Level yêu cầu</label>
               <input x-model.number="form.level_required" type="number" min="1" max="100" class="input-field" />
             </div>
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-2">Loại reward</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-2">Loại reward</label>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label :class="form.type==='role' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'" class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all">
                   <input x-model="form.type" type="radio" value="role" class="accent-indigo-600" />
-                  <span class="text-sm font-medium">Role</span>
+                  <span class="text-xs md:text-sm font-medium">Role</span>
                 </label>
                 <label :class="form.type==='badge' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'" class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all">
                   <input x-model="form.type" type="radio" value="badge" class="accent-indigo-600" />
-                  <span class="text-sm font-medium">Badge</span>
+                  <span class="text-xs md:text-sm font-medium">Badge</span>
                 </label>
               </div>
             </div>
             <div x-show="form.type === 'role'">
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Role Discord</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Role Discord</label>
               <select x-model="form.role_id" class="input-field">
                 <option value="">-- Chọn role --</option>
                 <template x-for="role in roles" :key="role.id">
@@ -256,18 +256,18 @@
             </div>
             <div x-show="form.type === 'badge'" class="space-y-3">
               <div>
-                <label class="text-sm font-semibold text-slate-700 block mb-1.5">Tên huy hiệu</label>
+                <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Tên huy hiệu</label>
                 <input x-model="form.badge_name" type="text" placeholder="VD: Thành viên tích cực" class="input-field" />
               </div>
               <div>
-                <label class="text-sm font-semibold text-slate-700 block mb-1.5">Upload ảnh (max 2MB)</label>
+                <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Upload ảnh (max 2MB)</label>
                 <input type="file" accept="image/*" @change="uploadImage($event)"
-                  class="w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold file:text-sm cursor-pointer" />
+                  class="w-full text-xs md:text-sm text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold file:text-sm cursor-pointer" />
                 <p x-show="uploading" class="text-indigo-500 text-xs mt-1.5">Đang upload ảnh...</p>
               </div>
               <img x-show="form.badge_url" :src="form.badge_url" class="h-20 w-20 rounded-xl object-cover border-2 border-slate-200" />
               <div>
-                <label class="text-sm font-semibold text-slate-700 block mb-1.5">Role kèm theo <span class="text-slate-400 font-normal">(tùy chọn)</span></label>
+                <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Role kèm theo <span class="text-slate-400 font-normal">(tùy chọn)</span></label>
                 <select x-model="form.role_id" @change="fetchCurrentRoleIcon()" class="input-field">
                   <option value="">-- Không gán role --</option>
                   <template x-for="role in roles" :key="role.id">
@@ -280,7 +280,7 @@
               <div x-show="form.role_id" class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 space-y-2.5">
                 <div class="flex items-start gap-3">
                   <div class="flex-1">
-                    <div class="text-sm font-semibold text-indigo-900 mb-0.5">🎖️ Icon role trên Discord</div>
+                    <div class="text-xs md:text-sm font-semibold text-indigo-900 mb-0.5">🎖️ Icon role trên Discord</div>
                     <p class="text-xs text-indigo-700 leading-snug">
                       Push 1 ảnh lên Discord làm icon của role kèm theo. Icon sẽ hiển thị cạnh tên
                       member khi họ chat. <strong>Cần Server Boost Level 2</strong> (≥7 boost) — ảnh ≤256KB.
@@ -319,16 +319,16 @@
             <label class="text-xs font-semibold text-slate-500 block mb-2">Gửi test preview level-up embed vào channel</label>
             <div class="flex gap-2">
               <input x-model="testChannelId" type="text" placeholder="Channel ID Discord"
-                class="flex-1 input-field text-sm" />
+                class="flex-1 input-field text-xs md:text-sm" />
               <button @click="sendTest()" :disabled="sending"
-                class="px-4 py-2.5 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 text-sm font-semibold transition-colors disabled:opacity-50">
+                class="px-4 py-2.5 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 text-xs md:text-sm font-semibold transition-colors disabled:opacity-50">
                 <span x-text="sending ? 'Đang gửi...' : '🚀 Gửi test'"></span>
               </button>
             </div>
             <p class="text-xs text-slate-400 mt-1">Bot sẽ gửi 1 embed mẫu vào channel để xem UI hiển thị thế nào.</p>
           </div>
           <div class="flex gap-3 mt-6">
-            <button @click="modal = false" class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-semibold transition-colors">Hủy</button>
+            <button @click="modal = false" class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 text-xs md:text-sm font-semibold transition-colors">Hủy</button>
             <button @click="save()" :disabled="saving || uploading" class="flex-1 btn-primary">
               <span x-text="saving ? 'Đang lưu...' : 'Lưu reward'"></span>
             </button>
@@ -341,7 +341,7 @@
     <div x-show="tab === 'members'" x-data="membersSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Thành viên</h1>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Thành viên</h1>
         </div>
         <div class="flex items-center gap-3">
           <button @click="load()" :disabled="loading" class="btn-refresh" title="Làm mới">
@@ -351,32 +351,32 @@
           <div class="relative">
             <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input x-model="search" @input="onSearchInput()" type="text" placeholder="Tìm tên hoặc Discord ID..."
-              class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-60 bg-slate-50" />
+              class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-60 bg-slate-50" />
           </div>
         </div>
       </div>
       <div class="p-4 md:p-8">
         <div x-show="toast" x-cloak
           :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
-          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+          class="mb-6 px-4 py-3 border rounded-xl text-xs md:text-sm font-medium" x-text="toast?.msg"></div>
         <div x-show="!loading && members.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
           <div class="card p-5">
-            <div class="text-2xl font-bold text-slate-800" x-text="members.length"></div>
-            <div class="text-sm text-slate-500 mt-1">Tổng thành viên</div>
+            <div class="text-base md:text-2xl font-bold text-slate-800" x-text="members.length"></div>
+            <div class="text-xs md:text-sm text-slate-500 mt-1">Tổng thành viên</div>
           </div>
           <div class="card p-5">
-            <div class="text-2xl font-bold text-slate-800" x-text="members.reduce((s,m)=>s+m.xp,0).toLocaleString()"></div>
-            <div class="text-sm text-slate-500 mt-1">Tổng XP</div>
+            <div class="text-base md:text-2xl font-bold text-slate-800" x-text="members.reduce((s,m)=>s+m.xp,0).toLocaleString()"></div>
+            <div class="text-xs md:text-sm text-slate-500 mt-1">Tổng XP</div>
           </div>
           <div class="card p-5">
-            <div class="text-2xl font-bold text-slate-800" x-text="members.length ? Math.max(...members.map(m=>m.level)) : 0"></div>
-            <div class="text-sm text-slate-500 mt-1">Level cao nhất</div>
+            <div class="text-base md:text-2xl font-bold text-slate-800" x-text="members.length ? Math.max(...members.map(m=>m.level)) : 0"></div>
+            <div class="text-xs md:text-sm text-slate-500 mt-1">Level cao nhất</div>
           </div>
         </div>
         <!-- Reward milestones (dynamic) -->
         <div class="card p-4 mb-6 overflow-x-auto">
           <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Mốc phần thưởng</p>
-          <div x-show="rewardMilestones.length === 0" class="text-sm text-slate-400 italic">
+          <div x-show="rewardMilestones.length === 0" class="text-xs md:text-sm text-slate-400 italic">
             Chưa có reward nào. Vào tab Rewards để tạo mốc phần thưởng.
           </div>
           <div x-show="rewardMilestones.length > 0" class="flex gap-2 flex-wrap">
@@ -389,18 +389,18 @@
             </template>
           </div>
         </div>
-        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Đang tải...</div>
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-xs md:text-sm">Đang tải...</div>
         <!-- Thanh hiển thị số mục + chọn số dòng / trang -->
         <div x-show="!loading && filtered.length > 0" class="flex items-center justify-between gap-3 mb-4 flex-wrap">
-          <div class="text-sm text-slate-500">
+          <div class="text-xs md:text-sm text-slate-500">
             Hiển thị <span class="font-bold text-slate-800" x-text="paged.length"></span>
             / <span class="font-bold text-slate-800" x-text="filtered.length"></span> thành viên
             <span x-show="search" class="ml-2 text-xs bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full font-semibold">Đang lọc</span>
           </div>
-          <label class="text-sm text-slate-500 flex items-center gap-2">
+          <label class="text-xs md:text-sm text-slate-500 flex items-center gap-2">
             Số dòng/trang
             <select x-model.number="limit" @change="onLimitChange()"
-              class="pl-2 pr-7 py-1.5 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+              class="pl-2 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs md:text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
               <option :value="10">10</option>
               <option :value="20">20</option>
               <option :value="50">50</option>
@@ -423,11 +423,11 @@
             </thead>
             <tbody>
               <template x-if="filtered.length === 0">
-                <tr><td colspan="7" class="text-center py-16 text-slate-400 text-sm">Không tìm thấy thành viên</td></tr>
+                <tr><td colspan="7" class="text-center py-16 text-slate-400 text-xs md:text-sm">Không tìm thấy thành viên</td></tr>
               </template>
               <template x-for="(m, i) in paged" :key="m.id">
                 <tr class="border-t border-slate-50 hover:bg-indigo-50/30 transition-colors">
-                  <td class="px-6 py-4 text-sm text-slate-400 font-mono" x-text="(page - 1) * limit + i + 1"></td>
+                  <td class="px-6 py-4 text-xs md:text-sm text-slate-400 font-mono" x-text="(page - 1) * limit + i + 1"></td>
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                       <div class="flex-shrink-0">
@@ -435,7 +435,7 @@
                           class="w-9 h-9 rounded-full object-cover ring-2 ring-white shadow-sm" />
                       </div>
                       <div>
-                        <div class="font-semibold text-slate-800 text-sm leading-tight" x-text="m.nickname || m.global_name || m.username || 'Unknown'"></div>
+                        <div class="font-semibold text-slate-800 text-xs md:text-sm leading-tight" x-text="m.nickname || m.global_name || m.username || 'Unknown'"></div>
                         <div class="text-xs text-slate-400 mt-0.5" x-show="m.nickname || m.global_name" x-text="m.username"></div>
                         <div class="text-xs text-slate-400 font-mono mt-0.5" x-text="m.id"></div>
                       </div>
@@ -446,9 +446,9 @@
                       Lv.<span x-text="m.level"></span>
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-sm font-semibold text-slate-700" x-text="m.xp.toLocaleString() + ' XP'"></td>
-                  <td class="px-6 py-4 text-sm font-semibold text-slate-700" x-text="(m.message_count || 0).toLocaleString()"></td>
-                  <td class="px-6 py-4 text-sm text-slate-400" x-text="timeAgo(m.last_message_at)"></td>
+                  <td class="px-6 py-4 text-xs md:text-sm font-semibold text-slate-700" x-text="m.xp.toLocaleString() + ' XP'"></td>
+                  <td class="px-6 py-4 text-xs md:text-sm font-semibold text-slate-700" x-text="(m.message_count || 0).toLocaleString()"></td>
+                  <td class="px-6 py-4 text-xs md:text-sm text-slate-400" x-text="timeAgo(m.last_message_at)"></td>
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-2">
                       <button @click="resetXp(m)"
@@ -468,23 +468,23 @@
         </div>
         <!-- Phân trang thành viên -->
         <div x-show="!loading && totalPages > 1" class="flex items-center justify-between mt-5 flex-wrap gap-3">
-          <span class="text-sm text-slate-400">
+          <span class="text-xs md:text-sm text-slate-400">
             Trang <span class="font-semibold text-slate-700" x-text="page"></span> / <span x-text="totalPages"></span>
           </span>
           <div class="flex gap-1.5 items-center">
             <button @click="prevPage()" :disabled="page <= 1"
-              class="px-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              class="px-3 py-2 text-xs md:text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               &larr; Trước
             </button>
             <template x-for="(p, idx) in pageNumbers" :key="idx">
               <button @click="typeof p === 'number' && goPage(p)" :disabled="p === '...'"
                 :class="p === page ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 hover:bg-slate-50 text-slate-600'"
-                class="min-w-[36px] px-2 py-2 text-sm font-semibold border rounded-lg transition-colors">
+                class="min-w-[36px] px-2 py-2 text-xs md:text-sm font-semibold border rounded-lg transition-colors">
                 <span x-text="p"></span>
               </button>
             </template>
             <button @click="nextPage()" :disabled="page >= totalPages"
-              class="px-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              class="px-3 py-2 text-xs md:text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               Tiếp &rarr;
             </button>
           </div>
@@ -496,24 +496,24 @@
     <div x-show="tab === 'scheduled'" x-data="scheduledMessagesSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Tin nhắn định kỳ</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Bot tự động gửi message + ảnh theo chu kỳ</p>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Tin nhắn định kỳ</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Bot tự động gửi message + ảnh theo chu kỳ</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
           <div class="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold">
             <button @click="statusFilter='all'"
               :class="statusFilter==='all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-              class="px-3 py-1.5 rounded-md transition">
+              class="px-3 py-1.5 rounded-md transition whitespace-nowrap">
               Tất cả <span class="ml-1 text-slate-400" x-text="'(' + statusCounts.all + ')'"></span>
             </button>
             <button @click="statusFilter='enabled'"
               :class="statusFilter==='enabled' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-              class="px-3 py-1.5 rounded-md transition">
+              class="px-3 py-1.5 rounded-md transition whitespace-nowrap">
               Đang bật <span class="ml-1 text-slate-400" x-text="'(' + statusCounts.enabled + ')'"></span>
             </button>
             <button @click="statusFilter='disabled'"
               :class="statusFilter==='disabled' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-              class="px-3 py-1.5 rounded-md transition">
+              class="px-3 py-1.5 rounded-md transition whitespace-nowrap">
               Đang tắt <span class="ml-1 text-slate-400" x-text="'(' + statusCounts.disabled + ')'"></span>
             </button>
           </div>
@@ -528,11 +528,11 @@
       <div class="p-4 md:p-8">
         <div x-show="toast" x-cloak
           :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
-          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
-        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Đang tải...</div>
+          class="mb-6 px-4 py-3 border rounded-xl text-xs md:text-sm font-medium" x-text="toast?.msg"></div>
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-xs md:text-sm">Đang tải...</div>
         <div x-show="!loading && messages.length === 0 && groups.length === 0" class="text-center py-24">
           <p class="text-slate-600 font-semibold mb-1">Chưa có tin nhắn định kỳ nào</p>
-          <p class="text-slate-400 text-sm mb-6">Tạo nhóm trước (vd: "Thông báo Boss"), rồi thêm tin nhắn vào nhóm</p>
+          <p class="text-slate-400 text-xs md:text-sm mb-6">Tạo nhóm trước (vd: "Thông báo Boss"), rồi thêm tin nhắn vào nhóm</p>
           <div class="flex justify-center gap-2">
             <button @click="createGroup()" class="btn-refresh">+ Tạo nhóm</button>
             <button @click="openCreate()" class="btn-primary">+ Tạo tin nhắn</button>
@@ -546,19 +546,20 @@
               @drop="onDrop($event, grp.id)"
               :class="dragOverGroup === grp.id && draggedId !== null ? 'ring-2 ring-indigo-400 ring-offset-2 rounded-xl bg-indigo-50/30' : ''"
               class="transition p-1">
-              <div class="flex items-center gap-3 mb-3 pb-2 border-b border-slate-200">
-                <h2 class="font-bold text-slate-800 text-lg" x-text="grp.name"></h2>
-                <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600" x-text="grp.items.length + ' tin'"></span>
-                <div class="flex-1"></div>
+              <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-3 pb-2 border-b border-slate-200">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                  <h2 class="font-bold text-slate-800 text-sm md:text-lg truncate" x-text="grp.name"></h2>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 whitespace-nowrap flex-shrink-0" x-text="grp.items.length + ' tin'"></span>
+                </div>
                 <template x-if="grp.id !== null">
-                  <div class="flex gap-1">
-                    <button @click="openCreate(grp.id)" class="text-xs px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold">+ Thêm tin</button>
-                    <button @click="renameGroup(grp)" class="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold">Đổi tên</button>
-                    <button @click="deleteGroup(grp)" class="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-semibold">Xóa nhóm</button>
+                  <div class="flex gap-1 flex-wrap">
+                    <button @click="openCreate(grp.id)" class="text-xs px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold whitespace-nowrap">+ Thêm tin</button>
+                    <button @click="renameGroup(grp)" class="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold whitespace-nowrap">Đổi tên</button>
+                    <button @click="deleteGroup(grp)" class="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-semibold whitespace-nowrap">Xóa nhóm</button>
                   </div>
                 </template>
               </div>
-              <div x-show="grp.items.length === 0" class="text-sm text-slate-400 italic py-4 px-2">Chưa có tin nhắn nào trong nhóm này</div>
+              <div x-show="grp.items.length === 0" class="text-xs md:text-sm text-slate-400 italic py-4 px-2">Chưa có tin nhắn nào trong nhóm này</div>
               <div x-show="grp.items.length > 0" class="space-y-3">
                 <template x-for="m in pagedItems(grp)" :key="m.id">
                   <div class="card p-5 flex items-start gap-4 cursor-move"
@@ -579,7 +580,7 @@
                         <span class="text-xs px-2 py-0.5 rounded-full" :class="m.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'" x-text="m.enabled ? 'Bật' : 'Tắt'"></span>
                         <span x-show="m.kind === 'leaderboard'" class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">🏆 Bảng xếp hạng</span>
                       </div>
-                      <p class="text-sm text-slate-600 line-clamp-2 mb-2" x-text="m.content || '(Không có text)'"></p>
+                      <p class="text-xs md:text-sm text-slate-600 line-clamp-2 mb-2" x-text="m.content || '(Không có text)'"></p>
                       <div class="text-xs text-slate-400 flex gap-4 flex-wrap">
                         <span>📍 Channel: <span class="font-mono" x-text="m.channel_id"></span></span>
                         <span x-show="!m.schedule_time">⏱ Mỗi <span x-text="m.interval_minutes"></span> phút<span x-show="m.start_time"> (mốc <span x-text="m.start_time"></span>)</span></span>
@@ -622,22 +623,22 @@
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="modal=false"></div>
         <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-5 md:p-7 z-10 max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-5">
-            <h2 class="text-lg font-bold text-slate-800" x-text="editId ? 'Sửa tin nhắn' : 'Tạo tin nhắn'"></h2>
-            <button @click="modal=false" class="text-slate-400 hover:text-slate-700 text-2xl">&times;</button>
+            <h2 class="text-xs md:text-lg font-bold text-slate-800" x-text="editId ? 'Sửa tin nhắn' : 'Tạo tin nhắn'"></h2>
+            <button @click="modal=false" class="text-slate-400 hover:text-slate-700 text-base md:text-2xl">&times;</button>
           </div>
           <div class="space-y-4">
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Tên <span class="text-slate-400 font-normal">(để ghi nhớ)</span></label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Tên <span class="text-slate-400 font-normal">(để ghi nhớ)</span></label>
               <input x-model="form.name" type="text" placeholder="VD: Meme mỗi 3 tiếng" class="input-field" />
             </div>
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Kiểu tin nhắn</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Kiểu tin nhắn</label>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <label class="flex items-center gap-2 px-3 py-2.5 border-2 rounded-xl cursor-pointer"
                   :class="form.kind === 'text' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                   <input type="radio" value="text" x-model="form.kind" @change="onKindChange()" class="accent-indigo-600" />
                   <div>
-                    <div class="text-sm font-semibold">Văn bản thường</div>
+                    <div class="text-xs md:text-sm font-semibold">Văn bản thường</div>
                     <div class="text-xs text-slate-500">Gửi nội dung tự nhập</div>
                   </div>
                 </label>
@@ -645,7 +646,7 @@
                   :class="form.kind === 'leaderboard' ? 'border-amber-500 bg-amber-50' : 'border-slate-200 bg-white'">
                   <input type="radio" value="leaderboard" x-model="form.kind" @change="onKindChange()" class="accent-amber-600" />
                   <div>
-                    <div class="text-sm font-semibold">🏆 Bảng xếp hạng XP</div>
+                    <div class="text-xs md:text-sm font-semibold">🏆 Bảng xếp hạng XP</div>
                     <div class="text-xs text-slate-500">Tự động chèn top 10</div>
                   </div>
                 </label>
@@ -658,7 +659,7 @@
               </div>
             </div>
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Nhóm</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Nhóm</label>
               <select x-model="form.group_id" class="input-field">
                 <option value="">(Chưa phân nhóm)</option>
                 <template x-for="g in groups" :key="g.id">
@@ -667,11 +668,11 @@
               </select>
             </div>
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Channel ID</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Channel ID</label>
               <input x-model="form.channel_id" type="text" placeholder="Discord channel ID" class="input-field font-mono" />
             </div>
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Nội dung text</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Nội dung text</label>
               <textarea x-ref="contentArea" x-model="form.content" rows="4" placeholder="VD: @everyone Anh em on goi ne 🎉" class="input-field"></textarea>
 
               <!-- Mention picker: chen <@USER_ID> vao content de Discord ping member -->
@@ -690,14 +691,14 @@
                 <div x-show="mentionPickerOpen" x-transition.opacity
                   class="absolute z-20 mt-2 left-0 right-0 max-w-md bg-white border border-slate-200 rounded-xl shadow-lg p-2">
                   <input x-model="mentionQuery" x-ref="mentionSearch" type="text" placeholder="Tìm theo tên hoặc nickname..."
-                    class="input-field text-sm mb-2" />
+                    class="input-field text-xs md:text-sm mb-2" />
                   <div x-show="loadingMembers" class="text-xs text-slate-500 px-2 py-3">Đang tải danh sách...</div>
                   <div x-show="!loadingMembers && filteredMentionMembers.length === 0" class="text-xs text-slate-500 px-2 py-3">Không tìm thấy thành viên</div>
                   <div class="max-h-64 overflow-y-auto">
                     <template x-for="m in filteredMentionMembers" :key="m.id">
                       <button type="button" @click="insertMention(m)"
                         class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-indigo-50 text-left">
-                        <span class="text-sm font-medium text-slate-700" x-text="m.nickname || m.global_name || m.username || m.id"></span>
+                        <span class="text-xs md:text-sm font-medium text-slate-700" x-text="m.nickname || m.global_name || m.username || m.id"></span>
                         <span class="text-xs text-slate-400" x-text="'@'+(m.username||m.id)"></span>
                       </button>
                     </template>
@@ -725,17 +726,17 @@
                 :class="form.use_embed ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.use_embed" type="checkbox" class="accent-indigo-600" />
                 <div>
-                  <div class="text-sm font-semibold">Gửi dạng Embed (dễ nhìn, có title + viền màu, tách biệt với tin nhắn khác)</div>
+                  <div class="text-xs md:text-sm font-semibold">Gửi dạng Embed (dễ nhìn, có title + viền màu, tách biệt với tin nhắn khác)</div>
                   <div class="text-xs text-slate-500">Tắt = gửi text thường</div>
                 </div>
               </label>
               <div x-show="form.use_embed" class="space-y-3 pl-2 border-l-4 border-indigo-200">
                 <div>
-                  <label class="text-sm font-semibold text-slate-700 block mb-1.5">Tiêu đề embed</label>
+                  <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Tiêu đề embed</label>
                   <input x-model="form.embed_title" type="text" placeholder="VD: ⚔️ Boss sắp xuất hiện!" class="input-field" />
                 </div>
                 <div>
-                  <label class="text-sm font-semibold text-slate-700 block mb-1.5">Màu viền embed</label>
+                  <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Màu viền embed</label>
                   <div class="flex gap-2">
                     <input x-model="form.embed_color" type="color" class="w-12 h-10 rounded-lg border border-slate-200" />
                     <input x-model="form.embed_color" type="text" class="input-field flex-1 font-mono" placeholder="#6366f1" />
@@ -744,21 +745,21 @@
               </div>
             </div>
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Ảnh kèm (tùy chọn, max 5MB)</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Ảnh kèm (tùy chọn, max 5MB)</label>
               <input type="file" accept="image/*" @change="uploadImage($event)"
-                class="w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold cursor-pointer" />
+                class="w-full text-xs md:text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold cursor-pointer" />
               <p x-show="uploading" class="text-indigo-500 text-xs mt-1">Đang upload...</p>
               <img x-show="form.image_url" :src="form.image_url" class="mt-2 max-h-32 rounded-lg border border-slate-200" />
               <button x-show="form.image_url" @click="form.image_url=''" type="button" class="text-xs text-red-500 mt-1">Xóa ảnh</button>
             </div>
             <div class="border-t border-slate-100 pt-4">
-              <label class="text-sm font-semibold text-slate-700 block mb-2">Lịch gửi</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-2">Lịch gửi</label>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
                 <label class="flex items-center gap-2 px-3 py-2.5 border-2 rounded-xl cursor-pointer"
                   :class="form.schedule_mode === 'interval' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                   <input type="radio" value="interval" x-model="form.schedule_mode" class="accent-indigo-600" />
                   <div>
-                    <div class="text-sm font-semibold">Theo chu kỳ</div>
+                    <div class="text-xs md:text-sm font-semibold">Theo chu kỳ</div>
                     <div class="text-xs text-slate-500">Mỗi N phút</div>
                   </div>
                 </label>
@@ -766,7 +767,7 @@
                   :class="form.schedule_mode === 'clock' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                   <input type="radio" value="clock" x-model="form.schedule_mode" class="accent-indigo-600" />
                   <div>
-                    <div class="text-sm font-semibold">Theo giờ cố định</div>
+                    <div class="text-xs md:text-sm font-semibold">Theo giờ cố định</div>
                     <div class="text-xs text-slate-500">Đúng HH:MM</div>
                   </div>
                 </label>
@@ -806,12 +807,12 @@
               <label class="flex items-center gap-2 px-4 py-3 border-2 rounded-xl cursor-pointer mt-3"
                 :class="form.enabled ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.enabled" type="checkbox" class="accent-emerald-600" />
-                <span class="text-sm font-medium">Bật tin nhắn</span>
+                <span class="text-xs md:text-sm font-medium">Bật tin nhắn</span>
               </label>
             </div>
           </div>
           <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
-            <button @click="modal=false" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">Hủy</button>
+            <button @click="modal=false" class="px-5 py-2.5 rounded-xl text-xs md:text-sm font-semibold text-slate-600 hover:bg-slate-100">Hủy</button>
             <button @click="save()" :disabled="saving" class="btn-primary" x-text="saving ? 'Đang lưu...' : 'Lưu'"></button>
           </div>
         </div>
@@ -822,8 +823,8 @@
     <div x-show="tab === 'analytics'" x-data="analyticsSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Analytics</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Tăng trưởng, hoạt động, top channel, inactive member</p>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Analytics</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Tăng trưởng, hoạt động, top channel, inactive member</p>
         </div>
         <button @click="load()" :disabled="loading" class="btn-refresh">
           <svg :class="loading ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
@@ -835,24 +836,24 @@
         <div class="grid grid-cols-1 md:grid-cols-2 md:grid-cols-5 gap-4">
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Tổng member</div>
-            <div class="text-2xl font-bold text-slate-800 mt-1" x-text="(summary.total_members_discord ?? summary.total_members ?? 0).toLocaleString()"></div>
+            <div class="text-base md:text-2xl font-bold text-slate-800 mt-1" x-text="(summary.total_members_discord ?? summary.total_members ?? 0).toLocaleString()"></div>
             <div class="text-xs text-slate-400 mt-1">Đã chat: <span x-text="summary.total_members || 0"></span></div>
           </div>
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Tổng message</div>
-            <div class="text-2xl font-bold text-indigo-600 mt-1" x-text="summary.total_messages?.toLocaleString() || 0"></div>
+            <div class="text-base md:text-2xl font-bold text-indigo-600 mt-1" x-text="summary.total_messages?.toLocaleString() || 0"></div>
           </div>
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Channel hoạt động</div>
-            <div class="text-2xl font-bold text-slate-800 mt-1" x-text="summary.total_channels || 0"></div>
+            <div class="text-base md:text-2xl font-bold text-slate-800 mt-1" x-text="summary.total_channels || 0"></div>
           </div>
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Join (30d)</div>
-            <div class="text-2xl font-bold text-emerald-600 mt-1" x-text="'+' + (summary.joins_30d || 0)"></div>
+            <div class="text-base md:text-2xl font-bold text-emerald-600 mt-1" x-text="'+' + (summary.joins_30d || 0)"></div>
           </div>
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Leave (30d)</div>
-            <div class="text-2xl font-bold text-rose-600 mt-1" x-text="'-' + (summary.leaves_30d || 0)"></div>
+            <div class="text-base md:text-2xl font-bold text-rose-600 mt-1" x-text="'-' + (summary.leaves_30d || 0)"></div>
           </div>
         </div>
 
@@ -860,7 +861,7 @@
         <div class="card p-6">
           <div class="flex items-center justify-between mb-4">
             <h2 class="font-bold text-slate-800">Tăng trưởng member</h2>
-            <select x-model="growthDays" @change="loadGrowth()" class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
+            <select x-model="growthDays" @change="loadGrowth()" class="text-xs md:text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
               <option value="7">7 ngày</option>
               <option value="30">30 ngày</option>
               <option value="90">90 ngày</option>
@@ -917,10 +918,10 @@
               <span x-text="loadingSilent ? 'Đang quét...' : 'Quét lại'"></span>
             </button>
           </div>
-          <div x-show="silentTotal > 0" class="mb-3 inline-flex px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm font-semibold">
+          <div x-show="silentTotal > 0" class="mb-3 inline-flex px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs md:text-sm font-semibold">
             <span x-text="silentTotal + ' member chưa chat'"></span>
           </div>
-          <div x-show="!loadingSilent && silentMembers.length === 0" class="text-sm text-slate-400 italic py-8 text-center">
+          <div x-show="!loadingSilent && silentMembers.length === 0" class="text-xs md:text-sm text-slate-400 italic py-8 text-center">
             Không có member nào chưa chat (hoặc chưa quét)
           </div>
           <div x-show="silentMembers.length > 0" class="grid grid-cols-1 md:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-96 overflow-y-auto">
@@ -929,7 +930,7 @@
                 <img x-show="m.avatar" :src="getAvatarUrl(m.id, m.avatar)" class="w-8 h-8 rounded-full flex-shrink-0" />
                 <div x-show="!m.avatar" class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" :style="`background:${avatarBgColor(m.id)}`" x-text="getInitials(m.nickname || m.global_name || m.username)"></div>
                 <div class="flex-1 min-w-0">
-                  <div class="text-sm font-semibold text-slate-800 truncate" x-text="m.nickname || m.global_name || m.username"></div>
+                  <div class="text-xs md:text-sm font-semibold text-slate-800 truncate" x-text="m.nickname || m.global_name || m.username"></div>
                   <div class="text-xs text-slate-400" x-text="'Tham gia ' + joinedAgo(m.joined_at)"></div>
                 </div>
               </div>
@@ -941,13 +942,13 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="card p-6">
             <h2 class="font-bold text-slate-800 mb-4">Top channels</h2>
-            <div x-show="topChannels.length === 0" class="text-sm text-slate-400 italic">Chưa có dữ liệu</div>
+            <div x-show="topChannels.length === 0" class="text-xs md:text-sm text-slate-400 italic">Chưa có dữ liệu</div>
             <div class="space-y-2">
               <template x-for="(c, idx) in topChannels" :key="c.channel_id">
                 <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
                   <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center" x-text="idx + 1"></div>
                   <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-slate-800 text-sm" x-text="'#' + (c.channel_name || c.channel_id)"></div>
+                    <div class="font-semibold text-slate-800 text-xs md:text-sm" x-text="'#' + (c.channel_name || c.channel_id)"></div>
                     <div class="text-xs text-slate-400 font-mono truncate" x-text="c.channel_id"></div>
                   </div>
                   <div class="text-right">
@@ -962,20 +963,20 @@
           <div class="card p-6">
             <div class="flex items-center justify-between mb-4">
               <h2 class="font-bold text-slate-800">Inactive members</h2>
-              <select x-model="inactiveDays" @change="loadInactive()" class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
+              <select x-model="inactiveDays" @change="loadInactive()" class="text-xs md:text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
                 <option value="3">3+ ngày</option>
                 <option value="7">7+ ngày</option>
                 <option value="14">14+ ngày</option>
                 <option value="30">30+ ngày</option>
               </select>
             </div>
-            <div x-show="inactive.length === 0" class="text-sm text-slate-400 italic">Không có member nào inactive</div>
+            <div x-show="inactive.length === 0" class="text-xs md:text-sm text-slate-400 italic">Không có member nào inactive</div>
             <div class="space-y-2 max-h-96 overflow-y-auto">
               <template x-for="m in inactive" :key="m.id">
                 <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
                   <img x-show="m.avatar" :src="getAvatarUrl(m.id, m.avatar)" class="w-8 h-8 rounded-full" />
                   <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-slate-800 text-sm truncate" x-text="m.nickname || m.global_name || m.username || m.id"></div>
+                    <div class="font-semibold text-slate-800 text-xs md:text-sm truncate" x-text="m.nickname || m.global_name || m.username || m.id"></div>
                     <div class="text-xs text-slate-400">Lv.<span x-text="m.level"></span> • <span x-text="m.xp"></span> XP</div>
                   </div>
                   <div class="text-xs text-slate-500" x-text="timeAgo(m.last_message_at)"></div>
@@ -991,8 +992,8 @@
     <div x-show="tab === 'moderation'" x-data="moderationSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 flex-wrap">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Quản lý Moderation</h1>
-          <p class="text-sm text-slate-400 mt-0.5">
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Quản lý Moderation</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">
             <span x-show="subTab==='actions'">Lịch sử kick / ban / unban / mute / unmute</span>
             <span x-show="subTab==='commands'">Thống kê sử dụng slash command</span>
           </p>
@@ -1002,7 +1003,7 @@
           <template x-if="subTab==='actions'">
             <div class="flex items-center gap-3 flex-wrap">
               <select x-model="filterType" @change="onFilterChange()"
-                class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 min-w-[140px]">
+                class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm bg-slate-50 min-w-[140px]">
                 <option value="">Tất cả</option>
                 <option value="kick">Kick</option>
                 <option value="ban">Ban</option>
@@ -1013,7 +1014,7 @@
               <div class="relative">
                 <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input x-model="search" @input="onSearchInput()" type="text" placeholder="Tìm user/lý do..."
-                  class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-60 bg-slate-50" />
+                  class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm w-60 bg-slate-50" />
               </div>
             </div>
           </template>
@@ -1021,14 +1022,14 @@
           <template x-if="subTab==='commands'">
             <div class="flex items-center gap-3 flex-wrap">
               <select x-model="cmdRange" @change="onCmdFilterChange()"
-                class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 min-w-[120px]">
+                class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm bg-slate-50 min-w-[120px]">
                 <option value="24h">24 giờ qua</option>
                 <option value="7d">7 ngày qua</option>
                 <option value="30d">30 ngày qua</option>
                 <option value="all">Tất cả</option>
               </select>
               <select x-model="cmdFilterName" @change="onCmdFilterChange()"
-                class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 min-w-[160px]">
+                class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm bg-slate-50 min-w-[160px]">
                 <option value="">Mọi lệnh</option>
                 <template x-for="c in cmdStats.top_commands" :key="c.command_name">
                   <option :value="c.command_name" x-text="'/' + c.command_name + ' (' + c.count + ')'"></option>
@@ -1037,7 +1038,7 @@
               <div class="relative">
                 <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input x-model="cmdSearch" @input="onCmdSearchInput()" type="text" placeholder="Tìm user/lệnh/option..."
-                  class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-60 bg-slate-50" />
+                  class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm w-60 bg-slate-50" />
               </div>
             </div>
           </template>
@@ -1052,19 +1053,19 @@
         <div class="flex items-center gap-2 mb-6 border-b border-slate-100 pb-3">
           <button @click="setSubTab('actions')"
             :class="subTab==='actions' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
-            class="px-4 py-2 rounded-lg text-sm font-semibold border transition">
+            class="px-4 py-2 rounded-lg text-xs md:text-sm font-semibold border transition">
             🛡️ Lịch sử Mod Action
           </button>
           <button @click="setSubTab('commands')"
             :class="subTab==='commands' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
-            class="px-4 py-2 rounded-lg text-sm font-semibold border transition">
+            class="px-4 py-2 rounded-lg text-xs md:text-sm font-semibold border transition">
             ⌨️ Sử dụng Command
           </button>
         </div>
 
         <div x-show="toast" x-cloak
           :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
-          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+          class="mb-6 px-4 py-3 border rounded-xl text-xs md:text-sm font-medium" x-text="toast?.msg"></div>
 
         <!-- ACTIONS SUB-TAB -->
         <div x-show="subTab==='actions'">
@@ -1072,34 +1073,34 @@
         <div class="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Đang bị ban</div>
-            <div class="text-2xl font-bold text-rose-600 mt-1" x-text="activeBans.length"></div>
+            <div class="text-base md:text-2xl font-bold text-rose-600 mt-1" x-text="activeBans.length"></div>
           </div>
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Tổng action</div>
-            <div class="text-2xl font-bold text-slate-800 mt-1" x-text="total.toLocaleString()"></div>
+            <div class="text-base md:text-2xl font-bold text-slate-800 mt-1" x-text="total.toLocaleString()"></div>
           </div>
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Hiển thị</div>
-            <div class="text-2xl font-bold text-indigo-600 mt-1" x-text="actions.length"></div>
+            <div class="text-base md:text-2xl font-bold text-indigo-600 mt-1" x-text="actions.length"></div>
           </div>
           <div class="card p-5">
             <div class="text-xs font-bold text-slate-400 uppercase">Trang</div>
-            <div class="text-2xl font-bold text-slate-800 mt-1" x-text="page + '/' + totalPages"></div>
+            <div class="text-base md:text-2xl font-bold text-slate-800 mt-1" x-text="page + '/' + totalPages"></div>
           </div>
         </div>
 
         <!-- Active bans (highlight) -->
         <div x-show="activeBans.length > 0" class="card p-5 mb-6">
-          <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+          <h2 class="text-xs md:text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
             <span class="text-rose-600">🔨</span> User đang bị ban
-            <span class="text-sm text-slate-400 font-normal" x-text="'(' + activeBans.length + ')'"></span>
+            <span class="text-xs md:text-sm text-slate-400 font-normal" x-text="'(' + activeBans.length + ')'"></span>
           </h2>
           <div class="space-y-2">
             <template x-for="b in activeBans" :key="b.id">
               <div class="flex items-center gap-3 px-3 py-2 rounded-lg border border-rose-100 bg-rose-50/50">
                 <img x-show="b.user_avatar" :src="b.user_avatar" class="w-9 h-9 rounded-full" />
                 <div class="flex-1 min-w-0">
-                  <div class="font-semibold text-slate-800 text-sm" x-text="b.user_tag || ('User ' + b.user_id)"></div>
+                  <div class="font-semibold text-slate-800 text-xs md:text-sm" x-text="b.user_tag || ('User ' + b.user_id)"></div>
                   <div class="text-xs text-slate-500 font-mono" x-text="b.user_id"></div>
                   <div x-show="b.reason" class="text-xs text-slate-600 mt-0.5"><span class="text-slate-400">Lý do:</span> <span x-text="b.reason"></span></div>
                 </div>
@@ -1142,15 +1143,15 @@
                   <td class="px-6 py-3">
                     <div class="flex items-center gap-2">
                       <img x-show="a.user_avatar" :src="a.user_avatar" class="w-7 h-7 rounded-full" />
-                      <div class="text-sm">
+                      <div class="text-xs md:text-sm">
                         <div class="font-semibold text-slate-800" x-text="a.user_tag || 'Unknown'"></div>
                         <div class="text-xs text-slate-400 font-mono" x-text="a.user_id"></div>
                       </div>
                     </div>
                   </td>
-                  <td class="px-6 py-3 text-sm text-slate-600" x-text="a.moderator_tag || '—'"></td>
-                  <td class="px-6 py-3 text-sm text-slate-600 max-w-xs truncate" :title="a.reason" x-text="a.reason || '—'"></td>
-                  <td class="px-6 py-3 text-sm text-slate-600">
+                  <td class="px-6 py-3 text-xs md:text-sm text-slate-600" x-text="a.moderator_tag || '—'"></td>
+                  <td class="px-6 py-3 text-xs md:text-sm text-slate-600 max-w-xs truncate" :title="a.reason" x-text="a.reason || '—'"></td>
+                  <td class="px-6 py-3 text-xs md:text-sm text-slate-600">
                     <span x-show="a.duration_ms" x-text="formatMs(a.duration_ms)"></span>
                     <span x-show="!a.duration_ms" class="text-slate-300">—</span>
                   </td>
@@ -1158,7 +1159,7 @@
                 </tr>
               </template>
               <tr x-show="!loading && actions.length === 0">
-                <td colspan="6" class="px-6 py-16 text-center text-slate-400 text-sm">Không có action nào</td>
+                <td colspan="6" class="px-6 py-16 text-center text-slate-400 text-xs md:text-sm">Không có action nào</td>
               </tr>
             </tbody>
           </table>
@@ -1166,7 +1167,7 @@
 
         <!-- Pagination -->
         <div x-show="actions.length > 0" class="flex items-center justify-between mt-4">
-          <p class="text-sm text-slate-500" x-text="'Trang ' + page + ' / ' + totalPages + ' (' + total.toLocaleString() + ' action)'"></p>
+          <p class="text-xs md:text-sm text-slate-500" x-text="'Trang ' + page + ' / ' + totalPages + ' (' + total.toLocaleString() + ' action)'"></p>
           <div class="flex gap-2">
             <button @click="prevPage()" :disabled="page<=1" class="btn-refresh">Trước</button>
             <button @click="nextPage()" :disabled="page>=totalPages" class="btn-refresh">Sau</button>
@@ -1180,35 +1181,35 @@
           <div class="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="card p-5">
               <div class="text-xs font-bold text-slate-400 uppercase">Tổng lượt dùng</div>
-              <div class="text-2xl font-bold text-indigo-600 mt-1" x-text="(cmdStats.totals?.total || 0).toLocaleString()"></div>
+              <div class="text-base md:text-2xl font-bold text-indigo-600 mt-1" x-text="(cmdStats.totals?.total || 0).toLocaleString()"></div>
               <div class="text-xs text-slate-400 mt-1" x-text="rangeLabel(cmdRange)"></div>
             </div>
             <div class="card p-5">
               <div class="text-xs font-bold text-slate-400 uppercase">User dùng lệnh</div>
-              <div class="text-2xl font-bold text-slate-800 mt-1" x-text="(cmdStats.totals?.unique_users || 0).toLocaleString()"></div>
+              <div class="text-base md:text-2xl font-bold text-slate-800 mt-1" x-text="(cmdStats.totals?.unique_users || 0).toLocaleString()"></div>
             </div>
             <div class="card p-5">
               <div class="text-xs font-bold text-slate-400 uppercase">Lệnh khác nhau</div>
-              <div class="text-2xl font-bold text-slate-800 mt-1" x-text="(cmdStats.totals?.unique_commands || 0).toLocaleString()"></div>
+              <div class="text-base md:text-2xl font-bold text-slate-800 mt-1" x-text="(cmdStats.totals?.unique_commands || 0).toLocaleString()"></div>
             </div>
             <div class="card p-5">
               <div class="text-xs font-bold text-slate-400 uppercase">Lỗi</div>
-              <div class="text-2xl font-bold text-rose-600 mt-1" x-text="(cmdStats.totals?.errors || 0).toLocaleString()"></div>
+              <div class="text-base md:text-2xl font-bold text-rose-600 mt-1" x-text="(cmdStats.totals?.errors || 0).toLocaleString()"></div>
             </div>
           </div>
 
           <!-- Top commands & top users -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
             <div class="card p-5">
-              <h2 class="text-base font-bold text-slate-800 mb-3">⌨️ Lệnh dùng nhiều nhất</h2>
-              <div x-show="!cmdStats.top_commands?.length" class="text-sm text-slate-400 py-6 text-center">Chưa có dữ liệu</div>
+              <h2 class="text-xs md:text-base font-bold text-slate-800 mb-3">⌨️ Lệnh dùng nhiều nhất</h2>
+              <div x-show="!cmdStats.top_commands?.length" class="text-xs md:text-sm text-slate-400 py-6 text-center">Chưa có dữ liệu</div>
               <div class="space-y-1.5">
                 <template x-for="(c, i) in (cmdStats.top_commands || []).slice(0, 10)" :key="c.command_name">
                   <div class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer"
                        @click="cmdFilterName = c.command_name; onCmdFilterChange()">
                     <div class="text-xs font-bold text-slate-400 w-6" x-text="'#' + (i + 1)"></div>
                     <div class="flex-1 min-w-0">
-                      <div class="font-mono text-sm font-semibold text-indigo-600 truncate" x-text="'/' + c.command_name"></div>
+                      <div class="font-mono text-xs md:text-sm font-semibold text-indigo-600 truncate" x-text="'/' + c.command_name"></div>
                       <div class="text-xs text-slate-400">
                         <span x-text="c.count + ' lượt'"></span>
                         <span x-show="c.errors > 0" class="text-rose-500"> · <span x-text="c.errors + ' lỗi'"></span></span>
@@ -1226,15 +1227,15 @@
             </div>
 
             <div class="card p-5">
-              <h2 class="text-base font-bold text-slate-800 mb-3">👤 User dùng lệnh nhiều nhất</h2>
-              <div x-show="!cmdStats.top_users?.length" class="text-sm text-slate-400 py-6 text-center">Chưa có dữ liệu</div>
+              <h2 class="text-xs md:text-base font-bold text-slate-800 mb-3">👤 User dùng lệnh nhiều nhất</h2>
+              <div x-show="!cmdStats.top_users?.length" class="text-xs md:text-sm text-slate-400 py-6 text-center">Chưa có dữ liệu</div>
               <div class="space-y-1.5">
                 <template x-for="(u, i) in (cmdStats.top_users || []).slice(0, 10)" :key="u.user_id">
                   <div class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-slate-50">
                     <div class="text-xs font-bold text-slate-400 w-6" x-text="'#' + (i + 1)"></div>
                     <img x-show="u.user_avatar" :src="u.user_avatar" class="w-7 h-7 rounded-full" />
                     <div class="flex-1 min-w-0">
-                      <div class="text-sm font-semibold text-slate-800 truncate" x-text="u.user_tag || ('User ' + u.user_id)"></div>
+                      <div class="text-xs md:text-sm font-semibold text-slate-800 truncate" x-text="u.user_tag || ('User ' + u.user_id)"></div>
                       <div class="text-xs text-slate-400">
                         <span x-text="u.count + ' lệnh'"></span>
                         <span> · <span x-text="timeAgo(u.last_used_at)"></span></span>
@@ -1250,8 +1251,8 @@
 
           <!-- Active user filter chip -->
           <div x-show="cmdFilterUser" class="mb-4 flex items-center gap-2">
-            <span class="text-sm text-slate-500">Đang lọc theo user:</span>
-            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-semibold">
+            <span class="text-xs md:text-sm text-slate-500">Đang lọc theo user:</span>
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-xs md:text-sm font-semibold">
               <span x-text="cmdFilterUserTag || cmdFilterUser"></span>
               <button @click="cmdFilterUser=''; cmdFilterUserTag=''; onCmdFilterChange()" class="text-indigo-500 hover:text-indigo-700">✕</button>
             </span>
@@ -1273,12 +1274,12 @@
                 <template x-for="row in cmdItems" :key="row.id">
                   <tr class="border-b border-slate-50 hover:bg-slate-50/50">
                     <td class="px-6 py-3">
-                      <span class="font-mono text-sm font-semibold text-indigo-600" x-text="'/' + row.command_name"></span>
+                      <span class="font-mono text-xs md:text-sm font-semibold text-indigo-600" x-text="'/' + row.command_name"></span>
                     </td>
                     <td class="px-6 py-3">
                       <div class="flex items-center gap-2">
                         <img x-show="row.user_avatar" :src="row.user_avatar" class="w-7 h-7 rounded-full" />
-                        <div class="text-sm">
+                        <div class="text-xs md:text-sm">
                           <div class="font-semibold text-slate-800" x-text="row.user_tag || 'Unknown'"></div>
                           <div class="text-xs text-slate-400 font-mono" x-text="row.user_id"></div>
                         </div>
@@ -1296,7 +1297,7 @@
                   </tr>
                 </template>
                 <tr x-show="!cmdLoading && cmdItems.length === 0">
-                  <td colspan="5" class="px-6 py-16 text-center text-slate-400 text-sm">Không có dữ liệu</td>
+                  <td colspan="5" class="px-6 py-16 text-center text-slate-400 text-xs md:text-sm">Không có dữ liệu</td>
                 </tr>
               </tbody>
             </table>
@@ -1304,7 +1305,7 @@
 
           <!-- Pagination -->
           <div x-show="cmdItems.length > 0" class="flex items-center justify-between mt-4">
-            <p class="text-sm text-slate-500" x-text="'Trang ' + cmdPage + ' / ' + cmdTotalPages + ' (' + cmdTotal.toLocaleString() + ' lượt)'"></p>
+            <p class="text-xs md:text-sm text-slate-500" x-text="'Trang ' + cmdPage + ' / ' + cmdTotalPages + ' (' + cmdTotal.toLocaleString() + ' lượt)'"></p>
             <div class="flex gap-2">
               <button @click="cmdPrev()" :disabled="cmdPage<=1" class="btn-refresh">Trước</button>
               <button @click="cmdNext()" :disabled="cmdPage>=cmdTotalPages" class="btn-refresh">Sau</button>
@@ -1318,8 +1319,8 @@
     <div x-show="tab === 'levelup'" x-data="levelUpTemplateSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Tin nhắn Level Up</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Tùy chỉnh embed thông báo khi member đạt level mới</p>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Tin nhắn Level Up</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Tùy chỉnh embed thông báo khi member đạt level mới</p>
         </div>
         <div class="flex items-center gap-3">
           <button @click="load()" :disabled="loading" class="btn-refresh">
@@ -1335,29 +1336,29 @@
       </div>
       <div class="p-4 md:p-8">
         <div class="mb-5 flex items-center gap-3 flex-wrap">
-          <label class="text-sm font-semibold text-slate-600">Channel test:</label>
+          <label class="text-xs md:text-sm font-semibold text-slate-600">Channel test:</label>
           <input x-model="testChannelId" type="text" placeholder="Discord channel ID"
-            class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white w-72 font-mono" />
+            class="px-3 py-2 border border-slate-200 rounded-lg text-xs md:text-sm bg-white w-72 font-mono" />
           <p class="text-xs text-slate-400">Bấm "Gửi thử" để gửi embed test (theo level đang preview) tới channel này.</p>
         </div>
         <div x-show="toast" x-cloak
           :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
-          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+          class="mb-6 px-4 py-3 border rounded-xl text-xs md:text-sm font-medium" x-text="toast?.msg"></div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- FORM -->
           <div class="card p-7 space-y-5">
-            <h2 class="text-base font-bold text-slate-800 pb-1">Nội dung</h2>
+            <h2 class="text-xs md:text-base font-bold text-slate-800 pb-1">Nội dung</h2>
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Tiêu đề embed</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Tiêu đề embed</label>
               <input x-model="form.title" type="text" class="input-field" />
             </div>
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Mô tả (level thường)</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Mô tả (level thường)</label>
               <textarea x-model="form.description" rows="2" class="input-field"></textarea>
             </div>
             <div>
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Mô tả (milestone: 10, 20, ..., 100)</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Mô tả (milestone: 10, 20, ..., 100)</label>
               <textarea x-model="form.milestone_description" rows="3" class="input-field"></textarea>
             </div>
             <div class="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-xs text-slate-600 leading-relaxed">
@@ -1371,51 +1372,51 @@
               💡 <strong>Mô tả milestone</strong> chỉ hiển thị khi có reward đạt level. Các level không có reward dùng mô tả thường.
             </div>
 
-            <h2 class="text-base font-bold text-slate-800 pt-3 pb-1 border-t border-slate-100">Hiển thị</h2>
+            <h2 class="text-xs md:text-base font-bold text-slate-800 pt-3 pb-1 border-t border-slate-100">Hiển thị</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.show_avatar ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.show_avatar" type="checkbox" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Avatar member</span>
+                <span class="text-xs md:text-sm font-medium">Avatar member</span>
               </label>
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.mention_user ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.mention_user" type="checkbox" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Tag @member</span>
+                <span class="text-xs md:text-sm font-medium">Tag @member</span>
               </label>
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.show_tier_field ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.show_tier_field" type="checkbox" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Field Phần thưởng</span>
+                <span class="text-xs md:text-sm font-medium">Field Phần thưởng</span>
               </label>
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.show_xp_field ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.show_xp_field" type="checkbox" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Field Tổng XP</span>
+                <span class="text-xs md:text-sm font-medium">Field Tổng XP</span>
               </label>
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.show_progress_field ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.show_progress_field" type="checkbox" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Field Tiến độ</span>
+                <span class="text-xs md:text-sm font-medium">Field Tiến độ</span>
               </label>
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.show_role_reward ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.show_role_reward" type="checkbox" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Hiện role reward</span>
+                <span class="text-xs md:text-sm font-medium">Hiện role reward</span>
               </label>
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.show_badge_reward ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.show_badge_reward" type="checkbox" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Hiện badge reward</span>
+                <span class="text-xs md:text-sm font-medium">Hiện badge reward</span>
               </label>
               <label class="flex items-center gap-2.5 px-4 py-3 border-2 rounded-xl cursor-pointer transition-all"
                 :class="form.show_badge_image ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'">
                 <input x-model="form.show_badge_image" type="checkbox" class="accent-indigo-600" />
-                <span class="text-sm font-medium">Hiện ảnh badge</span>
+                <span class="text-xs md:text-sm font-medium">Hiện ảnh badge</span>
               </label>
             </div>
 
-            <h2 class="text-base font-bold text-slate-800 pt-3 pb-1 border-t border-slate-100">Màu viền embed</h2>
+            <h2 class="text-xs md:text-base font-bold text-slate-800 pt-3 pb-1 border-t border-slate-100">Màu viền embed</h2>
             <div class="flex items-center gap-3">
               <input x-model="form.custom_color" type="color" class="w-14 h-11 rounded-lg border border-slate-200 cursor-pointer" />
               <input x-model="form.custom_color" type="text" placeholder="#6366f1" class="input-field flex-1" />
@@ -1425,10 +1426,10 @@
           <!-- LIVE PREVIEW -->
           <div>
             <div class="sticky top-24">
-              <h2 class="text-base font-bold text-slate-800 mb-3">Xem trước</h2>
+              <h2 class="text-xs md:text-base font-bold text-slate-800 mb-3">Xem trước</h2>
               <div class="flex items-center gap-3 mb-4">
                 <label class="text-xs font-semibold text-slate-600">Preview level:</label>
-                <select x-model="previewLevel" class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
+                <select x-model="previewLevel" class="text-xs md:text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
                   <template x-for="opt in previewLevelOptions" :key="opt.value">
                     <option :value="opt.value" x-text="opt.label"></option>
                   </template>
@@ -1437,42 +1438,42 @@
               <!-- Discord-like preview -->
               <div class="rounded-xl bg-[#313338] p-5 shadow-xl">
                 <div x-show="form.mention_user" class="mb-1.5">
-                  <span class="text-indigo-300 bg-indigo-500/15 rounded px-1.5 py-0.5 text-sm font-medium">@User_ABC</span>
+                  <span class="text-indigo-300 bg-indigo-500/15 rounded px-1.5 py-0.5 text-xs md:text-sm font-medium">@User_ABC</span>
                 </div>
                 <div class="flex">
                   <div class="w-1 rounded-l-md flex-shrink-0" :style="`background:${previewColor}`"></div>
                   <div class="flex-1 bg-[#2b2d31] rounded-r-md p-4">
                     <div class="flex gap-4">
                       <div class="flex-1 min-w-0">
-                        <div class="text-white font-semibold text-base mb-2" x-text="renderTpl(form.title)"></div>
-                        <div class="text-[#dbdee1] text-sm whitespace-pre-line" x-text="renderTpl(previewIsMilestone ? form.milestone_description : form.description)"></div>
+                        <div class="text-white font-semibold text-xs md:text-base mb-2" x-text="renderTpl(form.title)"></div>
+                        <div class="text-[#dbdee1] text-xs md:text-sm whitespace-pre-line" x-text="renderTpl(previewIsMilestone ? form.milestone_description : form.description)"></div>
                         <div x-show="(form.show_tier_field && previewRewardName) || form.show_xp_field || form.show_progress_field" class="flex gap-4 mt-3 flex-wrap">
                           <div x-show="form.show_tier_field && previewRewardName" class="min-w-0">
                             <div class="text-white text-xs font-semibold mb-0.5">Phần thưởng</div>
-                            <div class="text-[#dbdee1] text-sm" x-text="previewRewardName"></div>
+                            <div class="text-[#dbdee1] text-xs md:text-sm" x-text="previewRewardName"></div>
                           </div>
                           <div x-show="form.show_xp_field" class="min-w-0">
                             <div class="text-white text-xs font-semibold mb-0.5">Tổng XP</div>
-                            <div class="text-[#dbdee1] text-sm" x-text="previewXp.toLocaleString() + ' XP'"></div>
+                            <div class="text-[#dbdee1] text-xs md:text-sm" x-text="previewXp.toLocaleString() + ' XP'"></div>
                           </div>
                           <div x-show="form.show_progress_field" class="min-w-0">
                             <div class="text-white text-xs font-semibold mb-0.5">Tiến độ</div>
-                            <div class="text-[#dbdee1] text-sm font-mono">[█████░░░░░] 50%</div>
+                            <div class="text-[#dbdee1] text-xs md:text-sm font-mono">[█████░░░░░] 50%</div>
                           </div>
                         </div>
                         <div x-show="form.show_role_reward && previewRoleName" class="mt-3">
                           <div class="text-white text-xs font-semibold mb-0.5">🏅 Nhận được role</div>
-                          <div class="inline-block bg-indigo-500/30 text-indigo-200 text-sm rounded px-2 py-0.5" x-text="'@' + previewRoleName"></div>
+                          <div class="inline-block bg-indigo-500/30 text-indigo-200 text-xs md:text-sm rounded px-2 py-0.5" x-text="'@' + previewRoleName"></div>
                         </div>
                         <div x-show="form.show_badge_reward && previewBadge" class="mt-3">
                           <div class="text-white text-xs font-semibold mb-0.5">🖼️ Huy hiệu mới</div>
-                          <div class="text-[#dbdee1] text-sm" x-text="previewBadge?.badge_name || 'Badge'"></div>
+                          <div class="text-[#dbdee1] text-xs md:text-sm" x-text="previewBadge?.badge_name || 'Badge'"></div>
                           <img x-show="form.show_badge_image && previewBadge?.badge_url" :src="previewBadge?.badge_url"
                             class="mt-2 max-w-full rounded-md max-h-48 object-contain" />
                         </div>
                       </div>
                       <div x-show="form.show_avatar" class="flex-shrink-0">
-                        <div class="w-20 h-20 rounded-md bg-indigo-600 flex items-center justify-center text-white font-bold text-2xl">U</div>
+                        <div class="w-20 h-20 rounded-md bg-indigo-600 flex items-center justify-center text-white font-bold text-base md:text-2xl">U</div>
                       </div>
                     </div>
                     <div class="text-[#80848e] text-xs mt-3" x-text="new Date().toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'}) + ' hôm nay'"></div>
@@ -1490,15 +1491,15 @@
     <div x-show="tab === 'settings'" x-data="settingsSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Cài đặt Bot</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Cấu hình hệ thống XP và thông báo</p>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Cài đặt Bot</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Cấu hình hệ thống XP và thông báo</p>
         </div>
       </div>
       <div class="p-4 md:p-8">
         <div x-show="toast" x-cloak
           :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
-          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
-        <div x-show="loading" class="text-slate-400 text-sm">Đang tải...</div>
+          class="mb-6 px-4 py-3 border rounded-xl text-xs md:text-sm font-medium" x-text="toast?.msg"></div>
+        <div x-show="loading" class="text-slate-400 text-xs md:text-sm">Đang tải...</div>
         <div x-show="!loading" class="max-w-xl space-y-4">
           <div class="card p-6">
             <div class="flex items-center gap-3 mb-5">
@@ -1515,7 +1516,7 @@
                 <label class="text-xs font-semibold text-slate-500 block mb-1.5">Tối thiểu</label>
                 <input x-model.number="form.xp_min" type="number" min="1" max="100" class="input-field" />
               </div>
-              <div class="text-slate-300 text-xl mt-5">&rarr;</div>
+              <div class="text-slate-300 text-sm md:text-xl mt-5">&rarr;</div>
               <div class="flex-1">
                 <label class="text-xs font-semibold text-slate-500 block mb-1.5">Tối đa</label>
                 <input x-model.number="form.xp_max" type="number" min="1" max="100" class="input-field" />
@@ -1535,7 +1536,7 @@
             <div class="flex items-center gap-3">
               <input x-model.number="form.cooldown_seconds" type="number" min="5" max="3600"
                 class="input-field" style="width:112px" />
-              <span class="text-slate-500 text-sm">giây</span>
+              <span class="text-slate-500 text-xs md:text-sm">giây</span>
               <span class="text-xs text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full">Khuyên nghị: 60s</span>
             </div>
           </div>
@@ -1586,28 +1587,28 @@
               </select>
               <button type="button" @click="reloadRoles()" :disabled="reloadingRoles"
                 title="Tải lại danh sách role từ Discord"
-                class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 rounded-xl text-sm font-semibold inline-flex items-center gap-1.5">
+                class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 rounded-xl text-xs md:text-sm font-semibold inline-flex items-center gap-1.5">
                 <svg :class="reloadingRoles ? 'spin' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
                 <span x-text="reloadingRoles ? 'Đang tải...' : 'Làm mới'"></span>
               </button>
               <button type="button" @click="addAllowedRole()" :disabled="!newRoleId"
-                class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold">
+                class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs md:text-sm font-semibold">
                 Thêm
               </button>
             </div>
-            <div x-show="form.allowed_role_ids.length === 0" class="text-sm text-slate-400 italic px-2">
+            <div x-show="form.allowed_role_ids.length === 0" class="text-xs md:text-sm text-slate-400 italic px-2">
               Chưa có role. Mọi member đều gọi được slash command.
             </div>
             <div x-show="form.allowed_role_ids.length > 0" class="flex flex-wrap gap-2">
               <template x-for="rid in form.allowed_role_ids" :key="rid">
-                <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full text-sm font-semibold">
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full text-xs md:text-sm font-semibold">
                   <span x-text="roleName(rid)"></span>
-                  <button type="button" @click="removeAllowedRole(rid)" class="text-indigo-400 hover:text-rose-500 text-base leading-none">&times;</button>
+                  <button type="button" @click="removeAllowedRole(rid)" class="text-indigo-400 hover:text-rose-500 text-xs md:text-base leading-none">&times;</button>
                 </span>
               </template>
             </div>
           </div>
-          <button @click="save()" :disabled="saving" class="btn-primary w-full py-3 text-base shadow-md shadow-indigo-200">
+          <button @click="save()" :disabled="saving" class="btn-primary w-full py-3 text-xs md:text-base shadow-md shadow-indigo-200">
             <span x-text="saving ? 'Đang lưu...' : 'Lưu cài đặt'"></span>
           </button>
         </div>
@@ -1618,8 +1619,8 @@
     <div x-show="tab === 'commands'" x-data="commandsSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 flex-wrap">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Commands</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Danh sách các slash command của bot</p>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Commands</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Danh sách các slash command của bot</p>
         </div>
         <div class="flex items-center gap-3 flex-wrap">
           <button @click="expandAll()" class="text-xs font-semibold text-slate-600 hover:text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-slate-50" title="Mở tất cả nhóm">Mở tất cả</button>
@@ -1627,7 +1628,7 @@
           <div class="relative">
             <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input x-model="search" type="text" placeholder="Tìm command, mô tả, tham số..."
-              class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-64 bg-slate-50" />
+              class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-64 bg-slate-50" />
           </div>
           <button @click="load()" :disabled="loading" class="btn-refresh" title="Làm mới">
             <svg :class="loading ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
@@ -1636,7 +1637,7 @@
         </div>
       </div>
       <div class="p-4 md:p-8">
-        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Đang tải...</div>
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-xs md:text-sm">Đang tải...</div>
         <div x-show="!loading && commands.length > 0 && groupedCommands.length === 0" class="text-center py-24">
           <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1654,7 +1655,7 @@
             <div class="p-1">
               <div @click="toggleGroup(grp.name)" class="flex items-center gap-3 mb-3 pb-2 border-b border-slate-200 cursor-pointer select-none hover:border-indigo-300 group">
                 <svg :class="isExpanded(grp.name) ? 'rotate-90' : ''" class="transition-transform text-slate-400 group-hover:text-indigo-500" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                <h2 class="font-bold text-slate-800 text-lg capitalize" x-text="grp.name"></h2>
+                <h2 class="font-bold text-slate-800 text-xs md:text-lg capitalize" x-text="grp.name"></h2>
                 <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600" x-text="grp.items.length + ' lệnh'"></span>
               </div>
               <div x-show="isExpanded(grp.name)" x-transition.opacity class="space-y-3">
@@ -1666,13 +1667,13 @@
                       </div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-3 mb-1">
-                          <span class="font-bold text-slate-800 text-base font-mono">/<span x-text="cmd.name"></span></span>
+                          <span class="font-bold text-slate-800 text-xs md:text-base font-mono">/<span x-text="cmd.name"></span></span>
                         </div>
-                        <p class="text-sm text-slate-500 mb-3" x-text="cmd.description"></p>
+                        <p class="text-xs md:text-sm text-slate-500 mb-3" x-text="cmd.description"></p>
                         <div x-show="cmd.options && cmd.options.length > 0" class="space-y-1.5">
                           <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Tham số</p>
                           <template x-for="opt in cmd.options" :key="opt.name">
-                            <div class="flex items-center gap-2 text-sm">
+                            <div class="flex items-center gap-2 text-xs md:text-sm">
                               <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-xs font-semibold" x-text="opt.name"></span>
                               <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
                                 :class="opt.required ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'"
@@ -1697,8 +1698,8 @@
     <div x-show="tab === 'servers'" x-data="serversSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Máy chủ</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Các máy chủ Discord đang sử dụng bot</p>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Máy chủ</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Các máy chủ Discord đang sử dụng bot</p>
         </div>
         <button @click="load()" :disabled="loading" class="btn-refresh" title="Làm mới">
           <svg :class="loading ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
@@ -1706,7 +1707,7 @@
         </button>
       </div>
       <div class="p-4 md:p-8">
-        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Đang tải...</div>
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-xs md:text-sm">Đang tải...</div>
         <div x-show="!loading && servers.length === 0" class="text-center py-24">
           <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
@@ -1723,7 +1724,7 @@
                 </div>
               </div>
               <div class="flex-1 min-w-0">
-                <div class="font-bold text-slate-800 text-sm truncate" x-text="s.name"></div>
+                <div class="font-bold text-slate-800 text-xs md:text-sm truncate" x-text="s.name"></div>
                 <div class="text-xs text-slate-400 font-mono mt-0.5" x-text="s.id"></div>
                 <div x-show="s.member_count" class="flex items-center gap-3 mt-2">
                   <span class="inline-flex items-center gap-1 text-xs text-slate-500">
@@ -1746,8 +1747,8 @@
     <div x-show="tab === 'links'" x-data="linksSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 flex-wrap">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Links</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Tổng hợp các đường link được gửi trong kênh chat</p>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Links</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Tổng hợp các đường link được gửi trong kênh chat</p>
         </div>
         <div class="flex items-center gap-3 flex-wrap">
           <button @click="load()" :disabled="loading" class="btn-refresh" title="Làm mới">
@@ -1755,7 +1756,7 @@
             <span x-text="loading ? 'Đang tải...' : 'Làm mới'"></span>
           </button>
           <select x-model="channelFilter" @change="onFilterChange()"
-            class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-slate-50 min-w-[160px]">
+            class="pl-3 pr-8 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-slate-50 min-w-[160px]">
             <option value="">Tất cả kênh</option>
             <template x-for="ch in channels" :key="ch.channel_id">
               <option :value="ch.channel_id" x-text="'#' + (ch.channel_name || ch.channel_id)"></option>
@@ -1764,18 +1765,18 @@
           <div class="relative">
             <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input x-model="search" @input="onSearchInput()" type="text" placeholder="Tìm link, tên miền..."
-              class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-56 bg-slate-50" />
+              class="pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-56 bg-slate-50" />
           </div>
         </div>
       </div>
       <div class="p-4 md:p-8">
         <div x-show="toast" x-cloak
           :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
-          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+          class="mb-6 px-4 py-3 border rounded-xl text-xs md:text-sm font-medium" x-text="toast?.msg"></div>
 
         <!-- Stats bar + công cụ chọn nhiều / chọn số dòng trên trang -->
         <div x-show="!loading" class="flex items-center justify-between gap-3 mb-5 flex-wrap">
-          <div class="flex items-center gap-2 text-sm text-slate-500">
+          <div class="flex items-center gap-2 text-xs md:text-sm text-slate-500">
             <span>Hiển thị</span>
             <span class="font-bold text-slate-800" x-text="links.length"></span>
             <span>/</span>
@@ -1788,14 +1789,14 @@
           </div>
           <div class="flex items-center gap-3">
             <button x-show="selected.length > 0" @click="deleteSelected()"
-              class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors">
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
               Xóa <span x-text="selected.length"></span> mục đã chọn
             </button>
-            <label class="text-sm text-slate-500 flex items-center gap-2">
+            <label class="text-xs md:text-sm text-slate-500 flex items-center gap-2">
               Số dòng/trang
               <select x-model.number="limit" @change="onLimitChange()"
-                class="pl-2 pr-7 py-1.5 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                class="pl-2 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs md:text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
                 <option :value="10">10</option>
                 <option :value="20">20</option>
                 <option :value="50">50</option>
@@ -1805,14 +1806,14 @@
           </div>
         </div>
 
-        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Đang tải...</div>
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-xs md:text-sm">Đang tải...</div>
 
         <div x-show="!loading && links.length === 0" class="text-center py-24">
           <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           </div>
           <p class="text-slate-600 font-semibold mb-1" x-text="search || channelFilter ? 'Không tìm thấy link phù hợp' : 'Chưa có link nào được ghi nhận'"></p>
-          <p class="text-slate-400 text-sm">Bot sẽ tự động ghi lại link khi thành viên gửi trong chat</p>
+          <p class="text-slate-400 text-xs md:text-sm">Bot sẽ tự động ghi lại link khi thành viên gửi trong chat</p>
         </div>
 
         <div x-show="!loading && links.length > 0" class="card overflow-x-auto">
@@ -1845,7 +1846,7 @@
                       <div class="min-w-0">
                         <div class="font-semibold text-slate-700 text-xs mb-0.5" x-text="getDomain(link.url)"></div>
                         <a :href="link.url" target="_blank" rel="noopener noreferrer"
-                          class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline break-all leading-snug"
+                          class="text-xs md:text-sm text-indigo-600 hover:text-indigo-800 hover:underline break-all leading-snug"
                           x-text="truncateUrl(link.url)"></a>
                       </div>
                     </div>
@@ -1859,7 +1860,7 @@
                   <td class="px-6 py-4">
                     <span class="text-xs text-slate-500 font-mono" x-text="link.user_id"></span>
                   </td>
-                  <td class="px-6 py-4 text-sm text-slate-400" x-text="timeAgo(link.created_at)"></td>
+                  <td class="px-6 py-4 text-xs md:text-sm text-slate-400" x-text="timeAgo(link.created_at)"></td>
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-1.5 justify-end">
                       <button @click="copyUrl(link.url)" title="Sao chép link"
@@ -1884,24 +1885,24 @@
 
         <!-- Phân trang với số trang -->
         <div x-show="!loading && totalPages > 1" class="flex items-center justify-between mt-5 flex-wrap gap-3">
-          <span class="text-sm text-slate-400">
+          <span class="text-xs md:text-sm text-slate-400">
             Trang <span class="font-semibold text-slate-700" x-text="page"></span> / <span x-text="totalPages"></span>
             <span class="ml-2">(tổng <span class="font-semibold text-slate-700" x-text="total"></span> link)</span>
           </span>
           <div class="flex gap-1.5 items-center">
             <button @click="prevPage()" :disabled="page <= 1"
-              class="px-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              class="px-3 py-2 text-xs md:text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               &larr; Trước
             </button>
             <template x-for="(p, idx) in pageNumbers" :key="idx">
               <button @click="typeof p === 'number' && goPage(p)" :disabled="p === '...'"
                 :class="p === page ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 hover:bg-slate-50 text-slate-600'"
-                class="min-w-[36px] px-2 py-2 text-sm font-semibold border rounded-lg transition-colors">
+                class="min-w-[36px] px-2 py-2 text-xs md:text-sm font-semibold border rounded-lg transition-colors">
                 <span x-text="p"></span>
               </button>
             </template>
             <button @click="nextPage()" :disabled="page >= totalPages"
-              class="px-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              class="px-3 py-2 text-xs md:text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               Tiếp &rarr;
             </button>
           </div>
@@ -1913,8 +1914,8 @@
     <div x-show="tab === 'welcome'" x-data="welcomeTemplateSection">
       <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div class="pl-12 md:pl-0">
-          <h1 class="text-xl font-bold text-slate-800">Tin nhắn chào mừng</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Bot tự động tag và chào thành viên mới ở "Channel auto-reply khi lên cấp"</p>
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">Tin nhắn chào mừng</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Bot tự động tag và chào thành viên mới ở "Channel auto-reply khi lên cấp"</p>
         </div>
         <div class="flex items-center gap-3">
           <button @click="load()" :disabled="loading" class="btn-refresh" title="Làm mới">
@@ -1929,7 +1930,7 @@
       <div class="p-4 md:p-8">
         <div x-show="toast" x-cloak
           :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
-          class="mb-6 px-4 py-3 border rounded-xl text-sm font-medium" x-text="toast?.msg"></div>
+          class="mb-6 px-4 py-3 border rounded-xl text-xs md:text-sm font-medium" x-text="toast?.msg"></div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- FORM -->
@@ -1938,13 +1939,13 @@
 
             <label class="flex items-center gap-2.5 mb-5 cursor-pointer select-none">
               <input type="checkbox" x-model="form.enabled" class="w-4 h-4 accent-indigo-600">
-              <span class="text-sm font-semibold text-slate-700">Bật tin nhắn chào mừng</span>
+              <span class="text-xs md:text-sm font-semibold text-slate-700">Bật tin nhắn chào mừng</span>
             </label>
 
             <div class="mb-4">
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Nội dung tin nhắn</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Nội dung tin nhắn</label>
               <textarea x-model="form.message" rows="6" maxlength="1800"
-                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-y"
+                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-y"
                 placeholder="Chào mừng {user}..."></textarea>
               <div class="flex items-center justify-between mt-2">
                 <div class="flex flex-wrap gap-1.5">
@@ -1960,9 +1961,9 @@
             </div>
 
             <div class="mb-4">
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Ảnh đính kèm (tuỳ chọn)</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Ảnh đính kèm (tuỳ chọn)</label>
               <template x-if="!form.image_url">
-                <label class="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-xl text-sm text-slate-500 hover:border-indigo-400 hover:text-indigo-600 cursor-pointer transition">
+                <label class="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-xl text-xs md:text-sm text-slate-500 hover:border-indigo-400 hover:text-indigo-600 cursor-pointer transition">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   <span x-text="uploading ? 'Đang upload...' : 'Chọn ảnh (JPEG/PNG/GIF/WEBP, ≤5MB)'"></span>
                   <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" @change="uploadImage($event)" :disabled="uploading">
@@ -1985,12 +1986,12 @@
             </div>
 
             <div class="mt-5 pt-5 border-t border-slate-100">
-              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Gửi tin nhắn test</label>
+              <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Gửi tin nhắn test</label>
               <div class="flex gap-2">
                 <input type="text" x-model="testChannelId" placeholder="Channel ID (mặc định: kênh auto-reply)"
-                  class="flex-1 px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                  class="flex-1 px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
                 <button @click="sendTest()" :disabled="sending"
-                  class="px-4 py-2.5 bg-slate-800 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 disabled:opacity-50">
+                  class="px-4 py-2.5 bg-slate-800 text-white text-xs md:text-sm font-semibold rounded-xl hover:bg-slate-700 disabled:opacity-50">
                   <span x-text="sending ? 'Đang gửi...' : 'Gửi test'"></span>
                 </button>
               </div>
@@ -2009,7 +2010,7 @@
                     <span class="px-1.5 py-0.5 text-[10px] font-bold rounded" style="background:#5865f2;color:#fff">APP</span>
                     <span class="text-xs" style="color:#949ba4">hôm nay 14:14</span>
                   </div>
-                  <div class="text-sm mt-0.5" style="color:#dbdee1;line-height:1.5" x-html="previewHtml"></div>
+                  <div class="text-xs md:text-sm mt-0.5" style="color:#dbdee1;line-height:1.5" x-html="previewHtml"></div>
                   <template x-if="form.image_url">
                     <img :src="form.image_url" alt="preview" class="mt-2 max-h-72 rounded-lg" style="border:1px solid #1e1f22">
                   </template>

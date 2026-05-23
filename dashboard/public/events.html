@@ -16,14 +16,14 @@
     .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
     .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; transition: border-color .15s; outline: none; }
     .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
-    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s;  white-space: nowrap;}
     .btn-primary:hover { background: #4f46e5; }
     .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
-    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s;  white-space: nowrap;}
     .btn-refresh:hover:not(:disabled) { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
-    .btn-soft-primary { background: #eef2ff; color: #4338ca; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; }
+    .btn-soft-primary { background: #eef2ff; color: #4338ca; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
     .btn-soft-primary:hover { background: #e0e7ff; }
-    .btn-soft-danger { background: #fef2f2; color: #b91c1c; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; }
+    .btn-soft-danger { background: #fef2f2; color: #b91c1c; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
     .btn-soft-danger:hover { background: #fee2e2; }
     .field-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
@@ -31,7 +31,11 @@
     .badge-on { background: #d1fae5; color: #065f46; }
     .badge-off { background: #e2e8f0; color: #475569; }
     .group-card { background: white; border-radius: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.04); border: 1px solid #e2e8f0; }
-    .group-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f1f5f9; cursor: default; }
+    .group-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f1f5f9; cursor: default; flex-wrap: wrap; }
+    @media (max-width: 767px) {
+      .group-header { flex-direction: column; align-items: stretch; gap: 8px; }
+      .group-header > .flex.items-center.gap-2 { justify-content: flex-start; flex-wrap: wrap; }
+    }
     .group-drag-handle { color: #94a3b8; cursor: grab; padding: 4px; user-select: none; }
     .group-drag-handle:active { cursor: grabbing; }
     .event-card { background: #f8fafc; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: grab; border: 1px solid transparent; transition: border-color .12s; }
@@ -51,13 +55,13 @@
 </head>
 <body class="min-h-screen" x-data="eventsTab()" x-init="init()">
 
-<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex items-center justify-between">
-  <div>
-    <h1 class="text-xl font-bold text-slate-800">Quản lý Events</h1>
-    <p class="text-sm text-slate-400 mt-0.5">Tổ chức custom events theo nhóm, kéo thả để sắp xếp</p>
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="pl-12 md:pl-0">
+    <h1 class="text-sm md:text-xl font-bold text-slate-800">Quản lý Events</h1>
+    <p class="text-xs md:text-sm text-slate-400 mt-0.5">Tổ chức custom events theo nhóm, kéo thả để sắp xếp</p>
   </div>
   <div class="flex items-center gap-3">
-    <span x-text="saveStatus" :class="saveStatusClass" class="text-sm"></span>
+    <span x-text="saveStatus" :class="saveStatusClass" class="text-xs md:text-sm"></span>
     <button @click="loadAll()" :disabled="loading" class="btn-refresh">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       Làm mới
@@ -83,7 +87,7 @@
         <div class="group-header">
           <span class="group-drag-handle" x-show="group.id !== null" title="Kéo để sắp xếp nhóm">⋮⋮</span>
           <div class="flex-1 flex items-center gap-3 min-w-0">
-            <span class="text-base font-bold text-slate-800 truncate" x-text="group.name"></span>
+            <span class="text-xs md:text-base font-bold text-slate-800 truncate" x-text="group.name"></span>
             <span class="text-xs text-slate-400" x-text="`(${group.total} event)`"></span>
           </div>
           <div class="flex items-center gap-2">
@@ -102,7 +106,7 @@
             <div class="event-card" :data-event-id="ev.id">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-semibold text-sm text-slate-800 truncate" x-text="ev.name"></span>
+                  <span class="font-semibold text-xs md:text-sm text-slate-800 truncate" x-text="ev.name"></span>
                   <span class="badge badge-type" x-text="ev.type"></span>
                   <span class="badge" :class="ev.status ? 'badge-on' : 'badge-off'" x-text="ev.status ? 'Đang bật' : 'Tắt'"></span>
                 </div>
@@ -143,7 +147,7 @@
 <!-- Modal: Event form -->
 <div class="modal-backdrop" x-show="showEventModal" x-cloak @click.self="showEventModal = false">
   <div class="modal">
-    <h2 class="text-lg font-bold text-slate-800 mb-4" x-text="editingEvent ? 'Sửa event' : 'Tạo event mới'"></h2>
+    <h2 class="text-xs md:text-lg font-bold text-slate-800 mb-4" x-text="editingEvent ? 'Sửa event' : 'Tạo event mới'"></h2>
     <div class="space-y-4">
       <div>
         <label class="field-label">Tên event <span class="text-red-500">*</span></label>
@@ -186,12 +190,12 @@
       </div>
       <label class="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" x-model="eventForm.status" class="w-4 h-4" />
-        <span class="text-sm text-slate-700">Bật event ngay khi lưu</span>
+        <span class="text-xs md:text-sm text-slate-700">Bật event ngay khi lưu</span>
       </label>
 
       <!-- Announcement config -->
       <div class="border-t border-slate-200 pt-4 mt-4">
-        <h3 class="text-sm font-bold text-slate-800 mb-3">Tin nhắn thông báo</h3>
+        <h3 class="text-xs md:text-sm font-bold text-slate-800 mb-3">Tin nhắn thông báo</h3>
         <div class="space-y-3">
           <div>
             <label class="field-label">Channel gửi (Discord Channel ID)</label>
@@ -220,7 +224,7 @@
           </div>
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" x-model="eventForm.announce_use_embed" class="w-4 h-4" />
-            <span class="text-sm text-slate-700">Dùng Embed (đẹp hơn, có title/màu)</span>
+            <span class="text-xs md:text-sm text-slate-700">Dùng Embed (đẹp hơn, có title/màu)</span>
           </label>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3" x-show="eventForm.announce_use_embed">
             <div>
@@ -235,11 +239,11 @@
           <div class="space-y-2">
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" x-model="eventForm.announce_on_enable" class="w-4 h-4" />
-              <span class="text-sm text-slate-700">Tự gửi khi bật (toggle Tắt → Bật)</span>
+              <span class="text-xs md:text-sm text-slate-700">Tự gửi khi bật (toggle Tắt → Bật)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" x-model="eventForm.announce_on_start" class="w-4 h-4" />
-              <span class="text-sm text-slate-700">Tự gửi khi đến thời điểm bắt đầu (start_at)</span>
+              <span class="text-xs md:text-sm text-slate-700">Tự gửi khi đến thời điểm bắt đầu (start_at)</span>
             </label>
           </div>
           <div class="flex items-center gap-2 pt-2" x-show="editingEvent">

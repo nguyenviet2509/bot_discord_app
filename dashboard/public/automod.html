@@ -13,10 +13,10 @@
     .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
     .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; transition: border-color .15s; outline: none; }
     .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
-    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s;  white-space: nowrap;}
     .btn-primary:hover { background: #4f46e5; }
     .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
-    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s;  white-space: nowrap;}
     .btn-refresh:hover:not(:disabled) { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
     .btn-danger-soft { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1.5px solid #fecaca; border-radius: 10px; font-size: 13px; font-weight: 500; color: #b91c1c; background: white; cursor: pointer; transition: all .15s; }
     .btn-danger-soft:hover { background: #fef2f2; }
@@ -45,13 +45,13 @@
 <body class="bg-slate-100 min-h-screen">
 
 <!-- Sticky header -->
-<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex items-center justify-between">
-  <div>
-    <h1 class="text-xl font-bold text-slate-800">Auto-Mod</h1>
-    <p class="text-sm text-slate-400 mt-0.5">Tự động xử phạt spam, link mời, từ cấm, mass-mention, lặp tin theo ladder warn → mute → kick</p>
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="pl-12 md:pl-0">
+    <h1 class="text-sm md:text-xl font-bold text-slate-800">Auto-Mod</h1>
+    <p class="text-xs md:text-sm text-slate-400 mt-0.5">Tự động xử phạt spam, link mời, từ cấm, mass-mention, lặp tin theo ladder warn → mute → kick</p>
   </div>
   <div class="flex items-center gap-3">
-    <span id="saveStatus" class="text-sm"></span>
+    <span id="saveStatus" class="text-xs md:text-sm"></span>
     <button id="reloadBtn" class="btn-refresh">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
       <span>Làm mới</span>
@@ -62,19 +62,21 @@
 <div class="p-4 md:p-8 max-w-6xl mx-auto">
 
   <!-- Tab navigation -->
-  <div class="flex items-center gap-2 mb-6 bg-white p-2 rounded-2xl shadow-sm" id="tabs">
-    <button class="tab-btn active" data-tab="config">Quy tắc</button>
-    <button class="tab-btn" data-tab="whitelist">Whitelist</button>
-    <button class="tab-btn" data-tab="ladder">Ladder phạt</button>
-    <button class="tab-btn" data-tab="logs">Logs</button>
-    <button class="tab-btn" data-tab="stats">Thống kê</button>
+  <div class="overflow-x-auto mb-6 -mx-4 md:mx-0 px-4 md:px-0">
+    <div class="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm w-max md:w-auto" id="tabs">
+      <button class="tab-btn whitespace-nowrap active" data-tab="config">Quy tắc</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="whitelist">Whitelist</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="ladder">Ladder phạt</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="logs">Logs</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="stats">Thống kê</button>
+    </div>
   </div>
 
   <!-- TAB: Rules -->
   <div class="tab-pane" id="tab-config">
     <div class="card p-7">
-      <h2 class="text-base font-bold text-slate-800 mb-2">Bật/tắt và cấu hình từng quy tắc</h2>
-      <p class="text-sm text-slate-400 mb-5">Bật quy tắc nào sẽ áp dụng cho server. Channel/role trong Whitelist không bị check.</p>
+      <h2 class="text-xs md:text-base font-bold text-slate-800 mb-2">Bật/tắt và cấu hình từng quy tắc</h2>
+      <p class="text-xs md:text-sm text-slate-400 mb-5">Bật quy tắc nào sẽ áp dụng cho server. Channel/role trong Whitelist không bị check.</p>
       <div id="rulesList" class="space-y-4"></div>
     </div>
   </div>
@@ -83,7 +85,7 @@
   <div class="tab-pane hidden" id="tab-whitelist">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
       <div class="card p-7">
-        <h2 class="text-base font-bold text-slate-800 mb-3">Channel được miễn check</h2>
+        <h2 class="text-xs md:text-base font-bold text-slate-800 mb-3">Channel được miễn check</h2>
         <div class="flex gap-2 mb-4">
           <select id="channelPick" class="input-field flex-1"></select>
           <button class="btn-primary" onclick="addWl('channel')">+ Thêm</button>
@@ -91,7 +93,7 @@
         <div id="wlChannels" class="min-h-[40px]"></div>
       </div>
       <div class="card p-7">
-        <h2 class="text-base font-bold text-slate-800 mb-3">Role được miễn check</h2>
+        <h2 class="text-xs md:text-base font-bold text-slate-800 mb-3">Role được miễn check</h2>
         <div class="flex gap-2 mb-4">
           <select id="rolePick" class="input-field flex-1"></select>
           <button class="btn-primary" onclick="addWl('role')">+ Thêm</button>
@@ -104,13 +106,13 @@
   <!-- TAB: Ladder -->
   <div class="tab-pane hidden" id="tab-ladder">
     <div class="card p-7 max-w-2xl">
-      <h2 class="text-base font-bold text-slate-800 mb-2">Cấp độ xử phạt</h2>
-      <p class="text-sm text-slate-400 mb-5">Áp dụng tuần tự khi user lặp vi phạm. Sau khoảng <em>reset</em>, count quay về 0.</p>
+      <h2 class="text-xs md:text-base font-bold text-slate-800 mb-2">Cấp độ xử phạt</h2>
+      <p class="text-xs md:text-sm text-slate-400 mb-5">Áp dụng tuần tự khi user lặp vi phạm. Sau khoảng <em>reset</em>, count quay về 0.</p>
       <div id="ladderRows" class="space-y-3 mb-5"></div>
       <div class="flex items-center gap-3 mb-5">
-        <label class="text-sm font-semibold text-slate-700">Reset warn sau:</label>
+        <label class="text-xs md:text-sm font-semibold text-slate-700">Reset warn sau:</label>
         <input id="ladderExpiry" type="number" min="1" max="168" class="input-field" style="max-width:120px" />
-        <span class="text-sm text-slate-500">giờ</span>
+        <span class="text-xs md:text-sm text-slate-500">giờ</span>
       </div>
       <button class="btn-primary" onclick="saveLadder()">Lưu ladder</button>
     </div>
@@ -143,10 +145,10 @@
         </table>
       </div>
       <div class="flex justify-between items-center mt-5 pt-4 border-t border-slate-100">
-        <span id="logsTotal" class="text-sm text-slate-500"></span>
+        <span id="logsTotal" class="text-xs md:text-sm text-slate-500"></span>
         <div class="flex items-center gap-2">
           <button class="btn-refresh" id="prevPage">← Trước</button>
-          <span id="pageInfo" class="text-sm text-slate-600 mx-2"></span>
+          <span id="pageInfo" class="text-xs md:text-sm text-slate-600 mx-2"></span>
           <button class="btn-refresh" id="nextPage">Sau →</button>
         </div>
       </div>
@@ -157,11 +159,11 @@
   <div class="tab-pane hidden" id="tab-stats">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
       <div class="card p-7">
-        <h2 class="text-base font-bold text-slate-800 mb-4">Vi phạm theo rule (7 ngày)</h2>
+        <h2 class="text-xs md:text-base font-bold text-slate-800 mb-4">Vi phạm theo rule (7 ngày)</h2>
         <div id="statsByRule" class="space-y-3"></div>
       </div>
       <div class="card p-7">
-        <h2 class="text-base font-bold text-slate-800 mb-4">Top user vi phạm (7 ngày)</h2>
+        <h2 class="text-xs md:text-base font-bold text-slate-800 mb-4">Top user vi phạm (7 ngày)</h2>
         <div id="statsTop"></div>
       </div>
     </div>

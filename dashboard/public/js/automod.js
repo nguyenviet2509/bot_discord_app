@@ -89,20 +89,20 @@ function renderRules() {
     const cfg = _config[r.key] || { enabled: false, params: {} }
     return `
       <div class="rule-row border border-slate-200 rounded-xl p-5 bg-slate-50" data-rule="${r.key}">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-3">
-            <label class="toggle-switch">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+          <div class="flex items-start md:items-center gap-3 min-w-0 flex-1">
+            <label class="toggle-switch flex-shrink-0">
               <input class="rule-toggle" type="checkbox" ${cfg.enabled ? 'checked' : ''} />
               <span class="toggle-slider"></span>
             </label>
-            <div>
+            <div class="min-w-0">
               <div class="font-semibold text-slate-800">${escapeHtml(r.label)}</div>
               <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(r.desc)}</div>
             </div>
           </div>
-          <button class="btn-primary save-rule" style="padding:6px 14px;font-size:13px">Lưu</button>
+          <button class="btn-primary save-rule self-start md:self-auto" style="padding:6px 14px;font-size:13px">Lưu</button>
         </div>
-        <div class="rule-params flex flex-wrap gap-2 items-center text-sm text-slate-700">${renderParams(r.key, cfg.params)}</div>
+        <div class="rule-params flex flex-wrap gap-2 items-center text-xs md:text-sm text-slate-700">${renderParams(r.key, cfg.params)}</div>
       </div>`
   }).join('')
 

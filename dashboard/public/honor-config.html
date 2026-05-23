@@ -13,10 +13,10 @@
     .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
     .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; transition: border-color .15s; outline: none; }
     .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
-    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s;  white-space: nowrap;}
     .btn-primary:hover { background: #4f46e5; }
     .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
-    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s;  white-space: nowrap;}
     .btn-refresh:hover:not(:disabled) { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
     .btn-success { background: #10b981; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
     .btn-success:hover { background: #059669; }
@@ -58,13 +58,13 @@
 <body class="bg-slate-100 min-h-screen">
 
 <!-- Sticky header -->
-<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex items-center justify-between">
-  <div>
-    <h1 class="text-xl font-bold text-slate-800">Vinh Danh</h1>
-    <p class="text-sm text-slate-400 mt-0.5">Quản lý emoji huy chương, banner và preview thông báo vinh danh Top 3 / Team</p>
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="pl-12 md:pl-0">
+    <h1 class="text-sm md:text-xl font-bold text-slate-800">Vinh Danh</h1>
+    <p class="text-xs md:text-sm text-slate-400 mt-0.5">Quản lý emoji huy chương, banner và preview thông báo vinh danh Top 3 / Team</p>
   </div>
   <div class="flex items-center gap-3">
-    <span id="saveStatus" class="text-sm"></span>
+    <span id="saveStatus" class="text-xs md:text-sm"></span>
     <button id="saveBtn" class="btn-primary">Lưu cấu hình</button>
   </div>
 </div>
@@ -77,16 +77,16 @@
       ℹ️ Quyền sử dụng <code class="bg-white px-1.5 py-0.5 rounded">/vinhdanh</code> dùng chung với cấu hình <strong>"Quyền dùng slash command"</strong> trong tab Cấu hình.
     </div>
 
-    <h2 class="text-base font-bold text-slate-800 mb-2">Channel mặc định</h2>
-    <p class="text-sm text-slate-400 mb-3">Channel được đề xuất khi user không chọn channel cụ thể.</p>
+    <h2 class="text-xs md:text-base font-bold text-slate-800 mb-2">Channel mặc định</h2>
+    <p class="text-xs md:text-sm text-slate-400 mb-3">Channel được đề xuất khi user không chọn channel cụ thể.</p>
     <select id="channelSelect" class="input-field" style="max-width:400px">
       <option value="">— Không chọn (để user tự chọn) —</option>
     </select>
 
     <hr class="my-6 border-slate-100" />
 
-    <h2 class="text-base font-bold text-slate-800 mb-2">🏅 Tuỳ chỉnh emoji huy chương (Top 3)</h2>
-    <p class="text-sm text-slate-400 mb-4">
+    <h2 class="text-xs md:text-base font-bold text-slate-800 mb-2">🏅 Tuỳ chỉnh emoji huy chương (Top 3)</h2>
+    <p class="text-xs md:text-sm text-slate-400 mb-4">
       Upload ảnh để bot tự đăng ký thành <strong>Application Emoji</strong> trên Discord (không cần tạo thủ công).<br/>
       File PNG/JPG/GIF/WEBP, ≤ 256KB, khuyên dùng 128×128. Bỏ trống = dùng mặc định 🥇🥈🥉.
     </p>
@@ -122,13 +122,13 @@
         <input type="hidden" id="bronzeEmoji" />
       </div>
     </div>
-    <div id="emojiUploadStatus" class="text-sm mt-3"></div>
+    <div id="emojiUploadStatus" class="text-xs md:text-sm mt-3"></div>
   </div>
 
   <!-- Preview -->
   <div class="card p-7">
-    <h2 class="text-base font-bold text-slate-800 mb-2">🔍 Xem trước embed</h2>
-    <p class="text-sm text-slate-400 mb-5">Nhập dữ liệu mẫu để xem embed trông thế nào trước khi gửi thật.</p>
+    <h2 class="text-xs md:text-base font-bold text-slate-800 mb-2">🔍 Xem trước embed</h2>
+    <p class="text-xs md:text-sm text-slate-400 mb-5">Nhập dữ liệu mẫu để xem embed trông thế nào trước khi gửi thật.</p>
 
     <div class="mb-5">
       <label class="field-label">Loại vinh danh</label>
@@ -185,7 +185,7 @@
         <div class="flex gap-2 items-center flex-wrap">
           <input type="file" id="pBannerFile" class="file-input" accept="image/*" style="max-width:360px" />
           <button id="pBannerUpload" type="button" class="btn-soft-primary">Upload</button>
-          <span id="pBannerStatus" class="text-sm"></span>
+          <span id="pBannerStatus" class="text-xs md:text-sm"></span>
         </div>
         <input type="hidden" id="pBanner" value="" />
         <div id="pBannerPreview" class="mt-3"></div>
@@ -215,7 +215,7 @@
         <div class="flex gap-2 items-center flex-wrap">
           <input type="file" id="tBannerFile" class="file-input" accept="image/*" style="max-width:360px" />
           <button id="tBannerUpload" type="button" class="btn-soft-primary">Upload</button>
-          <span id="tBannerStatus" class="text-sm"></span>
+          <span id="tBannerStatus" class="text-xs md:text-sm"></span>
         </div>
         <input type="hidden" id="tBanner" value="" />
         <div id="tBannerPreview" class="mt-3"></div>
@@ -231,7 +231,7 @@
         </select>
       </div>
       <button id="sendTestBtn" class="btn-success">📤 Gửi vinh danh</button>
-      <span id="sendStatus" class="text-sm"></span>
+      <span id="sendStatus" class="text-xs md:text-sm"></span>
     </div>
 
     <div id="previewBox" class="preview-pane">
@@ -241,12 +241,12 @@
 
   <!-- History -->
   <div class="card p-7">
-    <h2 class="text-base font-bold text-slate-800 mb-4">📜 Lịch sử vinh danh gần đây</h2>
+    <h2 class="text-xs md:text-base font-bold text-slate-800 mb-4">📜 Lịch sử vinh danh gần đây</h2>
     <div class="flex items-center gap-1 mb-4 bg-slate-100 p-1 rounded-xl w-fit" id="historyTabs">
       <a class="tab-link active" data-tab="top3" href="#">👤 Cá nhân</a>
       <a class="tab-link" data-tab="team" href="#">👥 Team</a>
     </div>
-    <div id="historyBox"><em class="text-sm text-slate-400">Đang tải...</em></div>
+    <div id="historyBox"><em class="text-xs md:text-sm text-slate-400">Đang tải...</em></div>
   </div>
 
 </div>

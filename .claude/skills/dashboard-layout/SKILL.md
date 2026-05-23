@@ -255,6 +255,55 @@ Hoặc: `<div class="overflow-x-auto"><table>...</table></div>`.
 ```
 `100dvh` fallback cho iOS Safari URL bar quirk.
 
+### Standalone HTML title MUST có `pl-12 md:pl-0`
+Iframe pages KHÔNG tách biệt khỏi hamburger button (hamburger nằm trên parent index.html, đè lên top-left iframe). Title block trong standalone HTML cũng cần:
+```html
+<div class="pl-12 md:pl-0">
+  <h1 class="text-xl font-bold ...">Tên trang</h1>
+</div>
+```
+
+### Tab strip / filter chip overflow
+Khi nhiều tab text dài → mobile bị tràn hoặc text vỡ vertical. Pattern:
+```html
+<div class="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+  <div class="flex items-center gap-2 ... w-max md:w-auto">
+    <button class="tab-btn whitespace-nowrap">...</button>
+  </div>
+</div>
+```
+`whitespace-nowrap` MUST có trên mọi button text mobile (ưu tiên thêm vào CSS class chung).
+
+### Button text white-space
+Class `.btn-primary`, `.btn-refresh`, `.btn-soft-primary`, `.btn-soft-danger` đều phải có `white-space: nowrap` trong CSS để tránh text vỡ dọc khi container hẹp.
+
+### Group action buttons stack mobile
+Header card có title + action buttons → mobile stack vertical:
+```html
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-3 mb-3">
+  <div class="flex items-center gap-3 min-w-0 flex-1">
+    <h2 class="font-bold truncate">Title</h2>
+    <span class="badge whitespace-nowrap flex-shrink-0">badge</span>
+  </div>
+  <div class="flex gap-1 flex-wrap">
+    <button class="whitespace-nowrap">...</button>
+  </div>
+</div>
+```
+
+### Font-size 2-step mobile scale
+Áp dụng `mobile_smaller md:original` cho mọi text class:
+| Desktop | Mobile |
+|---|---|
+| text-3xl | text-lg |
+| text-2xl | text-base |
+| text-xl | text-sm |
+| text-lg | text-xs |
+| text-base | text-xs |
+| text-sm | text-xs |
+
+Ví dụ: `class="text-xl font-bold"` → `class="text-sm md:text-xl font-bold"`.
+
 ### Z-index map cố định
 | Element | z-index |
 |---|---|
