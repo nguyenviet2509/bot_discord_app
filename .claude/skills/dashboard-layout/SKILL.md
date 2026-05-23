@@ -194,6 +194,76 @@ function flashSave(text, ok = true) {
 }
 ```
 
+## Mobile Responsive (BẮT BUỘC)
+
+Breakpoint chuẩn: `< 768px` = mobile (Tailwind `md:`).
+
+### Sidebar drawer pattern (chỉ áp dụng trong `index.html` SPA)
+```html
+<body x-data="{ tab: '...', sidebarOpen: false }"
+      @keydown.escape.window="sidebarOpen=false"
+      :class="sidebarOpen && 'overflow-hidden md:overflow-auto'">
+
+  <!-- Hamburger -->
+  <button @click="sidebarOpen = true"
+          class="md:hidden fixed top-3 left-3 z-30 p-2.5 rounded-lg bg-white shadow-md border border-slate-200">
+    <svg>menu icon</svg>
+  </button>
+
+  <!-- Backdrop -->
+  <div x-show="sidebarOpen" @click="sidebarOpen = false" x-cloak
+       x-transition.opacity class="md:hidden fixed inset-0 bg-black/40 z-30"></div>
+
+  <!-- Sidebar: off-canvas mobile, fixed desktop -->
+  <aside class="sidebar-bg w-60 h-screen overflow-y-auto fixed top-0 left-0 flex flex-col z-50 transform transition-transform duration-200 -translate-x-full md:translate-x-0"
+         :class="sidebarOpen && '!translate-x-0'">
+    <!-- Nav items thêm `; sidebarOpen=false` để auto-close -->
+    <div @click="tab='X'; sidebarOpen=false" ...>
+  </aside>
+
+  <main class="md:ml-60 flex-1 w-full min-w-0">
+```
+
+### Sticky header responsive
+```html
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="pl-12 md:pl-0">  <!-- chừa chỗ hamburger trong index.html -->
+    <h1 class="text-xl font-bold text-slate-800">...</h1>
+  </div>
+  <div class="flex items-center gap-3 flex-wrap">...buttons</div>
+</div>
+```
+Standalone HTML KHÔNG cần `pl-12 md:pl-0` (sidebar nằm ngoài iframe).
+
+### Content padding
+`p-4 md:p-8` thay cho `p-8`.
+
+### Form grids
+- `grid-cols-1 md:grid-cols-2` thay `grid-cols-2`
+- `grid-cols-1 sm:grid-cols-2 md:grid-cols-3` thay `grid-cols-3`
+
+### Modal padding
+`max-w-md p-5 md:p-7` thay `max-w-md p-7`.
+
+### Table overflow
+Hoặc card wrapper: `class="card overflow-x-auto"` thay `card overflow-hidden`.
+Hoặc: `<div class="overflow-x-auto"><table>...</table></div>`.
+
+### Iframe trong SPA
+```html
+<iframe ... style="height: 100vh; height: 100dvh; width: 100%; border: 0;">
+```
+`100dvh` fallback cho iOS Safari URL bar quirk.
+
+### Z-index map cố định
+| Element | z-index |
+|---|---|
+| Dropdown / popover trong content | 20 |
+| Sticky header | 10 |
+| Hamburger + backdrop | 30 |
+| Sidebar (mobile drawer) | 50 |
+| Modal | 50 |
+
 ## Color Palette (chuẩn)
 
 | Token | Hex | Dùng cho |
@@ -286,18 +356,18 @@ Khi tạo trang mới `dashboard/public/my-page.html`:
 </head>
 <body class="bg-slate-100 min-h-screen">
 
-<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
   <div>
     <h1 class="text-xl font-bold text-slate-800">[Tên trang]</h1>
     <p class="text-sm text-slate-400 mt-0.5">[Mô tả]</p>
   </div>
-  <div class="flex items-center gap-3">
+  <div class="flex items-center gap-3 flex-wrap">
     <span id="saveStatus" class="text-sm"></span>
     <button id="saveBtn" class="btn-primary">Lưu thay đổi</button>
   </div>
 </div>
 
-<div class="p-8 max-w-6xl mx-auto space-y-5">
+<div class="p-4 md:p-8 max-w-6xl mx-auto space-y-5">
   <div class="card p-7">
     <h2 class="text-base font-bold text-slate-800 mb-2">Section title</h2>
     <p class="text-sm text-slate-400 mb-5">Section description</p>
@@ -327,7 +397,7 @@ Nếu standalone, thêm iframe block ở cuối index.html:
 
 ```html
 <div x-show="tab === 'myfeature'" class="h-screen">
-  <iframe src="/my-page.html" class="w-full h-full border-0" style="height:100vh;width:100%;border:0;" loading="lazy"></iframe>
+  <iframe src="/my-page.html" class="w-full h-full border-0" style="height:100vh;height:100dvh;width:100%;border:0;" loading="lazy"></iframe>
 </div>
 ```
 
@@ -350,6 +420,14 @@ Nếu standalone, thêm iframe block ở cuối index.html:
 - [ ] Title trong sidebar (nếu thêm tab mới) + iframe block trong index.html
 - [ ] Empty state + loading state + error toast với `saveStatus`
 - [ ] Test responsive: `grid-cols-1 md:grid-cols-2` / `lg:grid-cols-3`
+- [ ] Sticky header dùng `flex-col md:flex-row` + `gap-3`
+- [ ] Title block trong index.html SPA có `pl-12 md:pl-0` (chừa hamburger)
+- [ ] Content wrapper `p-4 md:p-8`
+- [ ] Modal `p-5 md:p-7`
+- [ ] Table wrap `overflow-x-auto` (hoặc card cha)
+- [ ] Iframe `style="height: 100vh; height: 100dvh"` (iOS fallback)
+- [ ] Nav-item index.html: `@click` thêm `; sidebarOpen=false`
+- [ ] Test DevTools 375px (portrait) + 667x375 (landscape)
 - [ ] Không có Bootstrap class (`form-control`, `btn`, `d-flex`, `mb-3`, etc.)
 
 ## Anti-patterns (KHÔNG làm)
@@ -362,6 +440,12 @@ Nếu standalone, thêm iframe block ở cuối index.html:
 - ❌ Không có auth check / 401 handler trong API helper
 - ❌ Sticky header thiếu `z-10` (bị card overlay)
 - ❌ Card không có padding (dùng `p-7` mặc định)
+- ❌ Sticky header `flex items-center` cố định không có `flex-col md:flex-row` (mobile button tràn)
+- ❌ `grid-cols-2` / `grid-cols-3` không có `grid-cols-1` mobile fallback
+- ❌ Table không wrap `overflow-x-auto` (tràn ngang mobile)
+- ❌ Quên `sidebarOpen=false` trong nav-item @click (drawer không tự đóng)
+- ❌ Iframe chỉ `height: 100vh` mà không có `100dvh` fallback (iOS double-scroll)
+- ❌ Z-index dropdown `z-30` trong content (collide với hamburger/backdrop) — dùng `z-20`
 
 ## Reference files
 
