@@ -105,15 +105,32 @@ function buildProgressBar(percent, length = 10) {
 async function handleLevelUp(client, guild, member, newLevel, settings, triggerMessage = null, oldLevel = 0) {
   const rewards = db.getRewards(guild.id)
 
-  // Assign roles: type='role' OR badge có kèm role_id
-  const roleRewards = rewards.filter(r => r.role_id && r.level_required <= newLevel)
-  for (const reward of roleRewards) {
+  // Single-tier role: chỉ giữ role-reward có level_required cao nhất ≤ newLevel.
+  // Các role-reward khác trong DB (tier thấp hơn) sẽ tự bị remove.
+  const roleRewards = rewards.filter(r => r.role_id)
+  const managedRoleIds = new Set(roleRewards.map(r => r.role_id))
+
+  const eligible = roleRewards.filter(r => r.level_required <= newLevel)
+  const top = eligible.length
+    ? eligible.reduce((a, b) => (b.level_required > a.level_required ? b : a))
+    : null
+  const targetRoleId = top?.role_id || null
+
+  if (targetRoleId && !member.roles.cache.has(targetRoleId)) {
     try {
-      if (!member.roles.cache.has(reward.role_id)) {
-        await member.roles.add(reward.role_id)
-      }
+      await member.roles.add(targetRoleId)
     } catch (err) {
-      console.error(`[LevelService] Failed to assign role ${reward.role_id}:`, err.message)
+      console.error(`[LevelService] Failed to assign role ${targetRoleId}:`, err.message)
+    }
+  }
+
+  for (const rid of managedRoleIds) {
+    if (rid === targetRoleId) continue
+    if (!member.roles.cache.has(rid)) continue
+    try {
+      await member.roles.remove(rid)
+    } catch (err) {
+      console.error(`[LevelService] Failed to remove role ${rid}:`, err.message)
     }
   }
 
