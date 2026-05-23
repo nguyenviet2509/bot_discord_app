@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js')
 const db = require('../../../shared/db')
-const { totalXpToReachLevel, levelFromXp } = require('../services/level-service')
+const { totalXpToReachLevel, levelFromXp, syncLevelRoles } = require('../services/level-service')
 
 const MAX_LEVEL = 100
 
@@ -51,6 +51,17 @@ module.exports = {
       const oldInfo = existing
         ? `Lv ${existing.level} / ${existing.xp} XP`
         : '(chưa có dữ liệu)'
+
+      // Sync role-reward theo level mới (single-tier mode)
+      try {
+        const member = await interaction.guild.members.fetch(target.id).catch(() => null)
+        if (member) {
+          const rewards = db.getRewards(guildId)
+          await syncLevelRoles(member, level, rewards)
+        }
+      } catch (err) {
+        console.error('[set-level] syncLevelRoles failed:', err.message)
+      }
 
       await interaction.reply({
         content:

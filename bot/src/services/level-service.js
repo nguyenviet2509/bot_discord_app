@@ -102,15 +102,14 @@ function buildProgressBar(percent, length = 10) {
   return '█'.repeat(filled) + '░'.repeat(length - filled)
 }
 
-async function handleLevelUp(client, guild, member, newLevel, settings, triggerMessage = null, oldLevel = 0) {
-  const rewards = db.getRewards(guild.id)
-
-  // Single-tier role: chỉ giữ role-reward có level_required cao nhất ≤ newLevel.
-  // Các role-reward khác trong DB (tier thấp hơn) sẽ tự bị remove.
+// Sync role-reward theo level: chỉ giữ role-reward có level_required cao nhất ≤ level,
+// remove các role-reward khác mà member đang giữ. Dùng chung cho level-up tự nhiên & admin /set-level.
+async function syncLevelRoles(member, level, rewards) {
   const roleRewards = rewards.filter(r => r.role_id)
-  const managedRoleIds = new Set(roleRewards.map(r => r.role_id))
+  if (roleRewards.length === 0) return
 
-  const eligible = roleRewards.filter(r => r.level_required <= newLevel)
+  const managedRoleIds = new Set(roleRewards.map(r => r.role_id))
+  const eligible = roleRewards.filter(r => r.level_required <= level)
   const top = eligible.length
     ? eligible.reduce((a, b) => (b.level_required > a.level_required ? b : a))
     : null
@@ -133,6 +132,11 @@ async function handleLevelUp(client, guild, member, newLevel, settings, triggerM
       console.error(`[LevelService] Failed to remove role ${rid}:`, err.message)
     }
   }
+}
+
+async function handleLevelUp(client, guild, member, newLevel, settings, triggerMessage = null, oldLevel = 0) {
+  const rewards = db.getRewards(guild.id)
+  await syncLevelRoles(member, newLevel, rewards)
 
   // Channel thong bao level-up (config tu dashboard hoac env)
   const channelId = settings?.level_up_channel_id || process.env.LEVELUP_CHANNEL_ID
@@ -255,4 +259,5 @@ module.exports = {
   BRACKET_MSGS_PER_LEVEL,
   msgsForNextLevel,
   handleLevelUp,
+  syncLevelRoles,
 }
