@@ -51,6 +51,11 @@
     .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
     .modal { background: white; border-radius: 16px; padding: 24px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; }
     .no-drag { background: #f8fafc; }
+    @media (max-width: 767px) {
+      .btn-primary { padding: 6px 12px; font-size: 12px; border-radius: 10px; }
+      .btn-refresh { padding: 5px 10px; font-size: 12px; border-radius: 10px; gap: 6px; }
+      .btn-soft-primary, .btn-soft-danger { padding: 4px 9px; font-size: 11px; border-radius: 8px; }
+    }
   </style>
 </head>
 <body class="min-h-screen" x-data="eventsTab()" x-init="init()">

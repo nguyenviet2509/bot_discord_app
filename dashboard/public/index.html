@@ -36,6 +36,10 @@
     .btn-refresh:disabled { opacity: .55; cursor: not-allowed; }
     .btn-refresh .spin { animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 767px) {
+      .btn-primary { padding: 6px 12px; font-size: 12px; border-radius: 10px; }
+      .btn-refresh { padding: 5px 10px; font-size: 12px; border-radius: 10px; gap: 6px; }
+    }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen" x-data="{ tab: 'rewards', sidebarOpen: false }"
@@ -562,39 +566,53 @@
               <div x-show="grp.items.length === 0" class="text-xs md:text-sm text-slate-400 italic py-4 px-2">Chưa có tin nhắn nào trong nhóm này</div>
               <div x-show="grp.items.length > 0" class="space-y-3">
                 <template x-for="m in pagedItems(grp)" :key="m.id">
-                  <div class="card p-5 flex items-start gap-4 cursor-move"
+                  <div class="card p-3 md:p-5 flex flex-col md:flex-row md:items-start gap-3 md:gap-4 cursor-move"
                     draggable="true"
                     @dragstart="onDragStart($event, m)"
                     @dragend="onDragEnd()"
                     :class="draggedId === m.id ? 'opacity-40' : ''">
-                    <div class="text-slate-300 flex-shrink-0 flex items-center self-stretch" title="Kéo để chuyển nhóm">
-                      <svg width="14" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+                    <!-- Mobile: header row [thumb+title+badge] -->
+                    <div class="flex items-start gap-3 md:contents">
+                      <div class="text-slate-300 flex-shrink-0 hidden md:flex items-center self-stretch" title="Kéo để chuyển nhóm">
+                        <svg width="14" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+                      </div>
+                      <img x-show="m.image_url" :src="m.image_url" class="w-12 h-12 md:w-20 md:h-20 rounded-lg object-cover flex-shrink-0" />
+                      <div x-show="!m.image_url" class="w-12 h-12 md:w-20 md:h-20 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 md:w-7 md:h-7" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      </div>
+                      <!-- Mobile only: title + badges inline với thumb -->
+                      <div class="flex-1 min-w-0 md:hidden">
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                          <h3 class="font-bold text-slate-800 text-sm line-clamp-2" x-text="m.name || ('Tin nhắn #' + m.id)"></h3>
+                          <span class="text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap" :class="m.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'" x-text="m.enabled ? 'Bật' : 'Tắt'"></span>
+                          <span x-show="m.kind === 'leaderboard'" class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold whitespace-nowrap">🏆 BXH</span>
+                        </div>
+                      </div>
                     </div>
-                    <img x-show="m.image_url" :src="m.image_url" class="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
-                    <div x-show="!m.image_url" class="w-20 h-20 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    </div>
+                    <!-- Body -->
                     <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-2 mb-1">
+                      <!-- Desktop only: title + badges -->
+                      <div class="hidden md:flex items-center gap-2 mb-1">
                         <h3 class="font-bold text-slate-800" x-text="m.name || ('Tin nhắn #' + m.id)"></h3>
                         <span class="text-xs px-2 py-0.5 rounded-full" :class="m.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'" x-text="m.enabled ? 'Bật' : 'Tắt'"></span>
                         <span x-show="m.kind === 'leaderboard'" class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">🏆 Bảng xếp hạng</span>
                       </div>
                       <p class="text-xs md:text-sm text-slate-600 line-clamp-2 mb-2" x-text="m.content || '(Không có text)'"></p>
-                      <div class="text-xs text-slate-400 flex gap-4 flex-wrap">
-                        <span>📍 Channel: <span class="font-mono" x-text="m.channel_id"></span></span>
+                      <div class="text-[11px] md:text-xs text-slate-400 flex gap-2 md:gap-4 flex-wrap">
+                        <span class="break-all">📍 Channel: <span class="font-mono" x-text="m.channel_id"></span></span>
                         <span x-show="!m.schedule_time">⏱ Mỗi <span x-text="m.interval_minutes"></span> phút<span x-show="m.start_time"> (mốc <span x-text="m.start_time"></span>)</span></span>
                         <span x-show="m.schedule_time" class="text-indigo-600">🕒 <span x-text="(m.schedule_weekday === null || m.schedule_weekday === undefined ? 'Hằng ngày' : ['CN','T2','T3','T4','T5','T6','T7'][m.schedule_weekday]) + ' lúc ' + m.schedule_time"></span></span>
                         <span x-show="m.last_sent_at">📤 Gửi lần cuối: <span x-text="timeAgo(m.last_sent_at)"></span></span>
                         <span x-show="!m.last_sent_at" class="text-amber-600">Chưa gửi lần nào</span>
                       </div>
                     </div>
-                    <div class="flex flex-col gap-1">
-                      <button @click="sendNow(m)" :disabled="sendingId===m.id" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100" title="Gửi ngay">
+                    <!-- Actions: row mobile, col desktop -->
+                    <div class="flex flex-row md:flex-col gap-1 flex-wrap md:flex-nowrap">
+                      <button @click="sendNow(m)" :disabled="sendingId===m.id" class="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 whitespace-nowrap" title="Gửi ngay">
                         <span x-text="sendingId===m.id ? '...' : '▶ Gửi ngay'"></span>
                       </button>
-                      <button @click="openEdit(m)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Sửa</button>
-                      <button @click="remove(m)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100">Xóa</button>
+                      <button @click="openEdit(m)" class="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 whitespace-nowrap">Sửa</button>
+                      <button @click="remove(m)" class="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 whitespace-nowrap">Xóa</button>
                     </div>
                   </div>
                 </template>

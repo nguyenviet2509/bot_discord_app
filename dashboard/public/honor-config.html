@@ -53,6 +53,10 @@
     /* Legacy class shims (honor-config.js inject dynamic HTML) */
     .text-muted { color: #64748b; }
     .small { font-size: 13px; }
+    @media (max-width: 767px) {
+      .btn-primary { padding: 6px 12px; font-size: 12px; border-radius: 10px; }
+      .btn-refresh { padding: 5px 10px; font-size: 12px; border-radius: 10px; gap: 6px; }
+    }
   </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
