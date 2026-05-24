@@ -113,6 +113,17 @@ router.patch('/:id', async (req, res) => {
         dbManaged.recordUsernameChange(id)
       }
     } catch (err) {
+      const msg = err?.message || ''
+      const isDiscordRateLimit =
+        err?.status === 429 ||
+        err?.name === 'RateLimitError' ||
+        /rate.?limit|too many requests/i.test(msg)
+      if (isDiscordRateLimit) {
+        return res.status(429).json({
+          error:
+            'Discord giới hạn đổi avatar/tên cho bot (khoảng 2 lần / 10 phút). Vui lòng đợi vài phút rồi thử lại, hoặc tắt rồi bật lại bot để áp dụng ngay.',
+        })
+      }
       return res.status(429).json({ error: err.message })
     }
   }
