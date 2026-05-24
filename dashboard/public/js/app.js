@@ -1743,4 +1743,169 @@ document.addEventListener('alpine:init', () => {
     },
   }))
 
+  // ============================================================
+  // Managed Bots Section (quan ly bot phu)
+  // ============================================================
+  Alpine.data('managedBotsSection', () => ({
+    bots: [],
+    loading: false,
+    saving: false,
+    actingId: null,
+    showModal: false,
+    editing: null, // null = create, object = edit
+    toast: null,
+    form: {
+      display_name: '',
+      token: '',
+      presence_status: 'online',
+      activity_type: 'Playing',
+      activity_text: '',
+    },
+    avatarFile: null,
+
+    activityTypes: [
+      { value: 'Playing',   label: 'Đang chơi' },
+      { value: 'Watching',  label: 'Đang xem' },
+      { value: 'Listening', label: 'Đang nghe' },
+      { value: 'Competing', label: 'Đang thi đấu' },
+      { value: 'Custom',    label: 'Tuỳ chỉnh' },
+    ],
+    presenceOptions: [
+      { value: 'online',    label: '🟢 Trực tuyến' },
+      { value: 'idle',      label: '🌙 Tạm vắng' },
+      { value: 'dnd',       label: '🔴 Không làm phiền' },
+      { value: 'invisible', label: '⚫ Ẩn (offline)' },
+    ],
+
+    async init() { await this.load() },
+
+    async load() {
+      this.loading = true
+      try {
+        const data = await api('GET', '/managed-bots')
+        this.bots = Array.isArray(data) ? data : []
+      } catch (e) {
+        this.flash('Tải danh sách thất bại', false)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    openAdd() {
+      this.editing = null
+      this.form = { display_name: '', token: '', presence_status: 'online', activity_type: 'Playing', activity_text: '' }
+      this.avatarFile = null
+      this.showModal = true
+    },
+
+    openEdit(bot) {
+      this.editing = bot
+      this.form = {
+        display_name: bot.display_name,
+        token: '', // không cho đổi token; ẩn input nếu editing
+        presence_status: bot.presence_status,
+        activity_type: bot.activity_type,
+        activity_text: bot.activity_text || '',
+      }
+      this.avatarFile = null
+      this.showModal = true
+    },
+
+    closeModal() { this.showModal = false; this.editing = null },
+
+    async save() {
+      if (!this.form.display_name.trim()) return this.flash('Nhập tên hiển thị', false)
+      this.saving = true
+      try {
+        let bot
+        if (this.editing) {
+          // Update
+          if (this.editing.display_name !== this.form.display_name && !this.editing.can_change_username) {
+            return this.flash('Đợi 30 phút sau lần đổi tên trước', false)
+          }
+          bot = await api('PATCH', `/managed-bots/${this.editing.id}`, {
+            display_name: this.form.display_name,
+            presence_status: this.form.presence_status,
+            activity_type: this.form.activity_type,
+            activity_text: this.form.activity_text,
+          })
+        } else {
+          // Create
+          if (!this.form.token.trim()) return this.flash('Nhập token', false)
+          bot = await api('POST', '/managed-bots', {
+            display_name: this.form.display_name,
+            token: this.form.token,
+            presence_status: this.form.presence_status,
+            activity_type: this.form.activity_type,
+            activity_text: this.form.activity_text,
+          })
+        }
+        if (bot?.error) return this.flash(bot.error, false)
+
+        // Upload avatar (neu co)
+        if (this.avatarFile && bot?.id) {
+          const fd = new FormData()
+          fd.append('file', this.avatarFile)
+          const up = await api('POST', `/managed-bots/${bot.id}/avatar`, fd)
+          if (up?.error) this.flash('Avatar lỗi: ' + up.error, false)
+          // Trigger PATCH de apply runtime neu dang running
+          if (up?.avatar_url) {
+            await api('PATCH', `/managed-bots/${bot.id}`, { avatar_url: up.avatar_url })
+          }
+        }
+
+        this.flash(this.editing ? 'Đã cập nhật' : 'Đã thêm bot', true)
+        this.closeModal()
+        await this.load()
+      } catch (e) {
+        this.flash('Lưu thất bại: ' + (e?.message || 'lỗi'), false)
+      } finally {
+        this.saving = false
+      }
+    },
+
+    async toggle(bot) {
+      this.actingId = bot.id
+      try {
+        const isRunning = bot.status === 'running'
+        const r = await api('POST', `/managed-bots/${bot.id}/${isRunning ? 'stop' : 'start'}`)
+        if (r?.error) this.flash(r.error, false)
+        else this.flash(isRunning ? 'Đã dừng' : 'Đã khởi động', true)
+        await this.load()
+      } catch (e) {
+        this.flash('Thao tác thất bại', false)
+      } finally {
+        this.actingId = null
+      }
+    },
+
+    async remove(bot) {
+      if (!confirm(`Xoá bot "${bot.display_name}"? Bot sẽ bị stop và xoá khỏi DB.`)) return
+      this.actingId = bot.id
+      try {
+        const r = await api('DELETE', `/managed-bots/${bot.id}`)
+        if (r?.error) this.flash(r.error, false)
+        else this.flash('Đã xoá', true)
+        await this.load()
+      } finally {
+        this.actingId = null
+      }
+    },
+
+    handleFile(e) { this.avatarFile = e.target.files[0] || null },
+
+    presenceDot(s) {
+      return { online: '#22c55e', idle: '#f59e0b', dnd: '#ef4444', invisible: '#94a3b8' }[s] || '#94a3b8'
+    },
+
+    activityLabel(t) {
+      return (this.activityTypes.find(x => x.value === t) || {}).label || t
+    },
+
+    flash(msg, ok) {
+      this.toast = { msg, ok }
+      setTimeout(() => { this.toast = null }, 3000)
+    },
+  }))
+
 })

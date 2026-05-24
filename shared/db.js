@@ -325,6 +325,9 @@ function initDb() {
   // Schema cho module Quan ly Events (tach file rieng)
   require('./db-events').initEventsSchema(database)
 
+  // Schema cho module Quan ly Bot Phu (multi lite bots)
+  require('./db-managed-bots').initManagedBotsSchema(database)
+
   return database
 }
 
