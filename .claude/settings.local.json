@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs -I{} grep -H \"^status:\" {})",
+      "Bash(ck plan *)",
+      "Bash(node --check dashboard/routes/managed-bots.js)",
+      "Bash(node --check dashboard/public/js/app.js)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}
