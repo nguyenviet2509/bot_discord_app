@@ -2220,7 +2220,7 @@
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Avatar (PNG/JPG, tối đa 256KB)</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Avatar (PNG/JPG, tối đa 1MB)</label>
               <input type="file" accept="image/*" @change="handleFile($event)" class="text-xs" />
               <template x-if="editing?.avatar_url && !avatarFile">
                 <img :src="editing.avatar_url" class="mt-2 w-16 h-16 rounded-full object-cover border" />

@@ -1844,6 +1844,10 @@ document.addEventListener('alpine:init', () => {
 
         // Upload avatar (neu co)
         if (this.avatarFile && bot?.id) {
+          if (this.avatarFile.size > 1024 * 1024) {
+            const mb = (this.avatarFile.size / 1024 / 1024).toFixed(2)
+            return this.flash(`Ảnh ${mb}MB vượt giới hạn 1MB. Vui lòng nén hoặc resize ảnh trước khi tải lên.`, false)
+          }
           const fd = new FormData()
           fd.append('file', this.avatarFile)
           const up = await api('POST', `/managed-bots/${bot.id}/avatar`, fd)

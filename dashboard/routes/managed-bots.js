@@ -16,6 +16,8 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../..')
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads', 'managed-bots')
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true })
 
+const MAX_AVATAR_SIZE = 1 * 1024 * 1024 // 1MB
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: UPLOADS_DIR,
@@ -24,7 +26,7 @@ const upload = multer({
       cb(null, `${crypto.randomUUID()}${ext}`)
     },
   }),
-  limits: { fileSize: 256 * 1024 }, // Discord avatar max 256KB
+  limits: { fileSize: MAX_AVATAR_SIZE },
   fileFilter: (req, file, cb) => {
     const ok = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
     if (ok.includes(file.mimetype)) cb(null, true)
@@ -178,6 +180,11 @@ router.post('/:id/stop', async (req, res) => {
 
 // Multer error handler
 router.use((err, req, res, next) => {
+  if (err?.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      error: 'Ảnh vượt giới hạn 1MB. Vui lòng nén hoặc resize ảnh trước khi tải lên.',
+    })
+  }
   if (err) return res.status(400).json({ error: err.message })
   next()
 })
