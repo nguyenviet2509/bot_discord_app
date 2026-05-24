@@ -1502,6 +1502,49 @@
             </div>
           </div>
         </div>
+
+        <!-- Auto-react emoji config -->
+        <div class="card p-5 md:p-7 mt-6" x-data="levelReactSection" x-init="load()">
+          <h2 class="text-base font-bold text-slate-800 mb-1">Auto-react khi level-up</h2>
+          <p class="text-xs md:text-sm text-slate-400 mb-5">Bot tự thả emoji vào tin nhắn cuối của member khi họ lên level (chỉ áp dụng từ level 10 trở lên). Để trống emoji của 1 tier để tắt react cho tier đó.</p>
+
+          <!-- Chance slider -->
+          <div class="mb-5">
+            <label class="field-label flex items-center gap-2 flex-wrap">
+              <span>Tần suất react:</span>
+              <span class="text-indigo-600 font-bold" x-text="chancePct + '%'"></span>
+              <span x-show="chancePct > 30" class="text-amber-600 text-xs">⚠ Cao — có thể gây spam</span>
+              <span x-show="chancePct === 0" class="text-slate-500 text-xs">— Tắt hoàn toàn</span>
+            </label>
+            <input type="range" min="0" max="100" step="1" x-model.number="chancePct"
+                   class="w-full mt-2 accent-indigo-500" />
+          </div>
+
+          <!-- Per-tier inputs -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <template x-for="t in tiers" :key="t.min">
+              <div class="flex items-center gap-3">
+                <span class="w-32 text-xs md:text-sm text-slate-700 font-medium flex-shrink-0">
+                  <span x-text="t.defaultBadge"></span>
+                  <span x-text="t.name"></span>
+                  <span class="text-slate-400" x-text="'(Lv ' + t.min + '+)'"></span>
+                </span>
+                <input type="text" :placeholder="'Mặc định: ' + t.defaultBadge" x-model="t.emoji"
+                       maxlength="100" class="input-field flex-1" />
+              </div>
+            </template>
+          </div>
+
+          <div class="mt-5 flex items-center gap-3">
+            <button @click="save()" :disabled="saving" class="btn-primary"
+                    x-text="saving ? 'Đang lưu...' : 'Lưu cấu hình react'"></button>
+            <span x-show="toast" :class="toast?.ok ? 'text-emerald-600' : 'text-red-600'" class="text-xs md:text-sm" x-text="toast?.msg"></span>
+          </div>
+
+          <div class="mt-4 rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700">
+            ℹ️ Hỗ trợ cả emoji Unicode (🔥 ⭐ 💎) và custom emoji server Discord (định dạng <code class="bg-white px-1 rounded">&lt;:tên:id&gt;</code> hoặc <code class="bg-white px-1 rounded">&lt;a:tên:id&gt;</code> cho animated). Mẹo lấy custom emoji: gõ <code class="bg-white px-1 rounded">\:tên_emoji:</code> trong Discord rồi copy.
+          </div>
+        </div>
       </div>
     </div>
 

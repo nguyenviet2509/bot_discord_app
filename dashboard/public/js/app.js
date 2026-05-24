@@ -1689,4 +1689,58 @@ document.addEventListener('alpine:init', () => {
     },
   }))
 
+  // Auto-react emoji config khi level-up (nested trong tab levelup nhung Alpine.data rieng)
+  Alpine.data('levelReactSection', () => ({
+    chancePct: 8,
+    saving: false,
+    toast: null,
+    // Match LEVEL_TIERS o bot/src/services/level-service.js
+    tiers: [
+      { min: 10,  name: 'Sắt',         defaultBadge: '⚫', emoji: '' },
+      { min: 20,  name: 'Đồng',        defaultBadge: '🟤', emoji: '' },
+      { min: 30,  name: 'Bạc',         defaultBadge: '⚪', emoji: '' },
+      { min: 40,  name: 'Vàng',        defaultBadge: '🟡', emoji: '' },
+      { min: 50,  name: 'Bạch Kim',    defaultBadge: '🩵', emoji: '' },
+      { min: 60,  name: 'Lục Bảo',     defaultBadge: '🟢', emoji: '' },
+      { min: 70,  name: 'Kim Cương',   defaultBadge: '🔵', emoji: '' },
+      { min: 80,  name: 'Cao Thủ',     defaultBadge: '🟣', emoji: '' },
+      { min: 90,  name: 'Đại Cao Thủ', defaultBadge: '🟠', emoji: '' },
+      { min: 100, name: 'Thách Đấu',   defaultBadge: '🔴', emoji: '' },
+    ],
+
+    async load() {
+      if (!checkAuth()) return
+      const data = await api('GET', '/level-react')
+      if (!data) return
+      this.chancePct = data.chancePct ?? 8
+      for (const t of this.tiers) {
+        const found = (data.perTier || []).find((x) => x.tier_min_level === t.min)
+        t.emoji = found?.react_emoji ?? ''
+      }
+    },
+
+    async save() {
+      this.saving = true
+      try {
+        await api('PUT', '/level-react', {
+          chancePct: this.chancePct,
+          perTier: this.tiers.map((t) => ({
+            tier_min_level: t.min,
+            react_emoji: (t.emoji || '').trim() || null,
+          })),
+        })
+        this.flash('Đã lưu cấu hình react', true)
+      } catch (err) {
+        this.flash('Lưu thất bại: ' + (err?.message || 'unknown'), false)
+      } finally {
+        this.saving = false
+      }
+    },
+
+    flash(msg, ok) {
+      this.toast = { msg, ok }
+      setTimeout(() => { this.toast = null }, 2500)
+    },
+  }))
+
 })

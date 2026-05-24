@@ -1,5 +1,5 @@
 const db = require('../../../shared/db')
-const { levelFromXp, handleLevelUp, getTierForLevel } = require('../services/level-service')
+const { levelFromXp, handleLevelUp, getTierForLevel, getLevelupReactConfig } = require('../services/level-service')
 
 const URL_REGEX = /https?:\/\/[^\s<>"']+/gi
 
@@ -109,14 +109,16 @@ module.exports = {
       }
     }
 
-    // Auto-react with tier emoji (~8% chance) to show rank flair in chat
-    // Only for users who have a tier (level >= 10) — sparks curiosity for others
-    if (newLevel >= 10 && Math.random() < 0.08) {
-      const tier = getTierForLevel(newLevel)
-      try {
-        await message.react(tier.badge)
-      } catch (_) {
-        // Ignore if emoji isn't available or missing permissions
+    // Auto-react khi level-up: emoji + chance % cau hinh qua dashboard
+    // Chi react khi level >= 10 (co tier). emoji=null hoac chancePct=0 -> tat.
+    if (newLevel >= 10) {
+      const { emoji, chancePct } = getLevelupReactConfig(message.guildId, newLevel)
+      if (emoji && chancePct > 0 && Math.random() * 100 < chancePct) {
+        try {
+          await message.react(emoji)
+        } catch (_) {
+          // Ignore neu emoji khong kha dung / thieu quyen / format sai
+        }
       }
     }
   },

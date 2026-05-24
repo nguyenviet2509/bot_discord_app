@@ -245,6 +245,18 @@ async function handleLevelUp(client, guild, member, newLevel, settings, triggerM
   }
 }
 
+// Lay config auto-react cho level vua dat duoc
+// Tra ve { emoji, chancePct } — emoji null neu chua xep hang hoac tier do bi tat
+function getLevelupReactConfig(guildId, level) {
+  const tier = getTierForLevel(level)
+  if (!tier?.minLevel) return { emoji: null, chancePct: 0 }
+  const cfg = db.getLevelupReactConfig(guildId, tier.minLevel)
+  return {
+    emoji: cfg.emoji ?? tier.badge, // fallback default badge neu chua config
+    chancePct: cfg.chancePct,
+  }
+}
+
 module.exports = {
   xpForLevel,
   xpForNextLevel,
@@ -260,4 +272,5 @@ module.exports = {
   msgsForNextLevel,
   handleLevelUp,
   syncLevelRoles,
+  getLevelupReactConfig,
 }

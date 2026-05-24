@@ -288,6 +288,10 @@ function initDb() {
   try { database.exec(`ALTER TABLE guild_tier_badges ADD COLUMN mode TEXT NOT NULL DEFAULT 'emoji'`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_tier_badges ADD COLUMN role_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_tier_badges ADD COLUMN icon_url TEXT`) } catch (_) {}
+  // Auto-react emoji per tier khi user level-up (NULL = tat react cho tier do)
+  try { database.exec(`ALTER TABLE guild_tier_badges ADD COLUMN react_emoji TEXT`) } catch (_) {}
+  // Tan suat react level-up (% 0-100), 0 = tat hoan toan
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN levelup_react_chance_pct INTEGER NOT NULL DEFAULT 8`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN allowed_role_ids TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN level_up_reply_channel_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
@@ -1102,6 +1106,72 @@ function getChannelsWithLinks(guildId) {
     .all(guildId)
 }
 
+// ===== Level-up Auto-React Emoji Config =====
+
+// Lay emoji react + chance % cho 1 tier cu the
+function getLevelupReactConfig(guildId, tierMinLevel) {
+  const database = getDb()
+  const row = database
+    .prepare('SELECT react_emoji FROM guild_tier_badges WHERE guild_id = ? AND tier_min_level = ?')
+    .get(guildId, tierMinLevel)
+  const chanceRow = database
+    .prepare('SELECT levelup_react_chance_pct FROM guild_settings WHERE guild_id = ?')
+    .get(guildId)
+  return {
+    emoji: row?.react_emoji ?? null,
+    chancePct: chanceRow?.levelup_react_chance_pct ?? 8,
+  }
+}
+
+// List toan bo config per-tier cho dashboard
+function listLevelupReactConfig(guildId) {
+  const database = getDb()
+  const rows = database
+    .prepare('SELECT tier_min_level, react_emoji FROM guild_tier_badges WHERE guild_id = ?')
+    .all(guildId)
+  const chanceRow = database
+    .prepare('SELECT levelup_react_chance_pct FROM guild_settings WHERE guild_id = ?')
+    .get(guildId)
+  return {
+    perTier: rows,
+    chancePct: chanceRow?.levelup_react_chance_pct ?? 8,
+  }
+}
+
+// Upsert emoji cho 1 tier; emoji = null thi tat react tier do
+function upsertLevelupReactEmoji(guildId, tierMinLevel, emoji) {
+  const database = getDb()
+  const existing = database
+    .prepare('SELECT 1 FROM guild_tier_badges WHERE guild_id = ? AND tier_min_level = ?')
+    .get(guildId, tierMinLevel)
+  if (existing) {
+    database
+      .prepare('UPDATE guild_tier_badges SET react_emoji = ?, updated_at = unixepoch() WHERE guild_id = ? AND tier_min_level = ?')
+      .run(emoji, guildId, tierMinLevel)
+  } else {
+    // Tao row moi voi badge rong (badge nickname rieng concern, khong dung tinh nang nay)
+    database
+      .prepare('INSERT INTO guild_tier_badges (guild_id, tier_min_level, badge, react_emoji) VALUES (?, ?, ?, ?)')
+      .run(guildId, tierMinLevel, '', emoji)
+  }
+}
+
+// Set chance % (clamp 0-100); tao guild_settings row neu chua co
+function setLevelupReactChance(guildId, pct) {
+  const clamped = Math.max(0, Math.min(100, parseInt(pct, 10) || 0))
+  const database = getDb()
+  const existing = database.prepare('SELECT 1 FROM guild_settings WHERE guild_id = ?').get(guildId)
+  if (existing) {
+    database
+      .prepare('UPDATE guild_settings SET levelup_react_chance_pct = ?, updated_at = unixepoch() WHERE guild_id = ?')
+      .run(clamped, guildId)
+  } else {
+    database
+      .prepare('INSERT INTO guild_settings (guild_id, levelup_react_chance_pct) VALUES (?, ?)')
+      .run(guildId, clamped)
+  }
+}
+
 module.exports = {
   initDb,
   getDb,
@@ -1166,4 +1236,8 @@ module.exports = {
   createScheduledMessageGroup,
   updateScheduledMessageGroup,
   deleteScheduledMessageGroup,
+  getLevelupReactConfig,
+  listLevelupReactConfig,
+  upsertLevelupReactEmoji,
+  setLevelupReactChance,
 }
