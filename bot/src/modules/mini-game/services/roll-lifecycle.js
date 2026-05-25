@@ -1,7 +1,6 @@
 // Business logic cho mini-game ROLL: orchestrate store + engine + timeout + renderer.
 // Handler/command goi cac onXxx function nay, khong tu access store/db.
 
-const { PermissionsBitField } = require('discord.js')
 const store = require('./roll-session-store')
 const engine = require('./roll-engine')
 const timeoutMgr = require('./roll-timeout')
@@ -29,17 +28,15 @@ async function rerenderPendingMessage(client, sessionId) {
   const participants = store.listParticipants(sessionId)
   await msg.edit({
     embeds: [renderer.buildPendingEmbed({ session, participants })],
-    components: [renderer.buildPendingButtons(sessionId, false)], // joined state per-user, embed chung dung false
+    components: [renderer.buildPublicButtons(sessionId, false)], // joined state per-user, embed chung dung false
     allowedMentions: { parse: [] },
   }).catch(err => console.warn('[roll:rerender]', err.message))
 }
 
-// Permission check: host hoac admin (ManageGuild) -> tra ve true; nguoc lai reply ephemeral va return false.
-async function ensureHostOrAdmin(interaction, session) {
-  const isHost = interaction.user.id === session.host_id
-  const isAdmin = interaction.memberPermissions?.has(PermissionsBitField.Flags.ManageGuild)
-  if (isHost || isAdmin) return true
-  await interaction.reply({ content: '🚫 Chỉ host hoặc admin (ManageGuild) mới được dùng nút này.', ephemeral: true })
+// Strict host check: chi user.id === session.host_id moi qua. Bo admin override.
+async function ensureHost(interaction, session) {
+  if (interaction.user.id === session.host_id) return true
+  await interaction.reply({ content: '🚫 Chỉ host (người tạo session) mới được dùng nút này.', ephemeral: true })
   return false
 }
 
@@ -81,7 +78,7 @@ async function onCancel(interaction, sessionId) {
   if (session.state !== store.STATE.OPEN) {
     return interaction.reply({ content: `⚠️ Session đang ở state '${session.state}', không hủy được.`, ephemeral: true })
   }
-  if (!(await ensureHostOrAdmin(interaction, session))) return
+  if (!(await ensureHost(interaction, session))) return
   // Clear timer TRUOC khi cancel (tranh expire fire trong window).
   timeoutMgr.clear(sessionId)
   const changes = store.cancelSessionIfOpen(sessionId, `Hủy bởi <@${interaction.user.id}>`)
@@ -114,7 +111,7 @@ async function onStart(interaction, sessionId) {
   if (session.state !== store.STATE.OPEN) {
     return interaction.reply({ content: `⚠️ Session đang ở state '${session.state}', không start được.`, ephemeral: true })
   }
-  if (!(await ensureHostOrAdmin(interaction, session))) return
+  if (!(await ensureHost(interaction, session))) return
   const count = store.countParticipants(sessionId)
   if (count < 2) {
     return interaction.reply({ content: `⚠️ Cần ≥ 2 người để bắt đầu (hiện ${count}).`, ephemeral: true })

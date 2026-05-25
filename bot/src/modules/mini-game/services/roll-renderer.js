@@ -32,21 +32,28 @@ function buildPendingEmbed({ session, participants }) {
     .setFooter({ text: `Pool điểm: 1-100 · Không trùng · Cần ≥ 2 người để bắt đầu` })
 }
 
-function buildPendingButtons(sessionId, joined) {
+// Public buttons: 1 nut toggle Tham gia/Roi khoi cho moi member
+function buildPublicButtons(sessionId, joined) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`mg:roll:join:${sessionId}`)
       .setLabel(joined ? 'Rời khỏi' : 'Tham gia')
       .setEmoji(joined ? '🚪' : '🎯')
       .setStyle(joined ? ButtonStyle.Secondary : ButtonStyle.Primary),
+  )
+}
+
+// Host-only buttons: gui qua ephemeral, chi host thay/dung duoc
+function buildHostButtons(sessionId) {
+  return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`mg:roll:start:${sessionId}`)
+      .setCustomId(`mg:roll:host-start:${sessionId}`)
       .setLabel('Bắt đầu roll')
       .setEmoji('▶️')
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
-      .setCustomId(`mg:roll:cancel:${sessionId}`)
-      .setLabel('Hủy')
+      .setCustomId(`mg:roll:host-cancel:${sessionId}`)
+      .setLabel('Hủy session')
       .setEmoji('❌')
       .setStyle(ButtonStyle.Danger),
   )
@@ -113,7 +120,8 @@ function dropSession(sessionId) {
 
 module.exports = {
   buildPendingEmbed,
-  buildPendingButtons,
+  buildPublicButtons,
+  buildHostButtons,
   buildResultEmbed,
   buildCancelEmbed,
   scheduleEdit,

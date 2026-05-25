@@ -77,17 +77,21 @@ module.exports = {
       return interaction.editReply({ content: '❌ Lỗi tạo session.' })
     }
 
-    // 4. Edit placeholder thanh embed thuc
+    // 4. Edit placeholder thanh embed thuc voi public buttons (1 nut Tham gia)
     await msg.edit({
       content: '',
       embeds: [renderer.buildPendingEmbed({ session, participants: [] })],
-      components: [renderer.buildPendingButtons(session.id, false)],
+      components: [renderer.buildPublicButtons(session.id, false)],
       allowedMentions: { parse: [] },
     }).catch(err => console.error('[roll:edit-initial]', err))
 
     // 5. Set timer expire
     timeoutMgr.set(session.id, minutes * 60 * 1000, () => lifecycle.onExpire(interaction.client, session.id))
 
-    return interaction.editReply({ content: `✅ Đã tạo ROLL Session #${session.id}. Hết hạn <t:${expiresAt}:R>.` })
+    // 6. Ephemeral cho host kem host buttons (Start + Cancel). Member khong thay.
+    return interaction.editReply({
+      content: `✅ Đã tạo ROLL Session #${session.id}. Hết hạn <t:${expiresAt}:R>.\n\n**Điều khiển session** (chỉ bạn thấy). Nếu reload mất, gõ \`/roll-control\` để mở lại.`,
+      components: [renderer.buildHostButtons(session.id)],
+    })
   },
 }

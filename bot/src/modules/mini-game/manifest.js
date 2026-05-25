@@ -6,5 +6,5 @@ module.exports = {
   name: 'Mini Game',
   description: 'Kéo Búa Bao PvP + ROLL multi-player — mini-game cho server.',
   defaultEnabled: false,
-  commands: ['rps', 'coin', 'roll-start'],
+  commands: ['rps', 'coin', 'roll-start', 'roll-control'],
 }
