@@ -151,36 +151,54 @@ function forceCancelSession(sessionId, reason) {
 
 // ===== Dashboard history queries =====
 
+// LEFT JOIN voi users de resolve ten hien thi. Uu tien: nickname > global_name
+// > username. Neu user chua co trong table users (chua nhan tin bao gio) →
+// COALESCE tra null, frontend tu fallback id rut gon.
 function listHistory({ guildId, from, to, limit, offset }) {
-  const where = ['guild_id = ?']
+  const where = ['rs.guild_id = ?']
   const params = [guildId]
-  if (from) { where.push('created_at >= ?'); params.push(from) }
-  if (to)   { where.push('created_at <= ?'); params.push(to) }
+  if (from) { where.push('rs.created_at >= ?'); params.push(from) }
+  if (to)   { where.push('rs.created_at <= ?'); params.push(to) }
   const sql = `
-    SELECT id, guild_id, channel_id, host_id, max_players, state,
-           winner_id, winner_score, cancel_reason, created_at, finished_at,
-           (SELECT COUNT(*) FROM roll_participant WHERE session_id = rs.id) AS participant_count
+    SELECT rs.id, rs.guild_id, rs.channel_id, rs.host_id, rs.max_players, rs.state,
+           rs.winner_id, rs.winner_score, rs.cancel_reason, rs.created_at, rs.finished_at,
+           (SELECT COUNT(*) FROM roll_participant WHERE session_id = rs.id) AS participant_count,
+           COALESCE(uh.nickname, uh.global_name, uh.username) AS host_name,
+           COALESCE(uw.nickname, uw.global_name, uw.username) AS winner_name
     FROM roll_session rs
+    LEFT JOIN users uh ON uh.id = rs.host_id   AND uh.guild_id = rs.guild_id
+    LEFT JOIN users uw ON uw.id = rs.winner_id AND uw.guild_id = rs.guild_id
     WHERE ${where.join(' AND ')}
-    ORDER BY created_at DESC
+    ORDER BY rs.created_at DESC
     LIMIT ? OFFSET ?
   `
   const rows = getDb().prepare(sql).all(...params, limit, offset)
-  const total = getDb().prepare(`SELECT COUNT(*) AS c FROM roll_session WHERE ${where.join(' AND ')}`).get(...params).c
+  const total = getDb()
+    .prepare(`SELECT COUNT(*) AS c FROM roll_session rs WHERE ${where.join(' AND ')}`)
+    .get(...params).c
   return { rows, total }
 }
 
 function getHistoryDetail(sessionId, guildId) {
-  const session = getDb()
-    .prepare('SELECT * FROM roll_session WHERE id = ? AND guild_id = ?')
-    .get(sessionId, guildId)
+  const session = getDb().prepare(`
+    SELECT rs.*,
+           COALESCE(uh.nickname, uh.global_name, uh.username) AS host_name,
+           COALESCE(uw.nickname, uw.global_name, uw.username) AS winner_name
+    FROM roll_session rs
+    LEFT JOIN users uh ON uh.id = rs.host_id   AND uh.guild_id = rs.guild_id
+    LEFT JOIN users uw ON uw.id = rs.winner_id AND uw.guild_id = rs.guild_id
+    WHERE rs.id = ? AND rs.guild_id = ?
+  `).get(sessionId, guildId)
   if (!session) return null
   // Portable: (score IS NULL) sort NULL last -> score DESC -> joined_at ASC
   const participants = getDb().prepare(`
-    SELECT user_id, score, joined_at FROM roll_participant
-    WHERE session_id = ?
-    ORDER BY (score IS NULL), score DESC, joined_at ASC
-  `).all(sessionId)
+    SELECT rp.user_id, rp.score, rp.joined_at,
+           COALESCE(u.nickname, u.global_name, u.username) AS name
+    FROM roll_participant rp
+    LEFT JOIN users u ON u.id = rp.user_id AND u.guild_id = ?
+    WHERE rp.session_id = ?
+    ORDER BY (rp.score IS NULL), rp.score DESC, rp.joined_at ASC
+  `).all(guildId, sessionId)
   return { session, participants }
 }
 

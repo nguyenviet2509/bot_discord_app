@@ -91,10 +91,10 @@
               <tr class="cursor-pointer" @click="openDetail(row.id)">
                 <td><span class="font-semibold text-indigo-600" x-text="'#' + row.id"></span></td>
                 <td x-text="fmtTime(row.created_at)"></td>
-                <td><code class="text-xs text-slate-500" x-text="row.host_id"></code></td>
+                <td><span class="text-slate-700" :title="row.host_id" x-text="displayUser(row.host_name, row.host_id)"></span></td>
                 <td x-text="row.participant_count + '/' + row.max_players"></td>
                 <td><span class="badge" :class="'badge-' + row.state" x-text="row.state"></span></td>
-                <td><code class="text-xs text-slate-500" x-text="row.winner_id || '—'"></code></td>
+                <td><span class="text-slate-700" :title="row.winner_id || ''" x-text="row.winner_id ? displayUser(row.winner_name, row.winner_id) : '—'"></span></td>
                 <td x-text="row.winner_score ?? '—'"></td>
               </tr>
             </template>
@@ -126,8 +126,8 @@
       <div class="space-y-3" x-show="selected">
         <div class="grid grid-cols-2 gap-3 text-sm">
           <div><span class="text-slate-500">State:</span> <span class="badge" :class="'badge-' + selected?.session.state" x-text="selected?.session.state"></span></div>
-          <div><span class="text-slate-500">Host:</span> <code class="text-xs" x-text="selected?.session.host_id"></code></div>
-          <div><span class="text-slate-500">Winner:</span> <code class="text-xs" x-text="selected?.session.winner_id || '—'"></code></div>
+          <div><span class="text-slate-500">Host:</span> <span class="font-medium" :title="selected?.session.host_id" x-text="displayUser(selected?.session.host_name, selected?.session.host_id)"></span></div>
+          <div><span class="text-slate-500">Winner:</span> <span class="font-medium" :title="selected?.session.winner_id || ''" x-text="selected?.session.winner_id ? displayUser(selected?.session.winner_name, selected?.session.winner_id) : '—'"></span></div>
           <div><span class="text-slate-500">Điểm winner:</span> <span class="font-semibold" x-text="selected?.session.winner_score ?? '—'"></span></div>
         </div>
         <div x-show="selected?.session.cancel_reason" class="text-sm text-rose-600">
@@ -138,7 +138,7 @@
           <div class="space-y-1 max-h-96 overflow-y-auto">
             <template x-for="(p, i) in selected?.participants" :key="p.user_id">
               <div class="flex justify-between text-sm py-1 border-b border-slate-50">
-                <span><span class="text-slate-400" x-text="(i+1) + '.'"></span> <code class="text-xs" x-text="p.user_id"></code></span>
+                <span><span class="text-slate-400" x-text="(i+1) + '.'"></span> <span :title="p.user_id" x-text="displayUser(p.name, p.user_id)"></span></span>
                 <span class="font-semibold" x-text="p.score ?? '—'"></span>
               </div>
             </template>

@@ -85,6 +85,18 @@ document.addEventListener('alpine:init', () => {
       } catch (err) { console.error(err) }
     },
 
+    // Rut gon id Discord (18 chu so) thanh "1234…5678" cho de doc
+    shortenId(id) {
+      if (!id) return '—'
+      const s = String(id)
+      return s.length > 10 ? `${s.slice(0, 4)}…${s.slice(-4)}` : s
+    },
+
+    // Hien ten neu co, fallback id rut gon
+    displayUser(name, id) {
+      return name || this.shortenId(id)
+    },
+
     fmtTime(unixSec) {
       if (!unixSec) return '—'
       const d = new Date(unixSec * 1000)
