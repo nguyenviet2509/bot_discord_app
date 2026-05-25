@@ -52,6 +52,38 @@ const SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_pvp_state ON pvp_match(state, created_at);
   CREATE INDEX IF NOT EXISTS idx_pvp_player_a ON pvp_match(guild_id, player_a, state);
   CREATE INDEX IF NOT EXISTS idx_pvp_player_b ON pvp_match(guild_id, player_b, state);
+
+  -- Mini-game ROLL multi-player: session header + participant detail
+  CREATE TABLE IF NOT EXISTS roll_session (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id      TEXT NOT NULL,
+    channel_id    TEXT NOT NULL,
+    message_id    TEXT,
+    host_id       TEXT NOT NULL,
+    max_players   INTEGER NOT NULL DEFAULT 100,
+    state         TEXT NOT NULL,
+    expires_at    INTEGER NOT NULL,
+    winner_id     TEXT,
+    winner_score  INTEGER,
+    cancel_reason TEXT,
+    created_at    INTEGER DEFAULT (unixepoch()),
+    finished_at   INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_roll_state ON roll_session(guild_id, state);
+  CREATE INDEX IF NOT EXISTS idx_roll_created ON roll_session(guild_id, created_at DESC);
+  -- Partial unique index: 1 guild chi co toi da 1 session 'open' hoac 'rolling' cung luc
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_roll_one_active
+    ON roll_session(guild_id) WHERE state IN ('open','rolling');
+
+  CREATE TABLE IF NOT EXISTS roll_participant (
+    session_id  INTEGER NOT NULL,
+    user_id     TEXT NOT NULL,
+    score       INTEGER,
+    joined_at   INTEGER DEFAULT (unixepoch()),
+    PRIMARY KEY (session_id, user_id),
+    FOREIGN KEY (session_id) REFERENCES roll_session(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_roll_part_session ON roll_participant(session_id, score DESC);
 `
 
 function initMiniGameSchema(database) {

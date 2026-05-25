@@ -69,6 +69,14 @@ client.once('ready', async () => {
   console.log(`[Bot] ✅ Ready! Logged in as ${client.user.tag}`)
   await registerCommands()
 
+  // Mini-game ROLL: sweep zombie session sau khi bot restart (await truoc khi listen interaction)
+  try {
+    const rollLifecycle = require('./modules/mini-game/services/roll-lifecycle')
+    await rollLifecycle.sweepOnStartup(client)
+  } catch (err) {
+    console.error('[roll:sweep] fatal', err.message)
+  }
+
   // Scheduled messages worker: check moi 60s, send neu da den han
   setInterval(async () => {
     const nowSec = Math.floor(Date.now() / 1000)

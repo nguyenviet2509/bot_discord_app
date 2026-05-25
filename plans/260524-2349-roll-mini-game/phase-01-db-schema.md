@@ -18,7 +18,7 @@ Mở rộng `shared/db-mini-game.js`: thêm 2 bảng `roll_session`, `roll_parti
 **Functional:**
 - 2 bảng SQLite: `roll_session` (header) + `roll_participant` (detail)
 - Index cho query phổ biến: state lookup, listing theo created_at, ranking theo score
-- Cột `score_max` forward-compat cho mở rộng pool sau
+- ~~Cột `score_max` forward-compat~~ **BỎ (Validation S1)** — hardcode 100. Khi cần custom range → `ALTER TABLE ADD COLUMN` sau.
 
 **Non-functional:**
 - Schema migration idempotent (`CREATE TABLE IF NOT EXISTS`)
@@ -65,8 +65,8 @@ roll_participant (
      message_id    TEXT,
      host_id       TEXT NOT NULL,
      max_players   INTEGER NOT NULL DEFAULT 100,
-     score_max     INTEGER NOT NULL DEFAULT 100,
      state         TEXT NOT NULL,
+     <!-- Updated: Validation Session 1 - bỏ cột score_max (YAGNI) -->
      expires_at    INTEGER NOT NULL,
      winner_id     TEXT,
      winner_score  INTEGER,
@@ -107,6 +107,17 @@ roll_participant (
 - [ ] FK CASCADE hoạt động: xóa session → participants tự xóa
 - [ ] Index `idx_roll_state`, `idx_roll_created`, `idx_roll_part_session` tồn tại (`.indexes` confirm)
 - [ ] Schema cũ (pvp_match, user_coin, coin_tx) không bị ảnh hưởng
+
+## Red Team Fixes (2026-05-25)
+
+**[Finding 5 — High] Bắt buộc thêm UNIQUE partial index** chống race 2 admin /roll-start:
+
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS idx_roll_one_active
+  ON roll_session(guild_id) WHERE state IN ('open','rolling');
+```
+
+Phase 2 `createSession` phải `try { INSERT } catch (e if SQLITE_CONSTRAINT_UNIQUE)` → return `{ duplicate: true, existingId }` để Phase 4 reply ephemeral.
 
 ## Risk Assessment
 

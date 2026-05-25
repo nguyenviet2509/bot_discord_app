@@ -47,6 +47,7 @@ app.use('/api/honor', auth, require('./routes/honor'))
 app.use('/api/automod', auth, require('./routes/automod'))
 app.use('/api/events', auth, require('./routes/events'))
 app.use('/api/managed-bots', auth, require('./routes/managed-bots'))
+app.use('/api/roll-history', auth, require('./routes/roll-history'))
 
 // Graceful shutdown: stop tat ca lite bot dang chay
 const litebotManager = require('../bots-lite')

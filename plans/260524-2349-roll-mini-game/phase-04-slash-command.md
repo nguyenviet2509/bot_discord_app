@@ -61,9 +61,9 @@ const renderer = require('../services/roll-renderer')
 const lifecycle = require('../services/roll-lifecycle')
 
 const MAX_PLAYERS_LIMIT = 100
-const SCORE_MAX_DEFAULT = 100
 const MIN_MINUTES = 1
 const MAX_MINUTES = 60
+// Validation S1 - bỏ SCORE_MAX_DEFAULT, dùng const trong roll-engine.js
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -180,6 +180,56 @@ ls bot/src/ | grep -i deploy
 - [ ] Embed public + ephemeral reply hoạt động
 - [ ] Timer expire trigger đúng sau N phút
 - [ ] Button handler được đăng ký, customId `mg:roll:*` route đúng
+
+## Red Team Fixes (2026-05-25)
+
+### F4 [High] Send-before-insert để tránh zombie session
+Insert trước rồi `channel.send` fail → row mãi mãi `open` với `message_id=NULL` → block mọi `/roll-start` sau.
+
+Fix order: **send embed trước, INSERT với message_id sẵn**:
+
+```js
+// 1. Tạm post placeholder (hoặc dùng deferReply rồi editReply public)
+const msg = await interaction.channel.send({ content: '🎲 Đang tạo session...' }).catch(err => null)
+if (!msg) return interaction.reply({ content: '❌ Bot không gửi được message trong channel này.', ephemeral: true })
+
+// 2. INSERT với message_id (catch UNIQUE constraint từ F5)
+let session
+try {
+  session = store.createSession({
+    guildId: guild.id, channelId: interaction.channelId, messageId: msg.id,
+    hostId: interaction.user.id, maxPlayers, expiresAt, // Validation S1 - bỏ scoreMax
+  })
+} catch (err) {
+  if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    await msg.delete().catch(() => {})
+    return interaction.reply({ content: '⚠️ Guild đã có session active.', ephemeral: true })
+  }
+  await msg.delete().catch(() => {})
+  throw err
+}
+
+// 3. Edit message thành embed thật
+await msg.edit({
+  embeds: [renderer.buildPendingEmbed({ session, participants: [], hostTag: interaction.user.username })],
+  components: [renderer.buildPendingButtons(session.id, false)],
+  allowedMentions: { parse: [] },
+})
+
+// 4. Set timer
+timeoutMgr.set(session.id, minutes * 60 * 1000, () => lifecycle.onExpire(interaction.client, session.id))
+```
+
+Phase 2 `createSession` nhận thêm `messageId` param ngay khi insert (bỏ `setMessageId` riêng), schema Phase 1 sẵn cho `message_id` (NOT NULL nếu insert-after-send pattern).
+
+### F9 Slash command deploy mechanism — follow RPS pattern (Validation S1)
+Không tự quyết global vs guild-scoped. Grep `bot/src/` tìm flow deploy `/rps` (RPS hiện đã chạy production) → follow y hệt cho `/roll-start`. Step 4.4 phải làm trước khi viết command:
+1. `grep -rn 'rps' bot/src/ --include='*.js' | grep -i 'register\|deploy\|command'`
+2. Đọc file đó, xác định cơ chế (REST PUT `/applications/{id}/commands` vs `/applications/{id}/guilds/{gid}/commands`).
+3. Document tên file + flow vào plan trước khi viết `/roll-start`.
+
+### F12 `allowedMentions` ở mọi message
+Mọi message.edit / msg.edit / .send từ phase này trở đi truyền `allowedMentions: { parse: [] }` (hoặc `{ users: [winnerId] }` cho result).
 
 ## Risk Assessment
 

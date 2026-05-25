@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lịch sử ROLL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    * { font-family: 'Inter', -apple-system, sans-serif; }
+    body { background: #f1f5f9; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; outline: none; transition: border-color .15s; }
+    .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; white-space: nowrap; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .btn-refresh:hover:not(:disabled) { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
+    .btn-soft-danger { background: #fef2f2; color: #b91c1c; padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+    .btn-soft-danger:hover { background: #fee2e2; }
+    .field-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .badge-open     { background: #e0e7ff; color: #4338ca; }
+    .badge-rolling  { background: #fef3c7; color: #92400e; }
+    .badge-finished { background: #d1fae5; color: #065f46; }
+    .badge-cancelled{ background: #e2e8f0; color: #475569; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+    .modal { background: white; border-radius: 16px; padding: 24px; max-width: 640px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px 14px; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: .04em; background: #f8fafc; }
+    td { padding: 12px 14px; font-size: 14px; color: #1e293b; border-top: 1px solid #f1f5f9; }
+    tr:hover td { background: #fafbfc; }
+    .pagination { display: flex; gap: 8px; align-items: center; padding: 12px 16px; font-size: 13px; color: #475569; justify-content: flex-end; }
+    .pagination button { padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; cursor: pointer; font-size: 13px; }
+    .pagination button:disabled { opacity: .4; cursor: not-allowed; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen" x-data="rollHistorySection" x-init="init()">
+  <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h1 class="text-sm md:text-xl font-bold text-slate-800">🎲 Lịch sử ROLL</h1>
+      <p class="text-xs md:text-sm text-slate-500 mt-1">Quản lý session ROLL đã chạy</p>
+    </div>
+    <div class="flex flex-wrap gap-2 md:gap-3">
+      <button @click="load()" class="btn-refresh" :disabled="loading">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+        <span>Làm mới</span>
+      </button>
+      <button @click="clearOld()" class="btn-soft-danger">Xóa &gt; <span x-text="clearDays"></span> ngày</button>
+      <button @click="showNuke = true" class="btn-soft-danger">🗑️ Xóa tất cả</button>
+    </div>
+  </div>
+
+  <div class="px-4 md:px-8 py-6 space-y-6">
+    <!-- Filter -->
+    <div class="card p-5">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label class="field-label">Từ ngày</label>
+          <input type="date" x-model="filters.from" class="input-field" />
+        </div>
+        <div>
+          <label class="field-label">Đến ngày</label>
+          <input type="date" x-model="filters.to" class="input-field" />
+        </div>
+        <div>
+          <label class="field-label">Xóa cũ hơn (ngày)</label>
+          <input type="number" min="1" x-model.number="clearDays" class="input-field" />
+        </div>
+        <div class="flex items-end">
+          <button @click="page = 1; load()" class="btn-primary w-full">Áp dụng filter</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#ID</th><th>Tạo lúc</th><th>Host</th><th>Người</th><th>State</th><th>Winner</th><th>Điểm</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="row in items" :key="row.id">
+              <tr class="cursor-pointer" @click="openDetail(row.id)">
+                <td><span class="font-semibold text-indigo-600" x-text="'#' + row.id"></span></td>
+                <td x-text="fmtTime(row.created_at)"></td>
+                <td><code class="text-xs text-slate-500" x-text="row.host_id"></code></td>
+                <td x-text="row.participant_count + '/' + row.max_players"></td>
+                <td><span class="badge" :class="'badge-' + row.state" x-text="row.state"></span></td>
+                <td><code class="text-xs text-slate-500" x-text="row.winner_id || '—'"></code></td>
+                <td x-text="row.winner_score ?? '—'"></td>
+              </tr>
+            </template>
+            <tr x-show="!items.length && !loading">
+              <td colspan="7" class="text-center text-slate-400 py-8">Chưa có session nào</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" x-show="total > pageSize">
+        <span x-text="'Tổng: ' + total"></span>
+        <button @click="page = Math.max(1, page - 1); load()" :disabled="page === 1">← Trước</button>
+        <span x-text="'Trang ' + page + '/' + Math.ceil(total / pageSize)"></span>
+        <button @click="page++; load()" :disabled="page >= Math.ceil(total / pageSize)">Sau →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail modal -->
+  <div x-show="showDetail" class="modal-backdrop" @click.self="showDetail = false" style="display:none">
+    <div class="modal" x-show="selected">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">Session #<span x-text="selected?.session.id"></span></h2>
+          <p class="text-xs text-slate-500 mt-1" x-text="fmtTime(selected?.session.created_at)"></p>
+        </div>
+        <button @click="showDetail = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+      </div>
+      <div class="space-y-3" x-show="selected">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-slate-500">State:</span> <span class="badge" :class="'badge-' + selected?.session.state" x-text="selected?.session.state"></span></div>
+          <div><span class="text-slate-500">Host:</span> <code class="text-xs" x-text="selected?.session.host_id"></code></div>
+          <div><span class="text-slate-500">Winner:</span> <code class="text-xs" x-text="selected?.session.winner_id || '—'"></code></div>
+          <div><span class="text-slate-500">Điểm winner:</span> <span class="font-semibold" x-text="selected?.session.winner_score ?? '—'"></span></div>
+        </div>
+        <div x-show="selected?.session.cancel_reason" class="text-sm text-rose-600">
+          <span class="font-semibold">Lý do hủy:</span> <span x-text="selected?.session.cancel_reason"></span>
+        </div>
+        <div class="border-t border-slate-100 pt-3">
+          <div class="font-semibold text-sm text-slate-700 mb-2">Bảng xếp hạng (<span x-text="selected?.participants.length"></span>)</div>
+          <div class="space-y-1 max-h-96 overflow-y-auto">
+            <template x-for="(p, i) in selected?.participants" :key="p.user_id">
+              <div class="flex justify-between text-sm py-1 border-b border-slate-50">
+                <span><span class="text-slate-400" x-text="(i+1) + '.'"></span> <code class="text-xs" x-text="p.user_id"></code></span>
+                <span class="font-semibold" x-text="p.score ?? '—'"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nuke confirm -->
+  <div x-show="showNuke" class="modal-backdrop" @click.self="showNuke = false" style="display:none">
+    <div class="modal">
+      <h2 class="text-lg font-bold text-rose-600">⚠️ Xóa toàn bộ lịch sử ROLL?</h2>
+      <p class="text-sm text-slate-600 mt-2 mb-4">Hành động này không thể hoàn tác. Gõ <code class="bg-slate-100 px-2 py-1 rounded">NUKE</code> để xác nhận.</p>
+      <input type="text" x-model="nukeInput" placeholder="Gõ NUKE" class="input-field mb-4" />
+      <div class="flex justify-end gap-2">
+        <button @click="showNuke = false; nukeInput = ''" class="btn-refresh">Hủy</button>
+        <button @click="nuke()" :disabled="nukeInput !== 'NUKE'" class="btn-soft-danger" :style="nukeInput === 'NUKE' ? '' : 'opacity: 0.4; cursor: not-allowed'">Xác nhận xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/roll-history.js"></script>
+</body>
+</html>

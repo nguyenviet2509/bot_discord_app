@@ -75,7 +75,8 @@ function buildPendingEmbed({ session, participants, hostTag }) {
     .addFields(
       { name: `👥 Tham gia (${participants.length}/${session.max_players})`, value: list },
     )
-    .setFooter({ text: `Pool điểm: 1-${session.score_max} · Không trùng` })
+    .setFooter({ text: `Pool điểm: 1-100 · Không trùng` })
+    // Updated: Validation S1 - hardcode 100, bỏ session.score_max
 }
 
 function buildPendingButtons(sessionId, joined) {
@@ -195,6 +196,84 @@ node -e "require('./bot/src/modules/mini-game/handlers/roll-button-handler.js')"
 - [ ] State change (start/cancel) edit ngay, không bị block bởi timer pending
 - [ ] Embed result list rank đúng (sorted desc) + top 1 ping + huy chương
 - [ ] Edit error (message bị xóa) được catch, không crash bot
+
+## Red Team Fixes (2026-05-25)
+
+### F3 [High] Host/admin check trong `onStart` & `onCancel`
+Button không kế thừa `defaultMemberPermissions`. Lifecycle phải:
+```js
+const session = store.getSession(sessionId)
+const isHost = interaction.user.id === session.host_id
+const isAdmin = interaction.memberPermissions?.has(PermissionsBitField.Flags.ManageGuild)
+if (!isHost && !isAdmin) return interaction.reply({ content: '🚫 Chỉ host hoặc admin.', ephemeral: true })
+```
+Áp dụng cho `onStart` và `onCancel`. `onJoin` không cần (ai cũng join được).
+
+### F9 [High] Debounce phải re-check state trong callback
+Late `scheduleEdit` có thể fire sau `editNow` (result embed) → ghi đè bằng pending embed cũ. Fix:
+
+```js
+function scheduleEdit(sessionId, editFn) {
+  if (editTimers.has(sessionId)) clearTimeout(editTimers.get(sessionId))
+  editTimers.set(sessionId, setTimeout(async () => {
+    editTimers.delete(sessionId)
+    const fresh = store.getSession(sessionId)
+    if (!fresh || fresh.state !== 'open') return // bail nếu đã transition
+    try { await editFn(fresh) } catch (err) { console.error('[roll:edit]', err) }
+  }, DEBOUNCE_MS))
+}
+
+function dropSession(sessionId) {
+  if (editTimers.has(sessionId)) { clearTimeout(editTimers.get(sessionId)); editTimers.delete(sessionId) }
+}
+```
+Lifecycle `onStart`/`onCancel` sau commit gọi `renderer.dropSession(sessionId)` rồi mới `editNow`.
+
+### F11 [High] Embed field.value limit là 1024, KHÔNG phải 4096
+**Validation S1 chốt:** Truncate ở 30 user + dùng `setDescription` thay `addFields`.
+
+```js
+const MAX_DISPLAY = 30
+function renderList(participants) {
+  const shown = participants.slice(0, MAX_DISPLAY)
+    .map((p, i) => `${i + 1}. <@${p.user_id}>`).join('\n')
+  const rest = participants.length - shown.length
+  return rest > 0 ? `${shown}\n_... và ${rest} người khác_` : (shown || '_Chưa có ai tham gia_')
+}
+
+// buildPendingEmbed:
+new EmbedBuilder()
+  .setColor(COLOR.wait)
+  .setTitle(`🎲 ROLL Session #${session.id}`)
+  .setDescription([
+    `Host: <@${session.host_id}>`,
+    `⏱ Hết hạn: <t:${session.expires_at}:R>`,
+    ``,
+    `**👥 Tham gia (${participants.length}/${session.max_players})**`,
+    renderList(participants),
+  ].join('\n'))
+  .setFooter({ text: `Pool điểm: 1-100 · Không trùng` })
+```
+
+Result embed cũng dùng description, truncate ranking top 30 + ghi chú N còn lại.
+
+Risk-table dưới: limit field.value = 1024 (không phải 4096) — fixed.
+
+### F13 [Medium] Validate message/channel khớp session — chống customId hijack
+Trong button-handler **trước** khi route:
+```js
+const session = store.getSession(sessionId)
+if (!session) return interaction.reply({ content: 'Session không tồn tại.', ephemeral: true }).then(() => true)
+if (session.message_id !== interaction.message.id || session.channel_id !== interaction.channelId) {
+  return interaction.reply({ content: 'Button không thuộc session này.', ephemeral: true }).then(() => true)
+}
+```
+Cũng strict-parse: `if (!/^\d+$/.test(parts[3])) return invalid`.
+
+### F12 [Medium] `allowedMentions`
+Mọi `editMessage` helper phải:
+- Pending edit: `allowedMentions: { parse: [] }`
+- Result: `allowedMentions: { users: [winner.user_id] }`
 
 ## Risk Assessment
 

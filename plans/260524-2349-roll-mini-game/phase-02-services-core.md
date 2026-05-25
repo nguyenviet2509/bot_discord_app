@@ -68,12 +68,15 @@ roll-timeout.js (timer)
 
 ### 2.1. `roll-engine.js`
 
+<!-- Updated: Validation Session 1 - hardcode SCORE_MAX, bỏ param scoreMax -->
 ```js
 const crypto = require('crypto')
 
-function rollScores(n, scoreMax = 100) {
-  if (n < 1 || n > scoreMax) throw new Error(`n phải 1..${scoreMax}`)
-  const pool = Array.from({ length: scoreMax }, (_, i) => i + 1)
+const SCORE_MAX = 100
+
+function rollScores(n) {
+  if (n < 1 || n > SCORE_MAX) throw new Error(`n phải 1..${SCORE_MAX}`)
+  const pool = Array.from({ length: SCORE_MAX }, (_, i) => i + 1)
   for (let i = 0; i < n; i++) {
     const j = i + crypto.randomInt(pool.length - i)
     ;[pool[i], pool[j]] = [pool[j], pool[i]]
@@ -81,7 +84,7 @@ function rollScores(n, scoreMax = 100) {
   return pool.slice(0, n)
 }
 
-module.exports = { rollScores }
+module.exports = { rollScores, SCORE_MAX }
 ```
 
 ### 2.2. `roll-timeout.js`
@@ -92,7 +95,7 @@ Pattern y hệt `match-timeout.js` (đọc tham khảo). Map module-level, set/c
 
 Functions:
 - `STATE` const: `{ OPEN: 'open', ROLLING: 'rolling', FINISHED: 'finished', CANCELLED: 'cancelled' }`
-- `createSession({ guildId, channelId, hostId, maxPlayers, scoreMax, expiresAt })` → return session row
+- `createSession({ guildId, channelId, messageId, hostId, maxPlayers, expiresAt })` → return session row (bỏ scoreMax — Validation S1)
 - `setMessageId(sessionId, messageId)`
 - `getSession(sessionId)`
 - `getActiveSessionByGuild(guildId)` — state IN ('open','rolling')
@@ -137,6 +140,58 @@ node -e "require('./bot/src/modules/mini-game/services/roll-lifecycle.js')"
 - [ ] `transitionToRolling` race-safe (2 concurrent call → chỉ 1 success)
 - [ ] `cancelSession` chuyển state đúng + ghi reason
 - [ ] `sweepOnStartup` xử lý đúng 3 case (stuck rolling / expired / future)
+
+## Red Team Fixes (2026-05-25)
+
+### F6 [High] `addParticipant` atomic capacity check
+Thay 2-step (count → insert) bằng 1 SQL atomic, check `info.changes === 1`:
+
+```js
+function tryAddParticipant(sessionId, userId) {
+  const info = db().prepare(`
+    INSERT INTO roll_participant (session_id, user_id, score, joined_at)
+    SELECT ?, ?, NULL, unixepoch()
+    WHERE NOT EXISTS (SELECT 1 FROM roll_participant WHERE session_id=? AND user_id=?)
+      AND (SELECT COUNT(*) FROM roll_participant WHERE session_id=?) <
+          (SELECT max_players FROM roll_session WHERE id=? AND state='open')
+  `).run(sessionId, userId, sessionId, userId, sessionId, sessionId)
+  return info.changes === 1
+}
+```
+Lifecycle `onJoin` toggle: nếu `isParticipant` → remove; nếu chưa → `tryAdd` → false thì ephemeral "Đã đủ X/X người" hoặc "Session đã đóng".
+
+### F8 [High] Wrap rolling + settle trong 1 transaction
+`onStart` flow phải atomic — không tách `transitionToRolling` ra trước rồi mới `settleScores`:
+
+```js
+const result = db().transaction(() => {
+  const r = db().prepare(`UPDATE roll_session SET state='rolling' WHERE id=? AND state='open'`).run(sessionId)
+  if (r.changes !== 1) return null
+  const parts = listParticipantsOrdered(sessionId) // ORDER BY joined_at, user_id
+  const scores = rollScores(parts.length, scoreMax)
+  // bulk update scores + finalize session row
+  ...
+  db().prepare(`UPDATE roll_session SET state='finished', winner_id=?, winner_score=?, finished_at=unixepoch() WHERE id=?`).run(winner, max, sessionId)
+  return { parts, scores }
+})()
+```
+Loại bỏ window crash-mid-roll. `listParticipants` cho settle phải `ORDER BY joined_at ASC, user_id ASC` (deterministic binding, F5 security).
+
+### F10 [High] Timer guard — chỉ cancel khi state='open'
+`onExpire`:
+```js
+const info = db().prepare(`UPDATE roll_session SET state='cancelled', cancel_reason=?, finished_at=unixepoch() WHERE id=? AND state='open'`).run('Hết hạn', sessionId)
+if (info.changes === 0) return // đã transition sang rolling/finished/cancelled bởi flow khác
+```
+`onStart`/`onCancel` phải `timeoutMgr.clear(sessionId)` **trước** khi mở transaction. `cancelSession` user-triggered chỉ cho `state='open'` (không cho cancel khi `rolling`).
+
+### F12 [Medium] `allowedMentions` mặc định không ping
+Mọi `channel.send` / `msg.edit` ở renderer/lifecycle phải truyền:
+- Pending/cancel embed: `allowedMentions: { parse: [] }`
+- Result embed: `allowedMentions: { users: [winnerId] }` (chỉ ping winner)
+
+### Cleanup timer/edit Map
+`settleScores` + `cancelSession` post-commit phải gọi `roll-timeout.clear(sessionId)` + `renderer.dropSession(sessionId)` để xóa entry Map (chống leak dài hạn).
 
 ## Risk Assessment
 

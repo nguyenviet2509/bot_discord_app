@@ -242,6 +242,76 @@ Tham khảo style cụ thể `dashboard/public/index.html` block tab `vinh-danh`
 - [ ] Style đồng nhất với tab khác (indigo/slate, btn-primary, card rounded-2xl)
 - [ ] Modal detail show ranking với score và mention user (qua user_id)
 
+<!-- Updated: Validation Session 1 - Step 0 mandatory pre-check + audit log dùng console/file -->
+
+## Step 0 — Pre-check authz pattern (Validation S1, BẮT BUỘC)
+
+**Trước khi viết code Phase 6**, đọc 2 file để xác định pattern scope guild trong dashboard:
+
+```bash
+grep -n 'guildId\|guild_id\|allowedGuilds\|req.user' dashboard/routes/automod.js
+grep -n 'guildId\|guild_id\|allowedGuilds\|req.user' dashboard/routes/scheduled-messages.js
+```
+
+Có 3 khả năng:
+1. **Đã có pattern per-guild** (ví dụ `req.user.guilds`, middleware `requireGuildAccess`) → copy y hệt cho `roll-history.js`.
+2. **Chỉ có JWT auth, chưa scope guild** → escalate user xác nhận: single-admin model OK? (theo Validation S1 option 3, hiện tại có thể single-admin). Nếu confirm single-admin → bỏ requirement per-guild ACL, chỉ giữ authenticated + audit log.
+3. **Hybrid** (vài route scope, vài route không) → follow route gần nhất tương đương về sensitivity (automod scope khá tương tự delete data).
+
+Document kết quả vào `plans/reports/scout-260525-0817-dashboard-authz-pattern.md` trước khi tiếp tục.
+
+## Red Team Fixes (2026-05-25)
+
+### F1 [CRITICAL] Per-guild authorization, không chỉ authentication
+JWT-auth chỉ verify identity, KHÔNG verify user có quyền với `guildId` cụ thể. Hiện trạng plan → bất kỳ dashboard user nào cũng đọc/xóa được history của mọi guild.
+
+**Bắt buộc:**
+1. Check pattern hiện tại trong `dashboard/routes/automod.js` hoặc `scheduled-messages.js` xem họ scope guild thế nào (chắc chắn có vì các route đó cũng đụng per-guild data). Copy y hệt.
+2. Nếu chưa có pattern → JWT phải có claim `allowedGuildIds: string[]` hoặc `isSuperAdmin: boolean`. Middleware route check:
+   ```js
+   function requireGuildAccess(req, res, next) {
+     const guildId = req.query.guildId || req.body?.guildId
+     if (!guildId) return res.status(400).json({ error: 'guildId required' })
+     if (req.user.isSuperAdmin) return next()
+     if (!req.user.allowedGuildIds?.includes(guildId)) return res.status(403).json({ error: 'No access to this guild' })
+     next()
+   }
+   ```
+3. **MỌI** endpoint GET/DELETE phải require `guildId` (bỏ optional). List query luôn `WHERE guild_id = ?`.
+
+### F2 [CRITICAL] Nuke endpoint fixes
+Hiện tại: `confirm: 'NUKE'` là string cố định trong source — KHÔNG phải authz. Empty/missing `guildId` → wipe TOÀN BỘ guild. Mis-click thảm hoạ.
+
+**Fix:**
+1. Order routes: `router.delete('/all', ...)` định nghĩa **trước** route khác (tránh shadowing).
+2. **Bắt buộc** `guildId` cho cả nuke + clear-old-days (đã yêu cầu ở F1).
+3. Reject body có `guildId === ''` (empty string) → 400.
+4. Audit log (Validation S1 — **console + file**, không tạo bảng mới):
+   ```js
+   console.log(JSON.stringify({
+     tag: '[roll-history:audit]',
+     ts: new Date().toISOString(),
+     actor: req.user?.id || req.user?.username || 'unknown',
+     action: 'nuke' | 'clear-old-days',
+     guildId,
+     deletedCount: info.changes,
+     ip: req.ip,
+   }))
+   ```
+   Console log đã được ingest vào file log dashboard (xem `dashboard/logs/` nếu có). Không cần bảng audit mới.
+5. ~~Dynamic token~~ **Validation S1 chốt:** giữ hardcoded `'NUKE'` (mis-click guard đủ với single-admin context). Audit log BẮT BUỘC theo step 4 ở trên.
+6. Frontend `nuke()` phải truyền `guildId`:
+   ```js
+   body: JSON.stringify({ confirm: 'NUKE', guildId: this.filters.guildId })
+   ```
+
+### Input validation & error wrapping
+- `guildId` regex `^\d{17,20}$` (Discord snowflake) — reject khác format.
+- `+page` / `+pageSize` / `+from` / `+to` validate finite, dùng default nếu NaN.
+- `+req.params.id` validate `Number.isInteger && > 0`.
+- Đổi `ORDER BY score DESC NULLS LAST` thành `ORDER BY (score IS NULL), score DESC, joined_at ASC` (portable).
+- Wrap mỗi handler `try/catch → res.status(500).json({error:'Internal'})` để không leak stack trace.
+
 ## Risk Assessment
 
 | Risk | Severity | Mitigation |

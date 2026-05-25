@@ -104,6 +104,7 @@ function listActiveSessions() {
 
 ### 5.2. Gọi sweep từ `bot/src/index.js`
 
+<!-- Updated: Validation Session 1 - await sweep TRƯỚC khi attach interactionCreate listener -->
 ```js
 // Trong client.once('ready', ...)
 const rollLifecycle = require('./modules/mini-game/services/roll-lifecycle')
@@ -112,11 +113,21 @@ client.once('ready', async () => {
   console.log(`[Bot] ✅ Ready! Logged in as ${client.user.tag}`)
   await registerCommands()
   // ... các initial khác
-  rollLifecycle.sweepOnStartup(client).catch(err => console.error('[roll:sweep]', err))
+
+  // Validation S1: AWAIT sweep TRƯỚC khi cho user tương tác — tránh race
+  // với zombie session. Mỗi session try/catch độc lập nên không sợ 1 lỗi
+  // làm dừng toàn bộ.
+  try {
+    await rollLifecycle.sweepOnStartup(client)
+  } catch (err) {
+    console.error('[roll:sweep] fatal', err) // sweep nội tại đã try/catch per-session
+  }
+
+  // Sau đây mới attach interaction listener (nếu chưa attach trước login)
 })
 ```
 
-Note: gọi `.catch(...)` thay vì `await` để không block bot ready nếu sweep chậm với nhiều session.
+**Lưu ý:** Nếu `interactionCreate` đã attach ở scope cao hơn (trước `client.login()`), thêm guard cờ `sweepDone = false` → handler reply ephemeral "Bot đang khởi tạo, thử lại sau vài giây" nếu cờ chưa bật.
 
 ### 5.3. Manual test scenarios
 
@@ -132,6 +143,25 @@ Note: gọi `.catch(...)` thay vì `await` để không block bot ready nếu sw
 - [ ] Future `open` → timer reschedule, đến hạn fire `onExpire`
 - [ ] Lỗi từ 1 session không làm dừng sweep cho session khác
 - [ ] Log rõ ràng cho debug
+
+## Red Team Fixes (2026-05-25)
+
+### F7 [High] Đảm bảo schema init TRƯỚC khi sweep query
+Trên deployment mới (DB lần đầu), `getDb()` chỉ open connection — KHÔNG tự `initDb()`. Nếu `bot/src/index.js` chưa gọi `initDb()` trước `ready` → sweep crash `no such table: roll_session`.
+
+Fix:
+1. Grep `bot/src/index.js` xem `initDb()` được gọi ở đâu. Đảm bảo nó chạy **trước** `client.login()` (đồng bộ, await).
+2. Defensive trong `sweepOnStartup`: bọc trong try/catch, log rõ "schema chưa init" nếu lỗi SQLITE table-not-exists.
+3. Sweep cũng kiểm tra `client.guilds.cache.has(session.guild_id)` trước khi `channels.fetch` — nếu bot không còn ở guild đó → chỉ DB-cancel, không thử edit message (tránh log spam + Discord audit log).
+
+### F12 `allowedMentions` trong `forceCancelAndEdit`
+```js
+await msg.edit({
+  embeds: [renderer.buildCancelEmbed({...})],
+  components: [],
+  allowedMentions: { parse: [] },
+})
+```
 
 ## Risk Assessment
 

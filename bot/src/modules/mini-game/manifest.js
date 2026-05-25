@@ -4,7 +4,7 @@
 module.exports = {
   key: 'mini-game',
   name: 'Mini Game',
-  description: 'Kéo Búa Bao PvP — thách đấu giữa 2 thành viên, cược coin, người thắng nhận hết.',
+  description: 'Kéo Búa Bao PvP + ROLL multi-player — mini-game cho server.',
   defaultEnabled: false,
-  commands: ['rps', 'coin'], // Cap nhat khi them odd-even / guess-number.
+  commands: ['rps', 'coin', 'roll-start'],
 }
