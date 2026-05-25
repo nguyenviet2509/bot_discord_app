@@ -169,6 +169,8 @@ router.post('/:id/start', async (req, res) => {
   const id = parseInt(req.params.id, 10)
   const bot = dbManaged.getBot(id)
   if (!bot) return res.status(404).json({ error: 'Bot khong ton tai' })
+  // Ghi intent truoc → dashboard restart se tu start lai bot nay
+  dbManaged.setDesiredState(id, 'running')
   try {
     const result = await manager.start(id)
     res.json(result)
@@ -181,6 +183,8 @@ router.post('/:id/stop', async (req, res) => {
   const id = parseInt(req.params.id, 10)
   const bot = dbManaged.getBot(id)
   if (!bot) return res.status(404).json({ error: 'Bot khong ton tai' })
+  // User chu y stop → khong auto-restore khi dashboard boot lai
+  dbManaged.setDesiredState(id, 'stopped')
   try {
     const result = await manager.stop(id)
     res.json(result)

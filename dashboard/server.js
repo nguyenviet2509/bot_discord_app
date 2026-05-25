@@ -65,4 +65,9 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[Dashboard] ✅ Running on port ${PORT}`)
+  // Auto-restore lite bot user da bat (desired_state='running') sau khi
+  // dashboard restart (deploy, healthcheck, idle wake). Async, khong block listen.
+  litebotManager.restoreAll().catch((err) => {
+    console.error('[Dashboard] restoreAll fail:', err.message)
+  })
 })

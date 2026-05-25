@@ -9,6 +9,9 @@
 //   - activity_type: 'Playing' | 'Watching' | 'Listening' | 'Competing' | 'Custom'
 //   - last_username_change: unix ms — dung de UI cooldown rate limit (Discord ~2/h)
 
+// desired_state: trang thai user MUON bot o ('running' | 'stopped'). Tach
+// khoi `status` (runtime actual) de boot dashboard co the tu start lai bot
+// user da chu y bat (xem bots-lite/index.js#restoreAll).
 const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS managed_bots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,6 +21,7 @@ const SCHEMA_SQL = `
     token_iv TEXT NOT NULL,
     application_id TEXT,
     status TEXT NOT NULL DEFAULT 'stopped',
+    desired_state TEXT NOT NULL DEFAULT 'stopped',
     presence_status TEXT NOT NULL DEFAULT 'online',
     activity_type TEXT NOT NULL DEFAULT 'Playing',
     activity_text TEXT,
@@ -30,6 +34,13 @@ const SCHEMA_SQL = `
 
 function initManagedBotsSchema(database) {
   database.exec(SCHEMA_SQL)
+  // Migration: them desired_state cho DB cu da co bang
+  const cols = database.prepare("PRAGMA table_info(managed_bots)").all()
+  if (!cols.some((c) => c.name === 'desired_state')) {
+    database.exec("ALTER TABLE managed_bots ADD COLUMN desired_state TEXT NOT NULL DEFAULT 'stopped'")
+    // Backfill: bot dang `running` lan migration → desired = running
+    database.exec("UPDATE managed_bots SET desired_state = 'running' WHERE status = 'running'")
+  }
 }
 
 function db() {
@@ -40,13 +51,28 @@ function db() {
 function listBots() {
   return db()
     .prepare(`
-      SELECT id, display_name, avatar_url, application_id, status,
+      SELECT id, display_name, avatar_url, application_id, status, desired_state,
              presence_status, activity_type, activity_text,
              last_error, last_username_change, created_at, updated_at
       FROM managed_bots
       ORDER BY id ASC
     `)
     .all()
+}
+
+// IDs cua bot user muon o trang thai running — dung de auto-restore khi boot
+function listDesiredRunningIds() {
+  return db()
+    .prepare("SELECT id FROM managed_bots WHERE desired_state = 'running' ORDER BY id ASC")
+    .all()
+    .map((r) => r.id)
+}
+
+function setDesiredState(id, state) {
+  if (state !== 'running' && state !== 'stopped') return
+  db()
+    .prepare('UPDATE managed_bots SET desired_state = ?, updated_at = ? WHERE id = ?')
+    .run(state, Date.now(), id)
 }
 
 // Full row (gom token+iv) — chi dung trong manager/internal
@@ -60,7 +86,7 @@ function getBotFull(id) {
 function getBot(id) {
   return db()
     .prepare(`
-      SELECT id, display_name, avatar_url, application_id, status,
+      SELECT id, display_name, avatar_url, application_id, status, desired_state,
              presence_status, activity_type, activity_text,
              last_error, last_username_change, created_at, updated_at
       FROM managed_bots WHERE id = ?
@@ -138,11 +164,13 @@ function deleteBot(id) {
 module.exports = {
   initManagedBotsSchema,
   listBots,
+  listDesiredRunningIds,
   getBot,
   getBotFull,
   createBot,
   updateBot,
   updateStatus,
+  setDesiredState,
   recordUsernameChange,
   deleteBot,
 }

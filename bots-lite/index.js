@@ -120,6 +120,33 @@ async function stopAll() {
   await Promise.all(ids.map((id) => stop(id).catch(() => {})))
 }
 
+// Goi luc dashboard boot: doc desired_state tu DB va start tuan tu cac bot
+// user muon chay. Tranh login burst → delay 500ms giua moi bot. Loi 1 bot
+// khong block bot khac.
+async function restoreAll() {
+  const ids = dbManaged.listDesiredRunningIds()
+  if (ids.length === 0) {
+    console.log('[bots-lite] khong co bot can auto-restore')
+    return { restored: 0, failed: 0 }
+  }
+  console.log(`[bots-lite] auto-restore ${ids.length} bot(s)...`)
+  let restored = 0
+  let failed = 0
+  for (const id of ids) {
+    try {
+      await start(id)
+      restored++
+      console.log(`[bots-lite] restored bot #${id}`)
+    } catch (err) {
+      failed++
+      console.error(`[bots-lite] restore bot #${id} that bai: ${err.message}`)
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  console.log(`[bots-lite] auto-restore xong: ${restored} OK, ${failed} fail`)
+  return { restored, failed }
+}
+
 function getStatus(id) {
   return isRunning(id) ? 'running' : 'stopped'
 }
@@ -132,6 +159,7 @@ module.exports = {
   start,
   stop,
   stopAll,
+  restoreAll,
   applyRuntimeChanges,
   getStatus,
   listRunning,
