@@ -24,6 +24,11 @@ function getSession(sessionId) {
   return getDb().prepare('SELECT * FROM roll_session WHERE id = ?').get(sessionId) || null
 }
 
+// Update message_id (vd: sau khi delete msg cu + post msg moi luc finish).
+function setMessageId(sessionId, messageId) {
+  getDb().prepare('UPDATE roll_session SET message_id = ? WHERE id = ?').run(messageId, sessionId)
+}
+
 function getActiveSessionByGuild(guildId) {
   return getDb().prepare(`
     SELECT * FROM roll_session
@@ -195,6 +200,7 @@ module.exports = {
   STATE,
   createSession,
   getSession,
+  setMessageId,
   getActiveSessionByGuild,
   listActiveSessions,
   tryAddParticipant,

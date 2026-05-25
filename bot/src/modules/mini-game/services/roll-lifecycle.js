@@ -136,16 +136,32 @@ async function onStart(interaction, sessionId) {
   await interaction.reply({ content: '🎲 Đang công bố kết quả...', ephemeral: true })
   const ranked = result.participants // store da sort desc
   const finalSession = store.getSession(sessionId)
-  const msg = await fetchSessionMessage(interaction.client, finalSession)
-  if (msg) {
-    await renderer.editNow(sessionId, async () => {
-      await msg.edit({
-        embeds: [renderer.buildResultEmbed({ session: finalSession, rankedParticipants: ranked })],
-        components: [],
-        allowedMentions: { users: [result.winnerId] }, // chi ping winner
-      })
+
+  // Khi finished: delete message cu + post message moi -> result luon o cuoi channel
+  // (chong member chat lam troi). Cancel/expire giu flow cu (edit in-place).
+  await renderer.editNow(sessionId, async () => {
+    const channel = await interaction.client.channels.fetch(finalSession.channel_id).catch(() => null)
+    if (!channel) {
+      console.warn(`[roll:repost] Channel ${finalSession.channel_id} khong fetch duoc, skip repost`)
+      return
+    }
+    // 1. Delete message cu (best-effort, fail vi perm/missing -> bo qua)
+    if (finalSession.message_id) {
+      try {
+        const oldMsg = await channel.messages.fetch(finalSession.message_id).catch(() => null)
+        if (oldMsg) await oldMsg.delete()
+      } catch (err) {
+        console.warn('[roll:delete-old]', err.message)
+      }
+    }
+    // 2. Post message moi voi result embed o cuoi channel
+    const newMsg = await channel.send({
+      embeds: [renderer.buildResultEmbed({ session: finalSession, rankedParticipants: ranked })],
+      allowedMentions: { users: [result.winnerId] }, // chi ping winner
     })
-  }
+    // 3. Update DB de consistency (dashboard detail link, audit)
+    store.setMessageId(sessionId, newMsg.id)
+  })
   renderer.dropSession(sessionId)
 }
 
