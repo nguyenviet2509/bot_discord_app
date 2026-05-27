@@ -1313,9 +1313,8 @@
                       </div>
                     </td>
                     <td class="px-6 py-3 text-xs">
-                      <span x-show="row.channel_name" class="font-mono text-slate-600" x-text="'#' + row.channel_name"></span>
-                      <span x-show="!row.channel_name && row.channel_id" class="font-mono text-slate-400" :title="row.channel_id" x-text="'#' + row.channel_id.slice(-6)"></span>
-                      <span x-show="!row.channel_name && !row.channel_id" class="text-slate-300">—</span>
+                      <span x-show="row.channel_id || row.channel_name" class="font-mono text-slate-600" :title="row.channel_id" x-text="channelLabel(row)"></span>
+                      <span x-show="!row.channel_id && !row.channel_name" class="text-slate-300">—</span>
                     </td>
                     <td class="px-6 py-3 text-xs text-slate-600 max-w-md">
                       <span x-show="row.options_json" class="font-mono" x-text="formatOptions(row.options_json)"></span>

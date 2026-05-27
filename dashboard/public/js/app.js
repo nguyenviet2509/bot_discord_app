@@ -938,6 +938,7 @@ document.addEventListener('alpine:init', () => {
     cmdSearch: '',
     cmdLoading: false,
     _cmdSearchTimer: null,
+    channelMap: {}, // channel_id -> name (resolve cho record cu khong co channel_name)
 
     async init() {
       if (!checkAuth()) return
@@ -971,8 +972,28 @@ document.addEventListener('alpine:init', () => {
       this.loading = false
     },
 
+    async loadChannelMap() {
+      if (Object.keys(this.channelMap).length > 0) return
+      try {
+        const list = await api('GET', '/automod/channels')
+        if (Array.isArray(list)) {
+          const map = {}
+          for (const c of list) map[c.id] = c.name
+          this.channelMap = map
+        }
+      } catch (_) { /* fallback hien thi #<id> rut gon */ }
+    },
+
+    channelLabel(row) {
+      if (row.channel_name) return '#' + row.channel_name
+      if (row.channel_id && this.channelMap[row.channel_id]) return '#' + this.channelMap[row.channel_id]
+      if (row.channel_id) return '#' + row.channel_id.slice(-6)
+      return ''
+    },
+
     async loadCommands() {
       this.cmdLoading = true
+      this.loadChannelMap() // fire-and-forget, khong block render
       const params = new URLSearchParams({
         page: this.cmdPage,
         limit: this.cmdLimit,
