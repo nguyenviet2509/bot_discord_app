@@ -170,6 +170,7 @@ function initDb() {
       user_tag TEXT,
       user_avatar TEXT,
       channel_id TEXT,
+      channel_name TEXT,
       options_json TEXT,
       success INTEGER NOT NULL DEFAULT 1,
       error_message TEXT,
@@ -309,6 +310,8 @@ function initDb() {
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN post_admin_role_ids TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE posts ADD COLUMN image_url TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE welcome_template ADD COLUMN image_url TEXT`) } catch (_) {}
+  // Snapshot ten kenh luc command chay (de hien thi tren dashboard)
+  try { database.exec(`ALTER TABLE command_usage ADD COLUMN channel_name TEXT`) } catch (_) {}
 
   // Honor: custom emoji overrides (Discord server emoji `<:name:id>` hoac fallback unicode)
   try { database.exec(`ALTER TABLE honor_settings ADD COLUMN gold_emoji TEXT`) } catch (_) {}
@@ -797,15 +800,15 @@ function logCommandUsage(data) {
     .prepare(`
       INSERT INTO command_usage (
         guild_id, command_name, user_id, user_tag, user_avatar,
-        channel_id, options_json, success, error_message
+        channel_id, channel_name, options_json, success, error_message
       ) VALUES (
         @guild_id, @command_name, @user_id, @user_tag, @user_avatar,
-        @channel_id, @options_json, @success, @error_message
+        @channel_id, @channel_name, @options_json, @success, @error_message
       )
     `)
     .run({
       user_tag: null, user_avatar: null,
-      channel_id: null, options_json: null,
+      channel_id: null, channel_name: null, options_json: null,
       success: 1, error_message: null,
       ...data,
     })

@@ -1291,6 +1291,7 @@
                 <tr class="border-b border-slate-100 bg-slate-50/60">
                   <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Lệnh</th>
                   <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">User</th>
+                  <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Kênh</th>
                   <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Tham số</th>
                   <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Trạng thái</th>
                   <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Khi nào</th>
@@ -1311,6 +1312,11 @@
                         </div>
                       </div>
                     </td>
+                    <td class="px-6 py-3 text-xs">
+                      <span x-show="row.channel_name" class="font-mono text-slate-600" x-text="'#' + row.channel_name"></span>
+                      <span x-show="!row.channel_name && row.channel_id" class="font-mono text-slate-400" :title="row.channel_id" x-text="'#' + row.channel_id.slice(-6)"></span>
+                      <span x-show="!row.channel_name && !row.channel_id" class="text-slate-300">—</span>
+                    </td>
                     <td class="px-6 py-3 text-xs text-slate-600 max-w-md">
                       <span x-show="row.options_json" class="font-mono" x-text="formatOptions(row.options_json)"></span>
                       <span x-show="!row.options_json" class="text-slate-300">—</span>
@@ -1323,7 +1329,7 @@
                   </tr>
                 </template>
                 <tr x-show="!cmdLoading && cmdItems.length === 0">
-                  <td colspan="5" class="px-6 py-16 text-center text-slate-400 text-xs md:text-sm">Không có dữ liệu</td>
+                  <td colspan="6" class="px-6 py-16 text-center text-slate-400 text-xs md:text-sm">Không có dữ liệu</td>
                 </tr>
               </tbody>
             </table>

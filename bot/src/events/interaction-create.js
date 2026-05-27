@@ -75,6 +75,7 @@ async function handleSlashCommand(interaction, client) {
         user_tag: interaction.user.tag || interaction.user.username,
         user_avatar: interaction.user.displayAvatarURL?.({ size: 64 }) || null,
         channel_id: interaction.channelId || null,
+        channel_name: interaction.channel?.name || null,
         options_json: opts.length ? JSON.stringify(opts) : null,
         success: execError ? 0 : 1,
         error_message: execError ? String(execError.message || execError).slice(0, 300) : null,
