@@ -51,7 +51,17 @@ function withCanChangeUsername(bot) {
 }
 
 router.get('/', (req, res) => {
-  const bots = dbManaged.listBots().map(withCanChangeUsername)
+  // Override field `status` bang realtime check tu manager (memory). DB status
+  // chi update khi user thao tac hoac onError fire, nen co the lech voi thuc te
+  // khi gateway disconnect am tham. Giu 'error' tu DB de user thay last_error.
+  const bots = dbManaged.listBots().map((b) => {
+    const enriched = withCanChangeUsername(b)
+    const realtimeRunning = manager.isRunning(b.id)
+    return {
+      ...enriched,
+      status: realtimeRunning ? 'running' : (b.status === 'error' ? 'error' : 'stopped'),
+    }
+  })
   res.json(bots)
 })
 
@@ -191,6 +201,28 @@ router.post('/:id/stop', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
+})
+
+// Khoi dong lai tat ca bot co desired_state='running'. Stop+start tuan tu, delay
+// 500ms/bot tranh login burst. Khong dong vao bot user da chu y stop.
+router.post('/restart-all', async (req, res) => {
+  const ids = dbManaged.listDesiredRunningIds()
+  let restarted = 0
+  let failed = 0
+  for (const id of ids) {
+    try {
+      if (manager.isRunning(id)) {
+        await manager.stop(id).catch(() => {})
+      }
+      await manager.start(id)
+      restarted++
+    } catch (err) {
+      failed++
+      console.error(`[restart-all] bot #${id}: ${err.message}`)
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  res.json({ restarted, failed, total: ids.length })
 })
 
 // Multer error handler

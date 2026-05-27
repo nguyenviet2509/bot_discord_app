@@ -1896,6 +1896,25 @@ document.addEventListener('alpine:init', () => {
       }
     },
 
+    async restartAll() {
+      if (!confirm('Khởi động lại tất cả bot đang bật? Có thể mất vài giây mỗi bot.')) return
+      this.loading = true
+      try {
+        const r = await api('POST', '/managed-bots/restart-all')
+        if (r?.error) {
+          this.flash(r.error, false)
+        } else {
+          const ok = r.failed === 0
+          this.flash(`Đã khởi động lại ${r.restarted}/${r.total} bot${r.failed ? ` (${r.failed} lỗi)` : ''}`, ok)
+        }
+        await this.load()
+      } catch (e) {
+        this.flash('Khởi động lại thất bại: ' + (e?.message || 'lỗi'), false)
+      } finally {
+        this.loading = false
+      }
+    },
+
     handleFile(e) { this.avatarFile = e.target.files[0] || null },
 
     presenceDot(s) {

@@ -8,7 +8,7 @@
 //   - ActivityType.Custom co the khong hien thi dung voi bot — neu user chon Custom
 //     ma khong thay status text → fallback de cuoi cung la khong gan activity.
 
-const { Client, GatewayIntentBits, ActivityType } = require('discord.js')
+const { Client, GatewayIntentBits, ActivityType, Status } = require('discord.js')
 
 const ACTIVITY_TYPE_MAP = {
   Playing: ActivityType.Playing,
@@ -40,6 +40,21 @@ class LiteClient {
     this.client = new Client({ intents: [GatewayIntentBits.Guilds] })
     this.client.on('error', (err) => this.onError(err))
     this.client.on('shardError', (err) => this.onError(err))
+    // Gateway disconnect → flip ready=false. discord.js se tu reconnect; shardResume/shardReady
+    // se flip lai ready=true. Neu khong reconnect duoc, state dung yen o ready=false (dung intent).
+    this.client.on('shardDisconnect', (event, shardId) => {
+      this.ready = false
+      this.onError(new Error(`Shard ${shardId} disconnect: code=${event?.code}`))
+    })
+    this.client.on('shardResume', () => { this.ready = true })
+    this.client.on('shardReady', () => { this.ready = true })
+    // Session invalidated = fatal. Cleanup hoan toan; lan start() tiep theo se tao client moi.
+    this.client.once('invalidated', () => {
+      this.ready = false
+      this.onError(new Error('Session invalidated — can restart bot'))
+      try { this.client?.destroy() } catch (_) {}
+      this.client = null
+    })
 
     const readyPromise = new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Bot login timeout sau 15s')), 15000)
@@ -77,7 +92,9 @@ class LiteClient {
   }
 
   isRunning() {
-    return this.ready && !!this.client
+    // Realtime check: tin ws.status thay vi chi tin bien cache ready.
+    // Tranh zombie state khi listener miss event hoac client.ws bi rot ngam.
+    return this.ready && !!this.client && this.client.ws?.status === Status.Ready
   }
 
   // Goi luc on ready: chi setUsername/setAvatar khi gia tri muc tieu khac hien tai
