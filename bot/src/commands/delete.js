@@ -1,15 +1,18 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js')
 
+const MAX_AMOUNT = 1000
+const BATCH_SIZE = 100
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('delete')
-    .setDescription('Xóa một số lượng tin nhắn trong kênh (tối đa 100)')
+    .setDescription('Xóa một số lượng tin nhắn trong kênh (tối đa 1000)')
     .addIntegerOption(opt =>
       opt
         .setName('amount')
-        .setDescription('Số tin nhắn cần xóa (1–100)')
+        .setDescription('Số tin nhắn cần xóa (1–1000)')
         .setMinValue(1)
-        .setMaxValue(100)
+        .setMaxValue(MAX_AMOUNT)
         .setRequired(true)
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
@@ -30,15 +33,33 @@ module.exports = {
     await interaction.deferReply({ ephemeral: true })
 
     try {
-      // bulkDelete lọc bỏ tin nhắn cũ hơn 14 ngày (filterOld = true)
-      const deleted = await channel.bulkDelete(amount, true)
+      let remaining = amount
+      let totalDeleted = 0
+      let stoppedEarly = false
 
-      const actualCount = deleted.size
-      const skipped = amount - actualCount
+      // Discord bulkDelete chỉ cho tối đa 100 tin/lần và bỏ qua tin > 14 ngày.
+      // Lặp theo batch để xóa lên tới 1000 tin.
+      while (remaining > 0) {
+        const batch = Math.min(BATCH_SIZE, remaining)
+        const deleted = await channel.bulkDelete(batch, true)
+        const count = deleted.size
+        totalDeleted += count
+        remaining -= batch
 
-      let content = `🗑️ Đã xóa thành công **${actualCount}** tin nhắn.`
+        // Nếu batch trả về ít hơn yêu cầu -> hết tin có thể xóa (kênh hết tin hoặc tin quá cũ)
+        if (count < batch) {
+          stoppedEarly = true
+          break
+        }
+      }
+
+      const skipped = amount - totalDeleted
+      let content = `🗑️ Đã xóa thành công **${totalDeleted}** tin nhắn.`
       if (skipped > 0) {
-        content += `\n⚠️ Bỏ qua **${skipped}** tin nhắn (cũ hơn 14 ngày, Discord không cho xóa hàng loạt).`
+        content += `\n⚠️ Bỏ qua **${skipped}** tin nhắn (cũ hơn 14 ngày hoặc kênh hết tin nhắn để xóa).`
+      }
+      if (stoppedEarly && totalDeleted < amount) {
+        // chỉ là note thêm, không lỗi
       }
 
       await interaction.editReply({ content })
