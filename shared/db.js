@@ -53,6 +53,8 @@ function initDb() {
       cooldown_seconds INTEGER NOT NULL DEFAULT 60,
       level_up_channel_id TEXT,
       level_up_reply_channel_id TEXT,
+      silent_include_role_id TEXT,
+      silent_exclude_role_id TEXT,
       updated_at INTEGER DEFAULT (unixepoch())
     );
 
@@ -295,6 +297,8 @@ function initDb() {
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN levelup_react_chance_pct INTEGER NOT NULL DEFAULT 8`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN allowed_role_ids TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN level_up_reply_channel_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_include_role_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_exclude_role_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
@@ -713,6 +717,29 @@ function removeSilentMember(guildId, userId) {
   return getDb()
     .prepare('DELETE FROM silent_members WHERE guild_id = ? AND user_id = ?')
     .run(guildId, userId)
+}
+
+// Lay config role filter cho silent member scan
+function getSilentFilterConfig(guildId) {
+  const row = getDb()
+    .prepare('SELECT silent_include_role_id, silent_exclude_role_id FROM guild_settings WHERE guild_id = ?')
+    .get(guildId)
+  return {
+    include_role_id: row?.silent_include_role_id || null,
+    exclude_role_id: row?.silent_exclude_role_id || null,
+  }
+}
+
+// Luu config role filter; null = bo filter
+function setSilentFilterConfig(guildId, { includeRoleId, excludeRoleId }) {
+  getDb().prepare(`
+    INSERT INTO guild_settings (guild_id, silent_include_role_id, silent_exclude_role_id, updated_at)
+    VALUES (?, ?, ?, unixepoch())
+    ON CONFLICT(guild_id) DO UPDATE SET
+      silent_include_role_id = excluded.silent_include_role_id,
+      silent_exclude_role_id = excluded.silent_exclude_role_id,
+      updated_at = unixepoch()
+  `).run(guildId, includeRoleId || null, excludeRoleId || null)
 }
 
 function getAnalyticsSummary(guildId) {
@@ -1231,6 +1258,8 @@ module.exports = {
   getSilentScannedAt,
   replaceSilentMembers,
   removeSilentMember,
+  getSilentFilterConfig,
+  setSilentFilterConfig,
   getScheduledMessages,
   getScheduledMessageById,
   createScheduledMessage,

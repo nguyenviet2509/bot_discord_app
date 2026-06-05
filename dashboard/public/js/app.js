@@ -778,6 +778,9 @@ document.addEventListener('alpine:init', () => {
     silentMembers: [],
     silentTotal: 0,
     silentScannedAt: null,
+    silentFilter: { include: '', exclude: '' },
+    guildRoles: [],
+    loadingFilterSave: false,
     growthDays: '30',
     inactiveDays: '7',
     loading: false,
@@ -792,13 +795,15 @@ document.addEventListener('alpine:init', () => {
 
     async load() {
       this.loading = true
-      const [summary, growth, heatmap, topChannels, inactive, silent] = await Promise.all([
+      const [summary, growth, heatmap, topChannels, inactive, silent, filterCfg, roles] = await Promise.all([
         api('GET', '/analytics/summary'),
         api('GET', `/analytics/growth?days=${this.growthDays}`),
         api('GET', '/analytics/heatmap'),
         api('GET', '/analytics/top-channels?limit=10'),
         api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=100`),
         api('GET', '/analytics/silent-members?limit=500'),
+        api('GET', '/analytics/silent-filter-config').catch(() => null),
+        api('GET', '/analytics/guild-roles').catch(() => []),
       ])
       this.summary = summary || {}
       this.growth = growth || []
@@ -808,9 +813,43 @@ document.addEventListener('alpine:init', () => {
       this.silentMembers = silent?.members || []
       this.silentTotal = silent?.total || 0
       this.silentScannedAt = silent?.scanned_at || null
+      this.silentFilter.include = filterCfg?.include_role_id || ''
+      this.silentFilter.exclude = filterCfg?.exclude_role_id || ''
+      this.guildRoles = Array.isArray(roles) ? roles : []
       this._heatmapMax = Math.max(1, ...this.heatmap.map(h => h.message_count))
       this.loading = false
       this.$nextTick(() => this.renderGrowthChart())
+    },
+
+    // Luu config role filter va auto re-scan silent members
+    async saveSilentFilter() {
+      this.loadingFilterSave = true
+      this.loadingSilent = true
+      try {
+        const res = await api('PUT', '/analytics/silent-filter-config', {
+          include_role_id: this.silentFilter.include || null,
+          exclude_role_id: this.silentFilter.exclude || null,
+        })
+        if (res?.error) {
+          this.showToastTmp(res.error, 'red')
+        } else if (res?.warnings?.length) {
+          this.showToastTmp(res.warnings.join('\n'), 'amber')
+        }
+        const data = await api('GET', '/analytics/silent-members?limit=500')
+        this.silentMembers = data?.members || []
+        this.silentTotal = data?.total || 0
+        this.silentScannedAt = data?.scanned_at || null
+      } catch (err) {
+        this.showToastTmp(err.message, 'red')
+      }
+      this.loadingFilterSave = false
+      this.loadingSilent = false
+    },
+
+    clearSilentFilter() {
+      this.silentFilter.include = ''
+      this.silentFilter.exclude = ''
+      return this.saveSilentFilter()
     },
 
     async loadGrowth() {

@@ -5,6 +5,9 @@ const db = require('./db')
 async function scanSilentMembers(guildId) {
   if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN chua duoc cau hinh')
 
+  // Config filter theo role: include = phai co, exclude = khong duoc co
+  const { include_role_id, exclude_role_id } = db.getSilentFilterConfig(guildId)
+
   const allMembers = []
   let after = '0'
   for (let i = 0; i < 10; i++) { // toi da 10 trang = 10k member
@@ -24,7 +27,14 @@ async function scanSilentMembers(guildId) {
 
   const chattedIds = new Set(db.getAllUsers(guildId).map(u => u.id))
   const silent = allMembers
-    .filter(m => m.user && !m.user.bot && !chattedIds.has(m.user.id))
+    .filter(m => {
+      if (!m.user || m.user.bot) return false
+      if (chattedIds.has(m.user.id)) return false
+      const roles = m.roles || []
+      if (include_role_id && !roles.includes(include_role_id)) return false
+      if (exclude_role_id && roles.includes(exclude_role_id)) return false
+      return true
+    })
     .map(m => ({
       user_id: m.user.id,
       username: m.user.username,

@@ -71,4 +71,68 @@ router.post('/silent-members/scan', async (req, res) => {
   }
 })
 
+// ============================================================
+// Silent member role filter config
+// ============================================================
+let rolesCache = { at: 0, data: null }
+async function fetchGuildRoles() {
+  if (Date.now() - rolesCache.at < 60_000 && rolesCache.data) return rolesCache.data
+  if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN chua duoc cau hinh')
+  const r = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID()}/roles`, {
+    headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
+  })
+  if (!r.ok) throw new Error(`Discord API ${r.status}: ${(await r.text()).slice(0, 200)}`)
+  const roles = await r.json()
+  rolesCache = { at: Date.now(), data: roles }
+  return roles
+}
+
+router.get('/silent-filter-config', (req, res) => {
+  res.json(db.getSilentFilterConfig(GUILD_ID()))
+})
+
+router.get('/guild-roles', async (req, res) => {
+  try {
+    const roles = await fetchGuildRoles()
+    res.json(
+      roles
+        .filter(r => r.name !== '@everyone')
+        .map(r => ({ id: r.id, name: r.name, color: r.color, position: r.position }))
+        .sort((a, b) => b.position - a.position)
+    )
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.put('/silent-filter-config', async (req, res) => {
+  try {
+    const { include_role_id, exclude_role_id } = req.body || {}
+    const normInclude = include_role_id ? String(include_role_id) : null
+    const normExclude = exclude_role_id ? String(exclude_role_id) : null
+
+    // Validate role ton tai (warn only, khong hard fail)
+    const warnings = []
+    if (normInclude || normExclude) {
+      try {
+        const roles = await fetchGuildRoles()
+        const ids = new Set(roles.map(r => r.id))
+        if (normInclude && !ids.has(normInclude)) warnings.push(`Role include "${normInclude}" khong ton tai trong server`)
+        if (normExclude && !ids.has(normExclude)) warnings.push(`Role exclude "${normExclude}" khong ton tai trong server`)
+      } catch (_) { /* skip validation neu fetch fail */ }
+    }
+
+    db.setSilentFilterConfig(GUILD_ID(), { includeRoleId: normInclude, excludeRoleId: normExclude })
+    const scan = await scanSilentMembers(GUILD_ID())
+    res.json({
+      success: true,
+      config: db.getSilentFilterConfig(GUILD_ID()),
+      scan,
+      warnings,
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 module.exports = router
