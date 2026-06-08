@@ -163,15 +163,29 @@ function buildSilentNotifyEmbed({ description, footerText, isTest = false }) {
 }
 
 // Parse Discord message link → tra ve { url, guildId, channelId, messageId } hoac null neu invalid
-// Ho tro:
+// Ho tro nhieu format:
 // - URL day du: https://discord.com/channels/{guild}/{channel}/{message}
-// - Chi message ID (19 chu so): can co channel context, ko parse duoc -> return null
+// - "{channel_id}/{message_id}" (dung GUILD_ID hien tai)
+// - "{channel_id} {message_id}" (cach nhau bang space/dau phay)
 function parseDiscordMessageLink(input) {
   if (!input) return null
   const str = String(input).trim()
-  const m = str.match(/^https?:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)\/?$/)
-  if (!m) return null
-  return { url: `https://discord.com/channels/${m[1]}/${m[2]}/${m[3]}`, guildId: m[1], channelId: m[2], messageId: m[3] }
+
+  // Format 1: URL day du
+  const urlMatch = str.match(/discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)/)
+  if (urlMatch) {
+    return { url: `https://discord.com/channels/${urlMatch[1]}/${urlMatch[2]}/${urlMatch[3]}`, guildId: urlMatch[1], channelId: urlMatch[2], messageId: urlMatch[3] }
+  }
+
+  // Format 2 & 3: 2 ID (channel + message), dung GUILD_ID hien tai
+  const ids = str.match(/\d{17,20}/g)
+  if (ids && ids.length >= 2) {
+    const guildId = process.env.GUILD_ID
+    if (!guildId) return null
+    return { url: `https://discord.com/channels/${guildId}/${ids[0]}/${ids[1]}`, guildId, channelId: ids[0], messageId: ids[1] }
+  }
+
+  return null
 }
 
 // POST: gui test thong bao - render giong that nhung KHONG ping ai

@@ -996,6 +996,21 @@ document.addEventListener('alpine:init', () => {
       this.notifyLoading = false
     },
 
+    // Parse link input → URL day du de preview (giong logic backend)
+    get resolvedLinkUrl() {
+      const str = (this.notifyLinkUrl || '').trim()
+      if (!str) return ''
+      const urlMatch = str.match(/discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)/)
+      if (urlMatch) return `https://discord.com/channels/${urlMatch[1]}/${urlMatch[2]}/${urlMatch[3]}`
+      const ids = str.match(/\d{17,20}/g)
+      if (ids && ids.length >= 2 && this.summary?.guild_id) {
+        return `https://discord.com/channels/${this.summary.guild_id}/${ids[0]}/${ids[1]}`
+      }
+      // Frontend khong biet GUILD_ID → ket noi link tuong doi, backend tu fill khi gui
+      if (ids && ids.length >= 2) return `https://discord.com/channels/@me/${ids[0]}/${ids[1]}`
+      return ''
+    },
+
     // Render mockup mentions theo style Discord that
     renderMentionsPreview() {
       const list = this.silentMembers || []

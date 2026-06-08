@@ -1051,10 +1051,11 @@
                         class="input-field text-xs md:text-sm" :disabled="notifyLoading"></textarea>
               <div>
                 <input type="text" x-model="notifyLinkUrl"
-                       placeholder="Link tin nhắn đính kèm (tuỳ chọn) — vd: https://discord.com/channels/{guild}/{channel}/{message}"
+                       placeholder="Link tin nhắn (tuỳ chọn): paste link Discord, HOẶC {channel_id} {message_id}"
                        class="input-field text-xs md:text-sm" :disabled="notifyLoading" />
                 <p class="text-xs text-slate-500 mt-1">
-                  💡 Right-click vào tin nhắn trên Discord → <b>Copy Message Link</b> → paste vào đây. Sẽ hiển thị nút "Click để xem tin nhắn liên quan" trong embed.
+                  💡 Chấp nhận: (1) Full link Discord, (2) <code>channel_id/message_id</code>, (3) hai ID cách nhau dấu cách.
+                  Vd: <code>1502548563563909120 1510499311715094678</code>
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -1084,8 +1085,11 @@
                       <div class="p-3">
                         <div class="font-bold text-[15px] mb-1" style="color:#f2f3f5;">📢 Thông báo dành cho bạn</div>
                         <div class="text-[14px] leading-snug whitespace-pre-wrap" style="color:#dbdee1;" x-text="(notifyMessage || ' ').replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim() || ' '"></div>
-                        <div x-show="notifyLinkUrl" class="mt-2 text-[14px]">
-                          <a :href="notifyLinkUrl" target="_blank" style="color:#00a8fc;text-decoration:underline;">🔗 <b>Click để xem tin nhắn liên quan →</b></a>
+                        <div x-show="notifyLinkUrl && resolvedLinkUrl" class="mt-2 text-[14px]">
+                          <a :href="resolvedLinkUrl" target="_blank" style="color:#00a8fc;text-decoration:underline;">🔗 <b>Click để xem tin nhắn liên quan →</b></a>
+                        </div>
+                        <div x-show="notifyLinkUrl && !resolvedLinkUrl" class="mt-2 text-[12px]" style="color:#f59e0b;">
+                          ⚠️ Link không hợp lệ
                         </div>
                         <div class="text-[11px] mt-2 flex items-center gap-1" style="color:#949ba4;">
                           <span x-text="`${silentTotal || 0} member trong batch này • hôm nay`"></span>
