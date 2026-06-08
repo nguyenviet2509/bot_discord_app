@@ -142,6 +142,18 @@ router.post('/silent-members/kick', async (req, res) => {
   res.json({ success: results.kicked > 0, ...results })
 })
 
+// Helper: build embed object cho silent-member notify (style dong nhat)
+// Discord embed limit: title 256, description 4096
+function buildSilentNotifyEmbed({ description, footerText, isTest = false }) {
+  return {
+    color: isTest ? 0xF59E0B : 0x6366F1, // amber test / indigo real
+    title: isTest ? '🧪 [TEST] Thông báo cho member chưa chat' : '📢 Thông báo dành cho bạn',
+    description: description.slice(0, 4096),
+    footer: footerText ? { text: footerText.slice(0, 2048) } : undefined,
+    timestamp: new Date().toISOString(),
+  }
+}
+
 // POST: gui test thong bao - render giong that nhung KHONG ping ai
 // Body: { channel_id, message, sample_size? (default 3) }
 // Lay vai member dau danh sach lam vi du, allowed_mentions=[] de Discord khong ping
@@ -161,15 +173,22 @@ router.post('/silent-members/notify-test', async (req, res) => {
     : '(không có member nào trong danh sách)'
 
   const hasPlaceholder = rawMsg.includes('{mentions}')
-  const baseTemplate = hasPlaceholder ? rawMsg : rawMsg + '\n{mentions}'
-  const content = `**[TEST — không ping ai]**\n` + baseTemplate.replace('{mentions}', mentionsText)
+  const description = hasPlaceholder
+    ? rawMsg.replace('{mentions}', mentionsText)
+    : `${rawMsg}\n\n${mentionsText}`
+
+  const embed = buildSilentNotifyEmbed({
+    description,
+    footerText: `Test • Sample ${members.length}/${totalActual} member • Không ping`,
+    isTest: true,
+  })
 
   const url = `https://discord.com/api/v10/channels/${String(channel_id).trim()}/messages`
   try {
     const r = await fetch(url, {
       method: 'POST',
       headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content.slice(0, 1990), allowed_mentions: { parse: [] } }),
+      body: JSON.stringify({ embeds: [embed], allowed_mentions: { parse: [] } }),
     })
     if (!r.ok) {
       const txt = await r.text()
@@ -202,24 +221,19 @@ router.post('/silent-members/notify', async (req, res) => {
   if (!members.length) return res.status(400).json({ error: 'Không có member nào trong danh sách silent (hãy quét trước)' })
 
   const targetChannel = String(channel_id).trim()
-  const hasPlaceholder = rawMsg.includes('{mentions}')
-  const baseTemplate = hasPlaceholder ? rawMsg : rawMsg + '\n{mentions}'
-
-  // Chia batch theo gioi han 2000 ky tu cua Discord
-  const DISCORD_LIMIT = 1900 // chua 100 ky tu margin cho header batch info
+  // Mentions phai nam trong CONTENT de Discord ping (embed mentions khong ping).
+  // Chia batch theo gioi han content 2000 ky tu.
+  const DISCORD_CONTENT_LIMIT = 1900
   const allMentions = members.map(m => `<@${m.user_id}>`)
-  const fixedPart = baseTemplate.replace('{mentions}', '')
-  const fixedLen = fixedPart.length
-
   const batches = []
   let current = []
-  let currentLen = fixedLen
+  let currentLen = 0
   for (const tag of allMentions) {
     const add = (current.length ? 1 : 0) + tag.length
-    if (currentLen + add > DISCORD_LIMIT && current.length > 0) {
+    if (currentLen + add > DISCORD_CONTENT_LIMIT && current.length > 0) {
       batches.push(current)
       current = [tag]
-      currentLen = fixedLen + tag.length
+      currentLen = tag.length
     } else {
       current.push(tag)
       currentLen += add
@@ -232,9 +246,17 @@ router.post('/silent-members/notify', async (req, res) => {
 
   for (let i = 0; i < batches.length; i++) {
     const mentionsText = batches[i].join(' ')
-    const content = baseTemplate.replace('{mentions}', mentionsText)
+    // Embed description: clone message, xoa placeholder {mentions} (mentions tach ra content)
+    const description = rawMsg.replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim()
+    const footerParts = [`${batches[i].length} member trong batch này`]
+    if (batches.length > 1) footerParts.push(`Batch ${i + 1}/${batches.length}`)
+    const embed = buildSilentNotifyEmbed({
+      description: description || ' ',
+      footerText: footerParts.join(' • '),
+    })
     const payload = {
-      content,
+      content: mentionsText,
+      embeds: [embed],
       allowed_mentions: { parse: ['users'] },
     }
     try {
