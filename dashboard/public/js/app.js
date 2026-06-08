@@ -778,7 +778,7 @@ document.addEventListener('alpine:init', () => {
     silentMembers: [],
     silentTotal: 0,
     silentScannedAt: null,
-    silentFilter: { include: '', exclude: '' },
+    silentFilter: { include: '', exclude: '', applyReactionFilter: true },
     guildRoles: [],
     loadingFilterSave: false,
     // Notify silent members
@@ -849,6 +849,8 @@ document.addEventListener('alpine:init', () => {
       this.silentScannedAt = silent?.scanned_at || null
       this.silentFilter.include = filterCfg?.include_role_id || ''
       this.silentFilter.exclude = filterCfg?.exclude_role_id || ''
+      // Mac dinh true cho backward compat neu API cu khong tra ve
+      this.silentFilter.applyReactionFilter = filterCfg?.apply_reaction_filter !== false
       this.guildRoles = Array.isArray(roles) ? roles : []
       this._heatmapMax = Math.max(1, ...this.heatmap.map(h => h.message_count))
       this.loading = false
@@ -863,6 +865,7 @@ document.addEventListener('alpine:init', () => {
         const res = await api('PUT', '/analytics/silent-filter-config', {
           include_role_id: this.silentFilter.include || null,
           exclude_role_id: this.silentFilter.exclude || null,
+          apply_reaction_filter: !!this.silentFilter.applyReactionFilter,
         })
         if (res?.error) {
           this.showToastTmp(res.error, 'red')
@@ -1021,6 +1024,7 @@ document.addEventListener('alpine:init', () => {
           const parts = [
             `Quét ${res.scanned_channels} channel, ${res.scanned_messages} message`,
             `${res.messages_with_reactions} có reaction`,
+            `Thu thập ${res.collected_users || 0} user, đủ điều kiện ${res.eligible_users || 0} (loại đã chat + role filter)`,
             `Thêm ${res.new_users} user mới (tổng ${res.total_reacted_users})`,
           ]
           if (typeof res.silent_after_rescan === 'number') {

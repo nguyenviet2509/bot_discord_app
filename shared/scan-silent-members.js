@@ -5,8 +5,8 @@ const db = require('./db')
 async function scanSilentMembers(guildId) {
   if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN chua duoc cau hinh')
 
-  // Config filter theo role: include = phai co, exclude = khong duoc co
-  const { include_role_id, exclude_role_id } = db.getSilentFilterConfig(guildId)
+  // Config filter: role + reaction filter optional
+  const { include_role_id, exclude_role_id, apply_reaction_filter } = db.getSilentFilterConfig(guildId)
 
   const allMembers = []
   let after = '0'
@@ -26,13 +26,15 @@ async function scanSilentMembers(guildId) {
   }
 
   const chattedIds = new Set(db.getAllUsers(guildId).map(u => u.id))
-  // Member da tha reaction → coi nhu da tuong tac, loai khoi silent list
-  const reactedIds = new Set(db.getReactionUserIds(guildId))
+  // Reaction filter: chi load + ap dung neu config bat
+  const reactedIds = apply_reaction_filter
+    ? new Set(db.getReactionUserIds(guildId))
+    : null
   const silent = allMembers
     .filter(m => {
       if (!m.user || m.user.bot) return false
       if (chattedIds.has(m.user.id)) return false
-      if (reactedIds.has(m.user.id)) return false
+      if (reactedIds && reactedIds.has(m.user.id)) return false
       const roles = m.roles || []
       if (include_role_id && !roles.includes(include_role_id)) return false
       if (exclude_role_id && roles.includes(exclude_role_id)) return false

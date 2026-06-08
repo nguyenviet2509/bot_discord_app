@@ -1059,6 +1059,14 @@
                 Bỏ filter
               </button>
             </div>
+            <label class="mt-3 flex items-center gap-2 text-xs cursor-pointer select-none">
+              <input type="checkbox" x-model="silentFilter.applyReactionFilter"
+                     :disabled="loadingFilterSave || loadingSilent" />
+              <span class="text-slate-700">
+                Lọc thêm member đã thả reaction (loại khỏi list những ai đã tương tác qua emoji)
+                <span class="text-slate-400">— bỏ tick nếu chỉ muốn filter theo chat + role</span>
+              </span>
+            </label>
           </div>
 
           <!-- Gui thong bao tag toan bo silent members -->

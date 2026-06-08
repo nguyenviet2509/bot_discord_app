@@ -310,6 +310,8 @@ function initDb() {
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_message TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_link_url TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_link_label TEXT`) } catch (_) {}
+  // 1 = ap reaction filter (loai member da tha reaction khoi silent list), 0 = bo qua
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_apply_reaction_filter INTEGER NOT NULL DEFAULT 1`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
@@ -767,27 +769,35 @@ function removeSilentMember(guildId, userId) {
     .run(guildId, userId)
 }
 
-// Lay config role filter cho silent member scan
+// Lay config role filter + reaction filter cho silent member scan
 function getSilentFilterConfig(guildId) {
   const row = getDb()
-    .prepare('SELECT silent_include_role_id, silent_exclude_role_id FROM guild_settings WHERE guild_id = ?')
+    .prepare('SELECT silent_include_role_id, silent_exclude_role_id, silent_apply_reaction_filter FROM guild_settings WHERE guild_id = ?')
     .get(guildId)
   return {
     include_role_id: row?.silent_include_role_id || null,
     exclude_role_id: row?.silent_exclude_role_id || null,
+    apply_reaction_filter: row?.silent_apply_reaction_filter == null ? true : !!row.silent_apply_reaction_filter,
   }
 }
 
-// Luu config role filter; null = bo filter
-function setSilentFilterConfig(guildId, { includeRoleId, excludeRoleId }) {
-  getDb().prepare(`
-    INSERT INTO guild_settings (guild_id, silent_include_role_id, silent_exclude_role_id, updated_at)
-    VALUES (?, ?, ?, unixepoch())
+// Luu config; null = bo filter role; applyReactionFilter undefined → giu nguyen
+function setSilentFilterConfig(guildId, { includeRoleId, excludeRoleId, applyReactionFilter }) {
+  const db = getDb()
+  // Doc gia tri hien tai de khong ghi de neu caller khong truyen
+  const existing = db.prepare('SELECT silent_apply_reaction_filter FROM guild_settings WHERE guild_id = ?').get(guildId)
+  const reactionFlag = applyReactionFilter === undefined
+    ? (existing?.silent_apply_reaction_filter == null ? 1 : existing.silent_apply_reaction_filter)
+    : (applyReactionFilter ? 1 : 0)
+  db.prepare(`
+    INSERT INTO guild_settings (guild_id, silent_include_role_id, silent_exclude_role_id, silent_apply_reaction_filter, updated_at)
+    VALUES (?, ?, ?, ?, unixepoch())
     ON CONFLICT(guild_id) DO UPDATE SET
       silent_include_role_id = excluded.silent_include_role_id,
       silent_exclude_role_id = excluded.silent_exclude_role_id,
+      silent_apply_reaction_filter = excluded.silent_apply_reaction_filter,
       updated_at = unixepoch()
-  `).run(guildId, includeRoleId || null, excludeRoleId || null)
+  `).run(guildId, includeRoleId || null, excludeRoleId || null, reactionFlag)
 }
 
 // Notify template cho silent members (channel + noi dung message + link dinh kem)
@@ -1030,6 +1040,13 @@ function getAllUsers(guildId) {
   return getDb()
     .prepare('SELECT * FROM users WHERE guild_id = ? ORDER BY xp DESC')
     .all(guildId)
+}
+
+// Cheap lookup: user da co message hay chua (dung trong reaction handler forward)
+function userHasChatted(guildId, userId) {
+  return !!getDb()
+    .prepare('SELECT 1 FROM users WHERE guild_id = ? AND id = ? LIMIT 1')
+    .get(guildId, userId)
 }
 
 function incrementUserMessageCount(userId, guildId) {
@@ -1294,6 +1311,7 @@ module.exports = {
   getUserRank,
   getLeaderboard,
   getAllUsers,
+  userHasChatted,
   incrementUserMessageCount,
   resetUserXp,
   deleteUser,

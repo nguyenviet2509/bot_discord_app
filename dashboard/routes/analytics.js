@@ -158,7 +158,42 @@ router.post('/reactions/backfill', async (req, res) => {
       await sleep(250)
     }
 
-    stats.new_users = db.markUsersReactedBulk(guildId, Array.from(allUsers))
+    // Filter: chi giu user la silent candidate (chua chat + pass role filter)
+    const chattedIds = new Set(db.getAllUsers(guildId).map(u => u.id))
+    const { include_role_id, exclude_role_id } = db.getSilentFilterConfig(guildId)
+
+    let memberRoleMap = null
+    if (include_role_id || exclude_role_id) {
+      memberRoleMap = new Map() // user_id → roles[]
+      let after = '0'
+      for (let i = 0; i < 10; i++) {
+        const r = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`, {
+          headers: { 'Authorization': `Bot ${token}` },
+        })
+        stats.api_calls++
+        if (!r.ok) break
+        const batch = await r.json()
+        if (!batch.length) break
+        for (const m of batch) {
+          if (m.user && !m.user.bot) memberRoleMap.set(m.user.id, m.roles || [])
+        }
+        after = batch[batch.length - 1].user.id
+        if (batch.length < 1000) break
+      }
+    }
+
+    const eligibleUsers = Array.from(allUsers).filter(uid => {
+      if (chattedIds.has(uid)) return false
+      if (memberRoleMap) {
+        const roles = memberRoleMap.get(uid) || []
+        if (include_role_id && !roles.includes(include_role_id)) return false
+        if (exclude_role_id && roles.includes(exclude_role_id)) return false
+      }
+      return true
+    })
+    stats.collected_users = allUsers.size
+    stats.eligible_users = eligibleUsers.length
+    stats.new_users = db.markUsersReactedBulk(guildId, eligibleUsers)
     stats.total_reacted_users = db.countReactionUsers(guildId)
 
     // Auto re-scan silent members de UI dong bo
@@ -515,7 +550,7 @@ router.get('/guild-roles', async (req, res) => {
 
 router.put('/silent-filter-config', async (req, res) => {
   try {
-    const { include_role_id, exclude_role_id } = req.body || {}
+    const { include_role_id, exclude_role_id, apply_reaction_filter } = req.body || {}
     const normInclude = include_role_id ? String(include_role_id) : null
     const normExclude = exclude_role_id ? String(exclude_role_id) : null
 
@@ -530,7 +565,11 @@ router.put('/silent-filter-config', async (req, res) => {
       } catch (_) { /* skip validation neu fetch fail */ }
     }
 
-    db.setSilentFilterConfig(GUILD_ID(), { includeRoleId: normInclude, excludeRoleId: normExclude })
+    db.setSilentFilterConfig(GUILD_ID(), {
+      includeRoleId: normInclude,
+      excludeRoleId: normExclude,
+      applyReactionFilter: apply_reaction_filter,
+    })
     const scan = await scanSilentMembers(GUILD_ID())
     res.json({
       success: true,
