@@ -26,10 +26,13 @@ async function scanSilentMembers(guildId) {
   }
 
   const chattedIds = new Set(db.getAllUsers(guildId).map(u => u.id))
+  // Member da tha reaction → coi nhu da tuong tac, loai khoi silent list
+  const reactedIds = new Set(db.getReactionUserIds(guildId))
   const silent = allMembers
     .filter(m => {
       if (!m.user || m.user.bot) return false
       if (chattedIds.has(m.user.id)) return false
+      if (reactedIds.has(m.user.id)) return false
       const roles = m.roles || []
       if (include_role_id && !roles.includes(include_role_id)) return false
       if (exclude_role_id && roles.includes(exclude_role_id)) return false

@@ -1008,6 +1008,32 @@
             </div>
           </div>
 
+          <!-- Reaction tracking + backfill -->
+          <div class="mb-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="text-xs flex-1 min-w-[200px]">
+                <div class="font-semibold text-emerald-800">Lọc luôn member đã thả reaction</div>
+                <div class="text-emerald-700 mt-0.5">
+                  Đã track <b x-text="reactionStats.tracked_users || 0"></b> user. Forward tracking đang chạy. Có thể quét lịch sử để có data ngay.
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-slate-600">Quét</label>
+                <select x-model.number="reactionBackfillDays" class="input-field text-xs py-1 px-2" :disabled="loadingReactionBackfill">
+                  <option :value="7">7 ngày</option>
+                  <option :value="14">14 ngày</option>
+                  <option :value="30">30 ngày</option>
+                </select>
+                <button @click="runReactionBackfill()" :disabled="loadingReactionBackfill" class="btn-primary text-xs whitespace-nowrap">
+                  <span x-text="loadingReactionBackfill ? 'Đang quét...' : 'Quét lịch sử reactions'"></span>
+                </button>
+              </div>
+            </div>
+            <div x-show="reactionBackfillResult" x-transition class="mt-2 text-xs p-2 rounded" :class="reactionBackfillResult?.ok ? 'bg-emerald-100 text-emerald-800' : 'bg-red-50 text-red-700'">
+              <span x-text="reactionBackfillResult?.text"></span>
+            </div>
+          </div>
+
           <!-- Role filter -->
           <div class="mb-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
             <div class="text-xs font-semibold text-slate-600 mb-2">Lọc theo role (tuỳ chọn)</div>

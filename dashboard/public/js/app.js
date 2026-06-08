@@ -792,6 +792,11 @@ document.addEventListener('alpine:init', () => {
     notifySaving: false,
     notifyResult: null,
     _notifyConfigLoaded: false,
+    // Reaction backfill
+    reactionStats: { tracked_users: 0 },
+    reactionBackfillDays: 7,
+    loadingReactionBackfill: false,
+    reactionBackfillResult: null,
     // Kick modal
     kickModal: {
       open: false,
@@ -814,7 +819,7 @@ document.addEventListener('alpine:init', () => {
 
     async load() {
       this.loading = true
-      const [summary, growth, heatmap, topChannels, inactive, silent, filterCfg, roles, notifyCfg] = await Promise.all([
+      const [summary, growth, heatmap, topChannels, inactive, silent, filterCfg, roles, notifyCfg, reactionStats] = await Promise.all([
         api('GET', '/analytics/summary'),
         api('GET', `/analytics/growth?days=${this.growthDays}`),
         api('GET', '/analytics/heatmap'),
@@ -824,7 +829,9 @@ document.addEventListener('alpine:init', () => {
         api('GET', '/analytics/silent-filter-config').catch(() => null),
         api('GET', '/analytics/guild-roles').catch(() => []),
         api('GET', '/analytics/silent-notify-config').catch(() => null),
+        api('GET', '/analytics/reactions/status').catch(() => null),
       ])
+      this.reactionStats = reactionStats || { tracked_users: 0 }
       if (notifyCfg) {
         if (notifyCfg.channel_id) this.notifyChannelId = notifyCfg.channel_id
         if (notifyCfg.message) this.notifyMessage = notifyCfg.message
@@ -999,6 +1006,39 @@ document.addEventListener('alpine:init', () => {
         this.notifyResult = { ok: false, text: err.message }
       }
       this.notifyLoading = false
+    },
+
+    // Backfill reactions tu lich su channel (7/14/30 ngay)
+    async runReactionBackfill() {
+      if (!confirm(`Sẽ quét reactions trong ${this.reactionBackfillDays} ngày gần nhất. Có thể mất vài phút tuỳ số channel. Tiếp tục?`)) return
+      this.loadingReactionBackfill = true
+      this.reactionBackfillResult = null
+      try {
+        const res = await api('POST', '/analytics/reactions/backfill', { days: this.reactionBackfillDays })
+        if (res?.error) {
+          this.reactionBackfillResult = { ok: false, text: res.error }
+        } else {
+          const parts = [
+            `Quét ${res.scanned_channels} channel, ${res.scanned_messages} message`,
+            `${res.messages_with_reactions} có reaction`,
+            `Thêm ${res.new_users} user mới (tổng ${res.total_reacted_users})`,
+          ]
+          if (typeof res.silent_after_rescan === 'number') {
+            parts.push(`Silent còn ${res.silent_after_rescan}`)
+          }
+          if (res.errors?.length) parts.push(`Lỗi: ${res.errors.length}`)
+          this.reactionBackfillResult = { ok: true, text: parts.join(' • ') }
+          this.reactionStats = { tracked_users: res.total_reacted_users }
+          // Reload silent members
+          const data = await api('GET', '/analytics/silent-members?limit=500')
+          this.silentMembers = data?.members || []
+          this.silentTotal = data?.total || 0
+          this.silentScannedAt = data?.scanned_at || null
+        }
+      } catch (err) {
+        this.reactionBackfillResult = { ok: false, text: err.message }
+      }
+      this.loadingReactionBackfill = false
     },
 
     // Parse link input → URL day du de preview (giong logic backend)

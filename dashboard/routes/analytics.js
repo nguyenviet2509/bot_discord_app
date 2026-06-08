@@ -71,6 +71,110 @@ router.post('/silent-members/scan', async (req, res) => {
   }
 })
 
+// GET: so user da co trong reaction_users table
+router.get('/reactions/status', (req, res) => {
+  res.json({ tracked_users: db.countReactionUsers(GUILD_ID()) })
+})
+
+// POST: backfill reactions tu lich su channel
+// Body: { days: 7-30 } — chi quet message trong window N ngay gan nhat
+// Logic: list all text channel → moi channel fetch 100 msg gan nhat
+// → voi msg co reactions trong window → fetch user list cho moi emoji
+// → upsert vao reaction_users.
+// Sau khi xong: auto re-scan silent members de UI dong bo.
+// Discord rate limit: delay 250ms giua moi request.
+router.post('/reactions/backfill', async (req, res) => {
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
+  const days = Math.min(Math.max(Number(req.body?.days) || 7, 7), 30)
+  const guildId = GUILD_ID()
+  const sinceMs = Date.now() - days * 86400 * 1000
+  const token = process.env.BOT_TOKEN
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms))
+
+  const stats = { days, scanned_channels: 0, scanned_messages: 0, messages_with_reactions: 0, api_calls: 0, new_users: 0, errors: [] }
+
+  try {
+    const chRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, {
+      headers: { 'Authorization': `Bot ${token}` },
+    })
+    stats.api_calls++
+    if (!chRes.ok) {
+      const txt = await chRes.text()
+      return res.status(500).json({ error: `Discord API ${chRes.status}: ${txt.slice(0, 200)}` })
+    }
+    const allChannels = await chRes.json()
+    // Type 0 = text, 5 = announcement
+    const textChannels = allChannels.filter(c => c.type === 0 || c.type === 5)
+
+    const allUsers = new Set()
+    for (const ch of textChannels) {
+      try {
+        const msgRes = await fetch(`https://discord.com/api/v10/channels/${ch.id}/messages?limit=100`, {
+          headers: { 'Authorization': `Bot ${token}` },
+        })
+        stats.api_calls++
+        if (!msgRes.ok) {
+          // 403/404 = khong co perm hoac channel bi xoa → skip im lang
+          if (msgRes.status !== 403 && msgRes.status !== 404) {
+            stats.errors.push(`#${ch.name}: ${msgRes.status}`)
+          }
+          await sleep(250)
+          continue
+        }
+        const messages = await msgRes.json()
+        stats.scanned_channels++
+        stats.scanned_messages += messages.length
+
+        for (const msg of messages) {
+          const ts = new Date(msg.timestamp).getTime()
+          if (ts < sinceMs) continue
+          if (!msg.reactions?.length) continue
+          stats.messages_with_reactions++
+
+          for (const reaction of msg.reactions) {
+            await sleep(250)
+            const emoji = reaction.emoji.id
+              ? `${reaction.emoji.name}:${reaction.emoji.id}`
+              : encodeURIComponent(reaction.emoji.name)
+            try {
+              const userRes = await fetch(`https://discord.com/api/v10/channels/${ch.id}/messages/${msg.id}/reactions/${emoji}?limit=100`, {
+                headers: { 'Authorization': `Bot ${token}` },
+              })
+              stats.api_calls++
+              if (!userRes.ok) {
+                if (stats.errors.length < 10) stats.errors.push(`React ${msg.id}: ${userRes.status}`)
+                continue
+              }
+              const users = await userRes.json()
+              for (const u of users) if (!u.bot) allUsers.add(u.id)
+            } catch (err) {
+              if (stats.errors.length < 10) stats.errors.push(`React ${msg.id}: ${err.message}`)
+            }
+          }
+        }
+      } catch (err) {
+        if (stats.errors.length < 10) stats.errors.push(`#${ch.name}: ${err.message}`)
+      }
+      await sleep(250)
+    }
+
+    stats.new_users = db.markUsersReactedBulk(guildId, Array.from(allUsers))
+    stats.total_reacted_users = db.countReactionUsers(guildId)
+
+    // Auto re-scan silent members de UI dong bo
+    try {
+      const scanRes = await scanSilentMembers(guildId)
+      stats.silent_after_rescan = scanRes.total
+    } catch (err) {
+      if (stats.errors.length < 10) stats.errors.push(`Rescan: ${err.message}`)
+    }
+
+    res.json({ success: true, ...stats, errors: stats.errors.slice(0, 5) })
+  } catch (err) {
+    res.status(500).json({ error: err.message, ...stats })
+  }
+})
+
 // Get/Set notify template (channel + noi dung) — persist tren DB
 router.get('/silent-notify-config', (req, res) => {
   res.json(db.getSilentNotifyConfig(GUILD_ID()))

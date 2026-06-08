@@ -106,6 +106,13 @@ function initDb() {
       created_at INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS reaction_users (
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      first_reacted_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (guild_id, user_id)
+    );
+
     CREATE TABLE IF NOT EXISTS silent_members (
       guild_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
@@ -717,6 +724,43 @@ function replaceSilentMembers(guildId, members) {
 }
 
 // Xoa 1 user khoi silent list (khi ho bat dau chat)
+// === Reaction tracking (forward + backfill) ===
+// Luu user_id da tung tha reaction (de loai khoi silent member list).
+// Idempotent insert: chi luu first_reacted_at lan dau.
+function markUserReacted(guildId, userId, atSec) {
+  if (!guildId || !userId) return
+  getDb()
+    .prepare(`INSERT OR IGNORE INTO reaction_users (guild_id, user_id, first_reacted_at) VALUES (?, ?, ?)`)
+    .run(guildId, userId, atSec || Math.floor(Date.now() / 1000))
+}
+
+// Bulk upsert dung cho backfill (transaction)
+function markUsersReactedBulk(guildId, userIds, atSec) {
+  if (!guildId || !userIds?.length) return 0
+  const stmt = getDb().prepare(`INSERT OR IGNORE INTO reaction_users (guild_id, user_id, first_reacted_at) VALUES (?, ?, ?)`)
+  const ts = atSec || Math.floor(Date.now() / 1000)
+  const tx = getDb().transaction((ids) => {
+    let added = 0
+    for (const uid of ids) {
+      const res = stmt.run(guildId, uid, ts)
+      if (res.changes > 0) added++
+    }
+    return added
+  })
+  return tx(userIds)
+}
+
+function getReactionUserIds(guildId) {
+  return getDb()
+    .prepare(`SELECT user_id FROM reaction_users WHERE guild_id = ?`)
+    .all(guildId)
+    .map(r => r.user_id)
+}
+
+function countReactionUsers(guildId) {
+  return (getDb().prepare(`SELECT COUNT(*) as t FROM reaction_users WHERE guild_id = ?`).get(guildId) || {}).t || 0
+}
+
 function removeSilentMember(guildId, userId) {
   return getDb()
     .prepare('DELETE FROM silent_members WHERE guild_id = ? AND user_id = ?')
@@ -1288,6 +1332,10 @@ module.exports = {
   getSilentScannedAt,
   replaceSilentMembers,
   removeSilentMember,
+  markUserReacted,
+  markUsersReactedBulk,
+  getReactionUserIds,
+  countReactionUsers,
   getSilentFilterConfig,
   setSilentFilterConfig,
   getSilentNotifyConfig,
