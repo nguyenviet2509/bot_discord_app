@@ -85,6 +85,45 @@ router.put('/silent-notify-config', (req, res) => {
   res.json({ success: true, config: db.getSilentNotifyConfig(GUILD_ID()) })
 })
 
+// POST: gui test thong bao - render giong that nhung KHONG ping ai
+// Body: { channel_id, message, sample_size? (default 3) }
+// Lay vai member dau danh sach lam vi du, allowed_mentions=[] de Discord khong ping
+router.post('/silent-members/notify-test', async (req, res) => {
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
+  const { channel_id, message, sample_size } = req.body || {}
+  if (!channel_id || !String(channel_id).trim()) return res.status(400).json({ error: 'Thiếu channel_id' })
+  const rawMsg = (message == null ? '' : String(message)).trim()
+  if (!rawMsg) return res.status(400).json({ error: 'Thiếu nội dung tin nhắn' })
+
+  const guildId = GUILD_ID()
+  const sampleN = Math.min(Math.max(Number(sample_size) || 3, 1), 10)
+  const members = db.getSilentMembers(guildId, sampleN)
+  const totalActual = db.countSilentMembers(guildId)
+  const mentionsText = members.length
+    ? members.map(m => `<@${m.user_id}>`).join(' ') + (totalActual > members.length ? ` ... (+${totalActual - members.length} member khác)` : '')
+    : '(không có member nào trong danh sách)'
+
+  const hasPlaceholder = rawMsg.includes('{mentions}')
+  const baseTemplate = hasPlaceholder ? rawMsg : rawMsg + '\n{mentions}'
+  const content = `**[TEST — không ping ai]**\n` + baseTemplate.replace('{mentions}', mentionsText)
+
+  const url = `https://discord.com/api/v10/channels/${String(channel_id).trim()}/messages`
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content.slice(0, 1990), allowed_mentions: { parse: [] } }),
+    })
+    if (!r.ok) {
+      const txt = await r.text()
+      return res.status(r.status).json({ error: `Discord API ${r.status}: ${txt.slice(0, 300)}` })
+    }
+    res.json({ success: true, sample_count: members.length, total_actual: totalActual })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // POST: gui thong bao tag toan bo silent members vao channel chi dinh
 // Body: { channel_id, message }
 // message co the chua placeholder {mentions} - neu khong se append vao cuoi

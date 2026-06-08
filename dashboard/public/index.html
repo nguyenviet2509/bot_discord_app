@@ -994,6 +994,11 @@
                         class="btn-refresh text-xs md:text-sm whitespace-nowrap">
                   <span x-text="notifySaving ? 'Đang lưu...' : 'Lưu nội dung'"></span>
                 </button>
+                <button @click="sendSilentTestNotification()" :disabled="notifyLoading || notifySaving || !notifyChannelId || !notifyMessage"
+                        class="btn-refresh text-xs md:text-sm whitespace-nowrap"
+                        title="Gửi vào channel để xem preview, KHÔNG ping bất kỳ member nào">
+                  <span x-text="notifyLoading ? 'Đang gửi...' : 'Gửi test'"></span>
+                </button>
                 <button @click="sendSilentNotification()" :disabled="notifyLoading || notifySaving || silentTotal === 0 || !notifyChannelId || !notifyMessage"
                         class="btn-primary text-xs md:text-sm whitespace-nowrap">
                   <span x-text="notifyLoading ? 'Đang gửi...' : 'Gửi thông báo'"></span>

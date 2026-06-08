@@ -920,6 +920,28 @@ document.addEventListener('alpine:init', () => {
       this.notifySaving = false
     },
 
+    // Gui test - render giong that nhung khong ping ai (allowed_mentions=[])
+    async sendSilentTestNotification() {
+      if (!this.notifyChannelId || !this.notifyMessage) return
+      this.notifyLoading = true
+      this.notifyResult = null
+      try {
+        const res = await api('POST', '/analytics/silent-members/notify-test', {
+          channel_id: this.notifyChannelId.trim(),
+          message: this.notifyMessage,
+          sample_size: 3,
+        })
+        if (res?.error) {
+          this.notifyResult = { ok: false, text: res.error }
+        } else {
+          this.notifyResult = { ok: true, text: `Đã gửi test (sample ${res.sample_count}/${res.total_actual} member, không ping ai)` }
+        }
+      } catch (err) {
+        this.notifyResult = { ok: false, text: err.message }
+      }
+      this.notifyLoading = false
+    },
+
     // Gui thong bao tag toan bo silent members vao channel chi dinh
     // Backend tu dong luu lai config khi gui thanh cong
     async sendSilentNotification() {
