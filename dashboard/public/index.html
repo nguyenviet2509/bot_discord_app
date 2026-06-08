@@ -1057,6 +1057,33 @@
                   <option value="plain">Plain — hiển thị đầy đủ tag (dài nhất)</option>
                 </select>
               </div>
+
+              <!-- Live Discord mockup preview -->
+              <div class="rounded-lg p-3 mt-1" style="background:#313338; color:#dbdee1; font-family:'gg sans', 'Noto Sans', sans-serif;">
+                <div class="text-[10px] uppercase tracking-wider mb-2" style="color:#949ba4;">Preview như trên Discord</div>
+                <div class="flex gap-3">
+                  <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white" style="background:#5865f2;">B</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2 mb-0.5">
+                      <span class="font-semibold text-[15px]" style="color:#f2f3f5;">Bot</span>
+                      <span class="text-[10px] px-1 rounded font-semibold" style="background:#5865f2;color:#fff;">BOT</span>
+                      <span class="text-[11px]" style="color:#949ba4;">hôm nay</span>
+                    </div>
+                    <!-- Content (mentions) -->
+                    <div class="text-[14px] leading-snug mb-1" x-html="renderMentionsPreview()"></div>
+                    <!-- Embed -->
+                    <div class="rounded mt-1 max-w-md" style="background:#2b2d31; border-left:4px solid #6366f1;">
+                      <div class="p-3">
+                        <div class="font-bold text-[15px] mb-1" style="color:#f2f3f5;">📢 Thông báo dành cho bạn</div>
+                        <div class="text-[14px] leading-snug whitespace-pre-wrap" style="color:#dbdee1;" x-text="(notifyMessage || ' ').replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim() || ' '"></div>
+                        <div class="text-[11px] mt-2 flex items-center gap-1" style="color:#949ba4;">
+                          <span x-text="`${silentTotal || 0} member trong batch này • hôm nay`"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="flex flex-col md:flex-row md:items-center gap-2">
                 <div class="text-xs text-slate-500 flex-1">
                   Sẽ tag <span class="font-bold text-indigo-700" x-text="silentTotal"></span> member đã lọc theo role filter ở trên (tự chia batch &lt; 2000 ký tự)

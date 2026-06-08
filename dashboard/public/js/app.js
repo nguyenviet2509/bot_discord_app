@@ -991,6 +991,28 @@ document.addEventListener('alpine:init', () => {
       this.notifyLoading = false
     },
 
+    // Render mockup mentions theo style Discord that
+    renderMentionsPreview() {
+      const list = this.silentMembers || []
+      if (!list.length) return '<span style="color:#949ba4;font-style:italic;">(chưa có member nào, hãy quét trước)</span>'
+      const sample = list.slice(0, 5)
+      const more = list.length - sample.length
+      const pillStyle = 'background:rgba(88,101,242,0.3);color:#c9cdfb;padding:0 2px;border-radius:3px;font-weight:500;'
+      const pills = sample.map(m => {
+        const name = (m.nickname || m.global_name || m.username || 'user').replace(/[<>&]/g, '')
+        return `<span style="${pillStyle}">@${name}</span>`
+      }).join(' ')
+      const moreText = more > 0 ? ` <span style="color:#949ba4;">... +${more}</span>` : ''
+      const inner = pills + moreText
+      if (this.notifyMentionStyle === 'spoiler') {
+        return `<span title="Click để xem (preview)" style="background:#202225;color:#202225;padding:2px 6px;border-radius:3px;cursor:pointer;" onclick="this.style.background='transparent';this.style.color='inherit';">${inner}</span>`
+      }
+      if (this.notifyMentionStyle === 'subtext') {
+        return `<span style="font-size:11px;color:#949ba4;">${inner}</span>`
+      }
+      return inner
+    },
+
     // ==== Kick modal ====
     get filteredKickList() {
       const q = (this.kickModal.search || '').trim().toLowerCase()
