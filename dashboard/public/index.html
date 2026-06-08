@@ -1047,8 +1047,16 @@
               <input type="text" x-model="notifyChannelId" placeholder="ID channel (vd: 1234567890123456789)"
                      class="input-field text-xs md:text-sm" :disabled="notifyLoading" />
               <textarea x-model="notifyMessage" rows="4"
-                        placeholder="Nội dung tin nhắn. Dùng {mentions} để chèn list tag, nếu không sẽ tự append cuối."
+                        placeholder="Nội dung tin nhắn (sẽ hiển thị trong embed). Mentions tự động đặt ngoài embed."
                         class="input-field text-xs md:text-sm" :disabled="notifyLoading"></textarea>
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-slate-600 whitespace-nowrap">Kiểu hiển thị mentions:</label>
+                <select x-model="notifyMentionStyle" class="input-field text-xs md:text-sm flex-1" :disabled="notifyLoading">
+                  <option value="spoiler">Spoiler — 1 thanh đen, click để xem (gọn nhất, vẫn ping)</option>
+                  <option value="subtext">Subtext — text xám nhỏ (vẫn ping)</option>
+                  <option value="plain">Plain — hiển thị đầy đủ tag (dài nhất)</option>
+                </select>
+              </div>
               <div class="flex flex-col md:flex-row md:items-center gap-2">
                 <div class="text-xs text-slate-500 flex-1">
                   Sẽ tag <span class="font-bold text-indigo-700" x-text="silentTotal"></span> member đã lọc theo role filter ở trên (tự chia batch &lt; 2000 ký tự)

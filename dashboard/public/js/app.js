@@ -784,7 +784,8 @@ document.addEventListener('alpine:init', () => {
     // Notify silent members
     showNotifyForm: false,
     notifyChannelId: '',
-    notifyMessage: 'Chào {mentions}, các bạn đã tham gia server nhưng chưa chat lần nào. Hãy ghé chào mọi người nhé!',
+    notifyMessage: 'Chào các bạn đã tham gia server nhưng chưa chat lần nào. Hãy ghé chào mọi người nhé!',
+    notifyMentionStyle: localStorage.getItem('silent_notify_mention_style') || 'spoiler',
     notifyLoading: false,
     notifySaving: false,
     notifyResult: null,
@@ -934,10 +935,12 @@ document.addEventListener('alpine:init', () => {
       this.notifyLoading = true
       this.notifyResult = null
       try {
+        localStorage.setItem('silent_notify_mention_style', this.notifyMentionStyle)
         const res = await api('POST', '/analytics/silent-members/notify-test', {
           channel_id: this.notifyChannelId.trim(),
           message: this.notifyMessage,
           sample_size: 3,
+          mention_style: this.notifyMentionStyle,
         })
         if (res?.error) {
           this.notifyResult = { ok: false, text: res.error }
@@ -966,9 +969,11 @@ document.addEventListener('alpine:init', () => {
       this.notifyLoading = true
       this.notifyResult = null
       try {
+        localStorage.setItem('silent_notify_mention_style', this.notifyMentionStyle)
         const res = await api('POST', '/analytics/silent-members/notify', {
           channel_id: this.notifyChannelId.trim(),
           message: this.notifyMessage,
+          mention_style: this.notifyMentionStyle,
         })
         if (res?.error) {
           this.notifyResult = { ok: false, text: res.error + (res.errors?.length ? ' | ' + res.errors.join('; ') : '') }

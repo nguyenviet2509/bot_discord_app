@@ -159,27 +159,39 @@ function buildSilentNotifyEmbed({ description, footerText, isTest = false }) {
 // Lay vai member dau danh sach lam vi du, allowed_mentions=[] de Discord khong ping
 router.post('/silent-members/notify-test', async (req, res) => {
   if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
-  const { channel_id, message, sample_size } = req.body || {}
+  const { channel_id, message, sample_size, mention_style } = req.body || {}
   if (!channel_id || !String(channel_id).trim()) return res.status(400).json({ error: 'Thiếu channel_id' })
   const rawMsg = (message == null ? '' : String(message)).trim()
   if (!rawMsg) return res.status(400).json({ error: 'Thiếu nội dung tin nhắn' })
 
+  const style = ['spoiler', 'subtext', 'plain'].includes(mention_style) ? mention_style : 'spoiler'
   const guildId = GUILD_ID()
   const sampleN = Math.min(Math.max(Number(sample_size) || 3, 1), 10)
   const members = db.getSilentMembers(guildId, sampleN)
   const totalActual = db.countSilentMembers(guildId)
-  const mentionsText = members.length
-    ? members.map(m => `<@${m.user_id}>`).join(' ') + (totalActual > members.length ? ` ... (+${totalActual - members.length} member khác)` : '')
-    : '(không có member nào trong danh sách)'
+
+  // Preview mentions theo style chon (van khong ping vi allowed_mentions=[])
+  const sampleTags = members.map(m => `<@${m.user_id}>`)
+  const extraNote = totalActual > members.length ? ` ... (+${totalActual - members.length} member khác)` : ''
+  let mentionsText
+  if (!sampleTags.length) {
+    mentionsText = '(không có member nào trong danh sách)'
+  } else if (style === 'spoiler') {
+    mentionsText = `||${sampleTags.join(' ')}||${extraNote}`
+  } else if (style === 'subtext') {
+    mentionsText = `-# ${sampleTags.join(' ')}${extraNote}`
+  } else {
+    mentionsText = sampleTags.join(' ') + extraNote
+  }
 
   const hasPlaceholder = rawMsg.includes('{mentions}')
   const description = hasPlaceholder
-    ? rawMsg.replace('{mentions}', mentionsText)
-    : `${rawMsg}\n\n${mentionsText}`
+    ? rawMsg.replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim() + `\n\n**Preview mentions (${style}):**\n${mentionsText}`
+    : `${rawMsg}\n\n**Preview mentions (${style}):**\n${mentionsText}`
 
   const embed = buildSilentNotifyEmbed({
     description,
-    footerText: `Test • Sample ${members.length}/${totalActual} member • Không ping`,
+    footerText: `Test • Sample ${members.length}/${totalActual} member • Style: ${style} • Không ping`,
     isTest: true,
   })
 
@@ -207,12 +219,15 @@ router.post('/silent-members/notify-test', async (req, res) => {
 // Filter role tu silent_filter_config da duoc ap khi scan → list trong DB da chinh xac
 router.post('/silent-members/notify', async (req, res) => {
   if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
-  const { channel_id, message } = req.body || {}
+  const { channel_id, message, mention_style } = req.body || {}
   if (!channel_id || !String(channel_id).trim()) {
     return res.status(400).json({ error: 'Thiếu channel_id' })
   }
   const rawMsg = (message == null ? '' : String(message)).trim()
   if (!rawMsg) return res.status(400).json({ error: 'Thiếu nội dung tin nhắn' })
+
+  // Style: 'spoiler' (1 thanh den, click de xem), 'subtext' (text xam nho), 'plain' (mac dinh)
+  const style = ['spoiler', 'subtext', 'plain'].includes(mention_style) ? mention_style : 'spoiler'
 
   const guildId = GUILD_ID()
   // Luu lai config cho lan sau
@@ -222,18 +237,20 @@ router.post('/silent-members/notify', async (req, res) => {
 
   const targetChannel = String(channel_id).trim()
   // Mentions phai nam trong CONTENT de Discord ping (embed mentions khong ping).
-  // Chia batch theo gioi han content 2000 ky tu.
+  // Chia batch theo gioi han content 2000 ky tu (tinh ca overhead spoiler/subtext).
   const DISCORD_CONTENT_LIMIT = 1900
+  // Overhead per batch: 'spoiler' wrap '||...||' = 4 ky tu, 'subtext' prefix '-# ' = 3 ky tu
+  const OVERHEAD = style === 'spoiler' ? 4 : (style === 'subtext' ? 3 : 0)
   const allMentions = members.map(m => `<@${m.user_id}>`)
   const batches = []
   let current = []
-  let currentLen = 0
+  let currentLen = OVERHEAD
   for (const tag of allMentions) {
     const add = (current.length ? 1 : 0) + tag.length
     if (currentLen + add > DISCORD_CONTENT_LIMIT && current.length > 0) {
       batches.push(current)
       current = [tag]
-      currentLen = tag.length
+      currentLen = OVERHEAD + tag.length
     } else {
       current.push(tag)
       currentLen += add
@@ -241,11 +258,19 @@ router.post('/silent-members/notify', async (req, res) => {
   }
   if (current.length) batches.push(current)
 
+  // Wrap mentions theo style chon
+  const wrapMentions = (tags) => {
+    const joined = tags.join(' ')
+    if (style === 'spoiler') return `||${joined}||`
+    if (style === 'subtext') return `-# ${joined}`
+    return joined
+  }
+
   const url = `https://discord.com/api/v10/channels/${targetChannel}/messages`
   const results = { sent: 0, failed: 0, total_members: allMentions.length, batches: batches.length, errors: [] }
 
   for (let i = 0; i < batches.length; i++) {
-    const mentionsText = batches[i].join(' ')
+    const mentionsText = wrapMentions(batches[i])
     // Embed description: clone message, xoa placeholder {mentions} (mentions tach ra content)
     const description = rawMsg.replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim()
     const footerParts = [`${batches[i].length} member trong batch này`]
