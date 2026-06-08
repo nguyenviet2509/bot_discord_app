@@ -299,6 +299,8 @@ function initDb() {
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN level_up_reply_channel_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_include_role_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_exclude_role_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_channel_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_message TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
@@ -740,6 +742,28 @@ function setSilentFilterConfig(guildId, { includeRoleId, excludeRoleId }) {
       silent_exclude_role_id = excluded.silent_exclude_role_id,
       updated_at = unixepoch()
   `).run(guildId, includeRoleId || null, excludeRoleId || null)
+}
+
+// Notify template cho silent members (channel + noi dung message)
+function getSilentNotifyConfig(guildId) {
+  const row = getDb()
+    .prepare('SELECT silent_notify_channel_id, silent_notify_message FROM guild_settings WHERE guild_id = ?')
+    .get(guildId)
+  return {
+    channel_id: row?.silent_notify_channel_id || '',
+    message: row?.silent_notify_message || '',
+  }
+}
+
+function setSilentNotifyConfig(guildId, { channelId, message }) {
+  getDb().prepare(`
+    INSERT INTO guild_settings (guild_id, silent_notify_channel_id, silent_notify_message, updated_at)
+    VALUES (?, ?, ?, unixepoch())
+    ON CONFLICT(guild_id) DO UPDATE SET
+      silent_notify_channel_id = excluded.silent_notify_channel_id,
+      silent_notify_message = excluded.silent_notify_message,
+      updated_at = unixepoch()
+  `).run(guildId, channelId || null, message || null)
 }
 
 function getAnalyticsSummary(guildId) {
@@ -1260,6 +1284,8 @@ module.exports = {
   removeSilentMember,
   getSilentFilterConfig,
   setSilentFilterConfig,
+  getSilentNotifyConfig,
+  setSilentNotifyConfig,
   getScheduledMessages,
   getScheduledMessageById,
   createScheduledMessage,

@@ -783,10 +783,12 @@ document.addEventListener('alpine:init', () => {
     loadingFilterSave: false,
     // Notify silent members
     showNotifyForm: false,
-    notifyChannelId: localStorage.getItem('silent_notify_channel_id') || '',
-    notifyMessage: localStorage.getItem('silent_notify_message') || 'Chào {mentions}, các bạn đã tham gia server nhưng chưa chat lần nào. Hãy ghé chào mọi người nhé!',
+    notifyChannelId: '',
+    notifyMessage: 'Chào {mentions}, các bạn đã tham gia server nhưng chưa chat lần nào. Hãy ghé chào mọi người nhé!',
     notifyLoading: false,
+    notifySaving: false,
     notifyResult: null,
+    _notifyConfigLoaded: false,
     growthDays: '30',
     inactiveDays: '7',
     loading: false,
@@ -801,7 +803,7 @@ document.addEventListener('alpine:init', () => {
 
     async load() {
       this.loading = true
-      const [summary, growth, heatmap, topChannels, inactive, silent, filterCfg, roles] = await Promise.all([
+      const [summary, growth, heatmap, topChannels, inactive, silent, filterCfg, roles, notifyCfg] = await Promise.all([
         api('GET', '/analytics/summary'),
         api('GET', `/analytics/growth?days=${this.growthDays}`),
         api('GET', '/analytics/heatmap'),
@@ -810,7 +812,13 @@ document.addEventListener('alpine:init', () => {
         api('GET', '/analytics/silent-members?limit=500'),
         api('GET', '/analytics/silent-filter-config').catch(() => null),
         api('GET', '/analytics/guild-roles').catch(() => []),
+        api('GET', '/analytics/silent-notify-config').catch(() => null),
       ])
+      if (notifyCfg) {
+        if (notifyCfg.channel_id) this.notifyChannelId = notifyCfg.channel_id
+        if (notifyCfg.message) this.notifyMessage = notifyCfg.message
+        this._notifyConfigLoaded = true
+      }
       this.summary = summary || {}
       this.growth = growth || []
       this.heatmap = heatmap || []
@@ -892,21 +900,42 @@ document.addEventListener('alpine:init', () => {
       alert(msg)
     },
 
+    // Luu template (channel + message) ma khong gui
+    async saveSilentNotifyConfig() {
+      this.notifySaving = true
+      this.notifyResult = null
+      try {
+        const res = await api('PUT', '/analytics/silent-notify-config', {
+          channel_id: this.notifyChannelId.trim(),
+          message: this.notifyMessage,
+        })
+        if (res?.error) {
+          this.notifyResult = { ok: false, text: res.error }
+        } else {
+          this.notifyResult = { ok: true, text: 'Đã lưu nội dung tin nhắn' }
+        }
+      } catch (err) {
+        this.notifyResult = { ok: false, text: err.message }
+      }
+      this.notifySaving = false
+    },
+
     // Gui thong bao tag toan bo silent members vao channel chi dinh
+    // Backend tu dong luu lai config khi gui thanh cong
     async sendSilentNotification() {
       if (!this.notifyChannelId || !this.notifyMessage) return
       if (this.silentTotal === 0) {
         this.notifyResult = { ok: false, text: 'Không có member nào trong danh sách' }
         return
       }
-      const confirmMsg = `Sẽ tag ${this.silentTotal} member vào channel ${this.notifyChannelId}. Tiếp tục?`
+      const filterNote = this.silentFilter.include || this.silentFilter.exclude
+        ? '\n(Đã áp filter role, chỉ tag member đúng filter)'
+        : ''
+      const confirmMsg = `Sẽ tag ${this.silentTotal} member vào channel ${this.notifyChannelId}.${filterNote}\nTiếp tục?`
       if (!confirm(confirmMsg)) return
       this.notifyLoading = true
       this.notifyResult = null
       try {
-        // Luu lai cho lan sau
-        localStorage.setItem('silent_notify_channel_id', this.notifyChannelId.trim())
-        localStorage.setItem('silent_notify_message', this.notifyMessage)
         const res = await api('POST', '/analytics/silent-members/notify', {
           channel_id: this.notifyChannelId.trim(),
           message: this.notifyMessage,

@@ -71,10 +71,25 @@ router.post('/silent-members/scan', async (req, res) => {
   }
 })
 
+// Get/Set notify template (channel + noi dung) — persist tren DB
+router.get('/silent-notify-config', (req, res) => {
+  res.json(db.getSilentNotifyConfig(GUILD_ID()))
+})
+
+router.put('/silent-notify-config', (req, res) => {
+  const { channel_id, message } = req.body || {}
+  db.setSilentNotifyConfig(GUILD_ID(), {
+    channelId: channel_id ? String(channel_id).trim() : null,
+    message: message != null ? String(message) : null,
+  })
+  res.json({ success: true, config: db.getSilentNotifyConfig(GUILD_ID()) })
+})
+
 // POST: gui thong bao tag toan bo silent members vao channel chi dinh
 // Body: { channel_id, message }
 // message co the chua placeholder {mentions} - neu khong se append vao cuoi
 // Tu dong chia batch de khong vuot 2000 ky tu/message cua Discord
+// Filter role tu silent_filter_config da duoc ap khi scan → list trong DB da chinh xac
 router.post('/silent-members/notify', async (req, res) => {
   if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
   const { channel_id, message } = req.body || {}
@@ -85,6 +100,8 @@ router.post('/silent-members/notify', async (req, res) => {
   if (!rawMsg) return res.status(400).json({ error: 'Thiếu nội dung tin nhắn' })
 
   const guildId = GUILD_ID()
+  // Luu lai config cho lan sau
+  db.setSilentNotifyConfig(guildId, { channelId: String(channel_id).trim(), message: rawMsg })
   const members = db.getSilentMembers(guildId, 1000)
   if (!members.length) return res.status(400).json({ error: 'Không có member nào trong danh sách silent (hãy quét trước)' })
 
