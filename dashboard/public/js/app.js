@@ -789,6 +789,14 @@ document.addEventListener('alpine:init', () => {
     notifySaving: false,
     notifyResult: null,
     _notifyConfigLoaded: false,
+    // Kick modal
+    kickModal: {
+      open: false,
+      search: '',
+      selected: new Set(),
+      loading: false,
+      result: null,
+    },
     growthDays: '30',
     inactiveDays: '7',
     loading: false,
@@ -976,6 +984,86 @@ document.addEventListener('alpine:init', () => {
         this.notifyResult = { ok: false, text: err.message }
       }
       this.notifyLoading = false
+    },
+
+    // ==== Kick modal ====
+    get filteredKickList() {
+      const q = (this.kickModal.search || '').trim().toLowerCase()
+      if (!q) return this.silentMembers
+      return this.silentMembers.filter(m => {
+        return (m.username || '').toLowerCase().includes(q)
+          || (m.global_name || '').toLowerCase().includes(q)
+          || (m.nickname || '').toLowerCase().includes(q)
+          || (m.id || '').includes(q)
+      })
+    },
+
+    openKickModal() {
+      this.kickModal.open = true
+      this.kickModal.search = ''
+      this.kickModal.selected = new Set()
+      this.kickModal.result = null
+    },
+
+    closeKickModal() {
+      if (this.kickModal.loading) return
+      this.kickModal.open = false
+    },
+
+    toggleKickMember(id) {
+      const s = new Set(this.kickModal.selected)
+      if (s.has(id)) s.delete(id); else s.add(id)
+      this.kickModal.selected = s
+    },
+
+    toggleSelectAll(checked) {
+      this.kickModal.selected = checked
+        ? new Set(this.filteredKickList.map(m => m.id))
+        : new Set()
+    },
+
+    selectAllKick(includeUnfiltered) {
+      // Chon tat ca trong list goc (khong chi list da filter search)
+      const list = includeUnfiltered ? this.silentMembers : this.filteredKickList
+      this.kickModal.selected = new Set(list.map(m => m.id))
+    },
+
+    async confirmKick() {
+      const count = this.kickModal.selected.size
+      if (count === 0) return
+      // Confirm step 1
+      const all = count === this.silentMembers.length
+      const msg1 = all
+        ? `Bạn sắp KICK TẤT CẢ ${count} member khỏi server. Tiếp tục?`
+        : `Bạn sắp KICK ${count} member khỏi server. Tiếp tục?`
+      if (!confirm(msg1)) return
+      // Confirm step 2 - nguy hiem hon
+      const msg2 = `⚠️ XÁC NHẬN LẦN CUỐI: KICK ${count} MEMBER\n\nHành động này KHÔNG THỂ HOÀN TÁC.\nBấm OK để thực hiện.`
+      if (!confirm(msg2)) return
+
+      this.kickModal.loading = true
+      this.kickModal.result = null
+      try {
+        const userIds = Array.from(this.kickModal.selected)
+        const res = await api('POST', '/analytics/silent-members/kick', {
+          user_ids: all ? 'all' : userIds,
+        })
+        if (res?.error) {
+          this.kickModal.result = { ok: false, text: res.error }
+        } else {
+          const parts = [`Đã kick ${res.kicked}/${res.total} member`]
+          if (res.failed > 0) parts.push(`(${res.failed} lỗi: ${(res.errors || []).slice(0, 3).join('; ')})`)
+          this.kickModal.result = { ok: res.failed === 0, text: parts.join(' • ') }
+          // Reload silent list de UI dong bo
+          const data = await api('GET', '/analytics/silent-members?limit=500')
+          this.silentMembers = data?.members || []
+          this.silentTotal = data?.total || 0
+          this.kickModal.selected = new Set()
+        }
+      } catch (err) {
+        this.kickModal.result = { ok: false, text: err.message }
+      }
+      this.kickModal.loading = false
     },
 
     joinedAgo(isoStr) {

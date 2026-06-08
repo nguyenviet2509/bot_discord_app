@@ -85,6 +85,63 @@ router.put('/silent-notify-config', (req, res) => {
   res.json({ success: true, config: db.getSilentNotifyConfig(GUILD_ID()) })
 })
 
+// POST: kick member khoi server
+// Body: { user_ids: string[] | 'all' }
+// SAFETY: chi kick member co trong bang silent_members (da pass filter Whitelisted khi scan)
+router.post('/silent-members/kick', async (req, res) => {
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
+  const guildId = GUILD_ID()
+  const { user_ids } = req.body || {}
+
+  // Lay whitelist tu DB - ID nay deu da pass filter role cua user
+  const silentList = db.getSilentMembers(guildId, 1000)
+  const allowedIds = new Set(silentList.map(m => m.user_id))
+
+  let targetIds
+  if (user_ids === 'all') {
+    targetIds = silentList.map(m => m.user_id)
+  } else if (Array.isArray(user_ids) && user_ids.length > 0) {
+    // Chi giu lai nhung ID nam trong silent list (safety)
+    targetIds = user_ids.map(String).filter(id => allowedIds.has(id))
+  } else {
+    return res.status(400).json({ error: 'Thiếu user_ids hoặc rỗng' })
+  }
+
+  if (targetIds.length === 0) {
+    return res.status(400).json({ error: 'Không có member hợp lệ để kick (phải nằm trong list silent đã filter)' })
+  }
+
+  const results = { kicked: 0, failed: 0, total: targetIds.length, errors: [] }
+  for (let i = 0; i < targetIds.length; i++) {
+    const uid = targetIds[i]
+    try {
+      const r = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${uid}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bot ${process.env.BOT_TOKEN}`,
+          'X-Audit-Log-Reason': 'Silent member - dashboard kick',
+        },
+      })
+      if (r.ok || r.status === 204) {
+        results.kicked++
+        // Xoa khoi silent_members table de UI dong bo
+        try { db.removeSilentMember(guildId, uid) } catch (_) {}
+      } else {
+        const txt = await r.text()
+        results.failed++
+        results.errors.push(`${uid}: ${r.status} ${txt.slice(0, 100)}`)
+      }
+    } catch (err) {
+      results.failed++
+      results.errors.push(`${uid}: ${err.message}`)
+    }
+    // Rate-limit safety: 350ms giua moi kick (Discord 5 req/2s an toan)
+    if (i < targetIds.length - 1) await new Promise(r => setTimeout(r, 350))
+  }
+
+  res.json({ success: results.kicked > 0, ...results })
+})
+
 // POST: gui test thong bao - render giong that nhung KHONG ping ai
 // Body: { channel_id, message, sample_size? (default 3) }
 // Lay vai member dau danh sach lam vi du, allowed_mentions=[] de Discord khong ping

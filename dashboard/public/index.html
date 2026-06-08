@@ -939,10 +939,73 @@
                 <span x-show="!silentScannedAt" class="ml-2 text-amber-600">• Chưa quét lần nào</span>
               </p>
             </div>
-            <button @click="loadSilent()" :disabled="loadingSilent" class="btn-refresh">
-              <svg :class="loadingSilent ? 'spin' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
-              <span x-text="loadingSilent ? 'Đang quét...' : 'Quét lại'"></span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button @click="openKickModal()" :disabled="loadingSilent || silentTotal === 0"
+                      class="btn-refresh text-red-600 border-red-300 hover:bg-red-50"
+                      title="Kick member khỏi server (chỉ trong danh sách này)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                <span>Kick</span>
+              </button>
+              <button @click="loadSilent()" :disabled="loadingSilent" class="btn-refresh">
+                <svg :class="loadingSilent ? 'spin' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+                <span x-text="loadingSilent ? 'Đang quét...' : 'Quét lại'"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Modal Kick member -->
+          <div x-show="kickModal.open" x-cloak class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" @click.self="closeKickModal()">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800">Kick member chưa chat</h3>
+                <button @click="closeKickModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+              </div>
+              <div class="p-5 space-y-3 overflow-y-auto flex-1">
+                <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                  ⚠️ Chỉ kick member trong danh sách "<b>Member chưa chat lần nào</b>" đã lọc theo role filter (không có Whitelisted nếu đã set).
+                  Member bị kick có thể tự join lại nếu server có invite mở.
+                </div>
+                <input type="text" x-model="kickModal.search" placeholder="Tìm theo tên/nickname/username..."
+                       class="input-field text-xs md:text-sm" />
+                <div class="flex items-center justify-between text-xs">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" :checked="kickModal.selected.size === filteredKickList.length && filteredKickList.length > 0"
+                           @change="toggleSelectAll($event.target.checked)" />
+                    <span x-text="`Chọn tất cả (${filteredKickList.length})`"></span>
+                  </label>
+                  <span class="text-indigo-700 font-semibold" x-text="`Đã chọn: ${kickModal.selected.size}`"></span>
+                </div>
+                <div class="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                  <template x-for="m in filteredKickList" :key="m.id">
+                    <label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer">
+                      <input type="checkbox" :checked="kickModal.selected.has(m.id)" @change="toggleKickMember(m.id)" />
+                      <img x-show="m.avatar" :src="getAvatarUrl(m.id, m.avatar)" class="w-7 h-7 rounded-full flex-shrink-0" />
+                      <div x-show="!m.avatar" class="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" :style="`background:${avatarBgColor(m.id)}`" x-text="getInitials(m.nickname || m.global_name || m.username)"></div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-xs md:text-sm font-semibold text-slate-800 truncate" x-text="m.nickname || m.global_name || m.username"></div>
+                        <div class="text-xs text-slate-400 truncate" x-text="'@' + m.username + ' • Tham gia ' + joinedAgo(m.joined_at)"></div>
+                      </div>
+                    </label>
+                  </template>
+                  <div x-show="filteredKickList.length === 0" class="p-4 text-center text-xs text-slate-400 italic">
+                    Không có member nào khớp tìm kiếm
+                  </div>
+                </div>
+                <div x-show="kickModal.result" class="text-xs p-2 rounded" :class="kickModal.result?.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'">
+                  <span x-text="kickModal.result?.text"></span>
+                </div>
+              </div>
+              <div class="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button @click="closeKickModal()" class="btn-refresh text-xs md:text-sm">Hủy</button>
+                <button @click="selectAllKick(true)" :disabled="kickModal.loading" class="btn-refresh text-xs md:text-sm">
+                  Chọn tất cả <span x-text="silentMembers.length"></span>
+                </button>
+                <button @click="confirmKick()" :disabled="kickModal.loading || kickModal.selected.size === 0"
+                        class="text-xs md:text-sm whitespace-nowrap px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+                  <span x-text="kickModal.loading ? 'Đang kick...' : `Kick ${kickModal.selected.size} member`"></span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Role filter -->
