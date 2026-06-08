@@ -27,6 +27,29 @@ router.delete('/', (req, res) => {
   res.json({ success: true, deleted: result.changes })
 })
 
+// POST /api/links/cleanup-old  body: { days: 30 }
+// Xóa nhanh tất cả link cũ hơn N ngày (mặc định 30). Trả về số dòng đã xóa.
+router.post('/cleanup-old', (req, res) => {
+  const guildId = GUILD_ID()
+  const days = parseInt(req.body?.days)
+  if (!Number.isFinite(days) || days <= 0) {
+    return res.status(400).json({ error: 'Số ngày không hợp lệ (phải > 0)' })
+  }
+  const result = db.deleteLinksOlderThan(days, guildId)
+  res.json({ success: true, deleted: result.changes || 0, days })
+})
+
+// GET /api/links/cleanup-old/preview?days=30 - đếm số link sẽ bị xóa
+router.get('/cleanup-old/preview', (req, res) => {
+  const guildId = GUILD_ID()
+  const days = parseInt(req.query.days)
+  if (!Number.isFinite(days) || days <= 0) {
+    return res.status(400).json({ error: 'Số ngày không hợp lệ (phải > 0)' })
+  }
+  const count = db.countLinksOlderThan(days, guildId)
+  res.json({ count, days })
+})
+
 // DELETE /api/links/:id
 router.delete('/:id', (req, res) => {
   const guildId = GUILD_ID()

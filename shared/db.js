@@ -1130,6 +1130,25 @@ function deleteLinks(ids, guildId) {
     .run(guildId, ...ids)
 }
 
+// Xóa các link cũ hơn N ngày (tính theo created_at)
+function deleteLinksOlderThan(days, guildId) {
+  const n = parseInt(days)
+  if (!Number.isFinite(n) || n <= 0) return { changes: 0 }
+  return getDb()
+    .prepare(`DELETE FROM links WHERE guild_id = ? AND created_at <= datetime('now', '-' || ? || ' days')`)
+    .run(guildId, n)
+}
+
+// Đếm số link cũ hơn N ngày (dùng để xác nhận trước khi xóa)
+function countLinksOlderThan(days, guildId) {
+  const n = parseInt(days)
+  if (!Number.isFinite(n) || n <= 0) return 0
+  const row = getDb()
+    .prepare(`SELECT COUNT(*) as total FROM links WHERE guild_id = ? AND created_at <= datetime('now', '-' || ? || ' days')`)
+    .get(guildId, n)
+  return row?.total || 0
+}
+
 // ============================================================
 // Level Up Template
 // ============================================================
@@ -1320,6 +1339,8 @@ module.exports = {
   countLinks,
   deleteLink,
   deleteLinks,
+  deleteLinksOlderThan,
+  countLinksOlderThan,
   getChannelsWithLinks,
   getLevelUpTemplate,
   upsertLevelUpTemplate,

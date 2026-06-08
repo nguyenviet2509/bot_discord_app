@@ -1777,6 +1777,7 @@ document.addEventListener('alpine:init', () => {
     search: '',
     channelFilter: '',
     loading: false,
+    cleaning: false, // đang xóa link cũ hơn N ngày
     toast: null,
     _searchTimer: null,
     selected: [], // danh sách id link đang được chọn để xóa hàng loạt
@@ -1891,6 +1892,30 @@ document.addEventListener('alpine:init', () => {
         this.showToast('Đã copy link ✓', 'green')
       } catch (_) {
         this.showToast('Không thể copy', 'red')
+      }
+    },
+
+    // Xóa nhanh tất cả link cũ hơn 30 ngày: xem trước số lượng → confirm → gọi API
+    async cleanupOld() {
+      const DAYS = 30
+      if (this.cleaning) return
+      this.cleaning = true
+      try {
+        const preview = await api('GET', `/links/cleanup-old/preview?days=${DAYS}`)
+        const count = preview?.count || 0
+        if (count === 0) {
+          this.showToast(`Không có link nào cũ hơn ${DAYS} ngày`, 'green')
+          return
+        }
+        if (!confirm(`Sẽ xóa ${count} link đã ghi nhận quá ${DAYS} ngày. Tiếp tục?`)) return
+        const res = await api('POST', '/links/cleanup-old', { days: DAYS })
+        if (res?.success) {
+          this.showToast(`Đã xóa ${res.deleted} link cũ`, 'green')
+          this.page = 1
+          await this.load()
+        }
+      } finally {
+        this.cleaning = false
       }
     },
 
