@@ -1135,7 +1135,7 @@ function deleteLinksOlderThan(days, guildId) {
   const n = parseInt(days)
   if (!Number.isFinite(n) || n <= 0) return { changes: 0 }
   return getDb()
-    .prepare(`DELETE FROM links WHERE guild_id = ? AND created_at <= datetime('now', '-' || ? || ' days')`)
+    .prepare(`DELETE FROM links WHERE guild_id = ? AND created_at <= unixepoch('now', '-' || ? || ' days')`)
     .run(guildId, n)
 }
 
@@ -1144,7 +1144,7 @@ function countLinksOlderThan(days, guildId) {
   const n = parseInt(days)
   if (!Number.isFinite(n) || n <= 0) return 0
   const row = getDb()
-    .prepare(`SELECT COUNT(*) as total FROM links WHERE guild_id = ? AND created_at <= datetime('now', '-' || ? || ' days')`)
+    .prepare(`SELECT COUNT(*) as total FROM links WHERE guild_id = ? AND created_at <= unixepoch('now', '-' || ? || ' days')`)
     .get(guildId, n)
   return row?.total || 0
 }
