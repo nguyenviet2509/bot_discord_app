@@ -787,6 +787,7 @@ document.addEventListener('alpine:init', () => {
     notifyMessage: 'Chào các bạn đã tham gia server nhưng chưa chat lần nào. Hãy ghé chào mọi người nhé!',
     notifyMentionStyle: localStorage.getItem('silent_notify_mention_style') || 'spoiler',
     notifyLinkUrl: '',
+    notifyLinkLabel: '',
     notifyLoading: false,
     notifySaving: false,
     notifyResult: null,
@@ -828,6 +829,7 @@ document.addEventListener('alpine:init', () => {
         if (notifyCfg.channel_id) this.notifyChannelId = notifyCfg.channel_id
         if (notifyCfg.message) this.notifyMessage = notifyCfg.message
         if (notifyCfg.link_url) this.notifyLinkUrl = notifyCfg.link_url
+        if (notifyCfg.link_label) this.notifyLinkLabel = notifyCfg.link_label
         this._notifyConfigLoaded = true
       }
       this.summary = summary || {}
@@ -920,6 +922,7 @@ document.addEventListener('alpine:init', () => {
           channel_id: this.notifyChannelId.trim(),
           message: this.notifyMessage,
           link_url: this.notifyLinkUrl ? this.notifyLinkUrl.trim() : null,
+          link_label: this.notifyLinkLabel ? this.notifyLinkLabel.trim() : null,
         })
         if (res?.error) {
           this.notifyResult = { ok: false, text: res.error }
@@ -945,6 +948,7 @@ document.addEventListener('alpine:init', () => {
           sample_size: 3,
           mention_style: this.notifyMentionStyle,
           link_url: this.notifyLinkUrl ? this.notifyLinkUrl.trim() : null,
+          link_label: this.notifyLinkLabel ? this.notifyLinkLabel.trim() : null,
         })
         if (res?.error) {
           this.notifyResult = { ok: false, text: res.error }
@@ -979,6 +983,7 @@ document.addEventListener('alpine:init', () => {
           message: this.notifyMessage,
           mention_style: this.notifyMentionStyle,
           link_url: this.notifyLinkUrl ? this.notifyLinkUrl.trim() : null,
+          link_label: this.notifyLinkLabel ? this.notifyLinkLabel.trim() : null,
         })
         if (res?.error) {
           this.notifyResult = { ok: false, text: res.error + (res.errors?.length ? ' | ' + res.errors.join('; ') : '') }

@@ -1055,8 +1055,11 @@
                        class="input-field text-xs md:text-sm" :disabled="notifyLoading" />
                 <p class="text-xs text-slate-500 mt-1">
                   💡 Chấp nhận: (1) Full link Discord, (2) <code>channel_id/message_id</code>, (3) hai ID cách nhau dấu cách.
-                  Vd: <code>1502548563563909120 1510499311715094678</code>
                 </p>
+                <input type="text" x-model="notifyLinkLabel"
+                       placeholder="Text hiển thị của link (tuỳ chọn, mặc định: 🔗 Click để xem tin nhắn liên quan →)"
+                       maxlength="200"
+                       class="input-field text-xs md:text-sm mt-2" :disabled="notifyLoading" />
               </div>
               <div class="flex items-center gap-2">
                 <label class="text-xs font-semibold text-slate-600 whitespace-nowrap">Kiểu hiển thị mentions:</label>
@@ -1086,7 +1089,8 @@
                         <div class="font-bold text-[15px] mb-1" style="color:#f2f3f5;">📢 Thông báo dành cho bạn</div>
                         <div class="text-[14px] leading-snug whitespace-pre-wrap" style="color:#dbdee1;" x-text="(notifyMessage || ' ').replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim() || ' '"></div>
                         <div x-show="notifyLinkUrl && resolvedLinkUrl" class="mt-2 text-[14px]">
-                          <a :href="resolvedLinkUrl" target="_blank" style="color:#00a8fc;text-decoration:underline;">🔗 <b>Click để xem tin nhắn liên quan →</b></a>
+                          <a :href="resolvedLinkUrl" target="_blank" style="color:#00a8fc;text-decoration:underline;"
+                             x-text="notifyLinkLabel?.trim() || '🔗 Click để xem tin nhắn liên quan →'"></a>
                         </div>
                         <div x-show="notifyLinkUrl && !resolvedLinkUrl" class="mt-2 text-[12px]" style="color:#f59e0b;">
                           ⚠️ Link không hợp lệ

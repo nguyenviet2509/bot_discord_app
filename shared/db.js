@@ -302,6 +302,7 @@ function initDb() {
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_channel_id TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_message TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_link_url TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_link_label TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
@@ -748,25 +749,27 @@ function setSilentFilterConfig(guildId, { includeRoleId, excludeRoleId }) {
 // Notify template cho silent members (channel + noi dung message + link dinh kem)
 function getSilentNotifyConfig(guildId) {
   const row = getDb()
-    .prepare('SELECT silent_notify_channel_id, silent_notify_message, silent_notify_link_url FROM guild_settings WHERE guild_id = ?')
+    .prepare('SELECT silent_notify_channel_id, silent_notify_message, silent_notify_link_url, silent_notify_link_label FROM guild_settings WHERE guild_id = ?')
     .get(guildId)
   return {
     channel_id: row?.silent_notify_channel_id || '',
     message: row?.silent_notify_message || '',
     link_url: row?.silent_notify_link_url || '',
+    link_label: row?.silent_notify_link_label || '',
   }
 }
 
-function setSilentNotifyConfig(guildId, { channelId, message, linkUrl }) {
+function setSilentNotifyConfig(guildId, { channelId, message, linkUrl, linkLabel }) {
   getDb().prepare(`
-    INSERT INTO guild_settings (guild_id, silent_notify_channel_id, silent_notify_message, silent_notify_link_url, updated_at)
-    VALUES (?, ?, ?, ?, unixepoch())
+    INSERT INTO guild_settings (guild_id, silent_notify_channel_id, silent_notify_message, silent_notify_link_url, silent_notify_link_label, updated_at)
+    VALUES (?, ?, ?, ?, ?, unixepoch())
     ON CONFLICT(guild_id) DO UPDATE SET
       silent_notify_channel_id = excluded.silent_notify_channel_id,
       silent_notify_message = excluded.silent_notify_message,
       silent_notify_link_url = excluded.silent_notify_link_url,
+      silent_notify_link_label = excluded.silent_notify_link_label,
       updated_at = unixepoch()
-  `).run(guildId, channelId || null, message || null, linkUrl || null)
+  `).run(guildId, channelId || null, message || null, linkUrl || null, linkLabel || null)
 }
 
 function getAnalyticsSummary(guildId) {

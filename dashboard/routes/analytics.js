@@ -77,18 +77,18 @@ router.get('/silent-notify-config', (req, res) => {
 })
 
 router.put('/silent-notify-config', (req, res) => {
-  const { channel_id, message, link_url } = req.body || {}
-  // Validate link neu co
+  const { channel_id, message, link_url, link_label } = req.body || {}
   let normalizedLink = null
   if (link_url && String(link_url).trim()) {
     const parsed = parseDiscordMessageLink(link_url)
-    if (!parsed) return res.status(400).json({ error: 'Link tin nhắn không hợp lệ. Phải có format https://discord.com/channels/{guild}/{channel}/{message}' })
+    if (!parsed) return res.status(400).json({ error: 'Link tin nhắn không hợp lệ' })
     normalizedLink = parsed.url
   }
   db.setSilentNotifyConfig(GUILD_ID(), {
     channelId: channel_id ? String(channel_id).trim() : null,
     message: message != null ? String(message) : null,
     linkUrl: normalizedLink,
+    linkLabel: link_label != null ? String(link_label).slice(0, 200) : null,
   })
   res.json({ success: true, config: db.getSilentNotifyConfig(GUILD_ID()) })
 })
@@ -193,7 +193,7 @@ function parseDiscordMessageLink(input) {
 // Lay vai member dau danh sach lam vi du, allowed_mentions=[] de Discord khong ping
 router.post('/silent-members/notify-test', async (req, res) => {
   if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
-  const { channel_id, message, sample_size, mention_style, link_url } = req.body || {}
+  const { channel_id, message, sample_size, mention_style, link_url, link_label } = req.body || {}
   if (!channel_id || !String(channel_id).trim()) return res.status(400).json({ error: 'Thiếu channel_id' })
   const rawMsg = (message == null ? '' : String(message)).trim()
   if (!rawMsg) return res.status(400).json({ error: 'Thiếu nội dung tin nhắn' })
@@ -224,7 +224,10 @@ router.post('/silent-members/notify-test', async (req, res) => {
     ? rawMsg.replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim() + `\n\n**Preview mentions (${style}):**\n${mentionsText}`
     : `${rawMsg}\n\n**Preview mentions (${style}):**\n${mentionsText}`
   if (parsedLink) {
-    description += `\n\n🔗 [**Click để xem tin nhắn liên quan →**](${parsedLink.url})`
+    const label = (link_label != null && String(link_label).trim())
+      ? String(link_label).trim().slice(0, 200)
+      : '🔗 Click để xem tin nhắn liên quan →'
+    description += `\n\n[${label}](${parsedLink.url})`
   }
 
   const embed = buildSilentNotifyEmbed({
@@ -257,7 +260,7 @@ router.post('/silent-members/notify-test', async (req, res) => {
 // Filter role tu silent_filter_config da duoc ap khi scan → list trong DB da chinh xac
 router.post('/silent-members/notify', async (req, res) => {
   if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
-  const { channel_id, message, mention_style, link_url } = req.body || {}
+  const { channel_id, message, mention_style, link_url, link_label } = req.body || {}
   if (!channel_id || !String(channel_id).trim()) {
     return res.status(400).json({ error: 'Thiếu channel_id' })
   }
@@ -273,13 +276,16 @@ router.post('/silent-members/notify', async (req, res) => {
     parsedLink = parseDiscordMessageLink(link_url)
     if (!parsedLink) return res.status(400).json({ error: 'Link tin nhắn không hợp lệ' })
   }
+  const linkLabel = (link_label != null && String(link_label).trim())
+    ? String(link_label).trim().slice(0, 200)
+    : '🔗 Click để xem tin nhắn liên quan →'
 
   const guildId = GUILD_ID()
-  // Luu lai config cho lan sau
   db.setSilentNotifyConfig(guildId, {
     channelId: String(channel_id).trim(),
     message: rawMsg,
     linkUrl: parsedLink ? parsedLink.url : null,
+    linkLabel: link_label != null ? String(link_label).slice(0, 200) : null,
   })
   const members = db.getSilentMembers(guildId, 1000)
   if (!members.length) return res.status(400).json({ error: 'Không có member nào trong danh sách silent (hãy quét trước)' })
@@ -322,9 +328,9 @@ router.post('/silent-members/notify', async (req, res) => {
     const mentionsText = wrapMentions(batches[i])
     // Embed description: clone message, xoa placeholder {mentions} (mentions tach ra content)
     let description = rawMsg.replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim()
-    // Append link tin nhan dinh kem neu co
+    // Append link tin nhan dinh kem neu co (text Markdown link)
     if (parsedLink) {
-      description += `\n\n🔗 [**Click để xem tin nhắn liên quan →**](${parsedLink.url})`
+      description += `\n\n[${linkLabel}](${parsedLink.url})`
     }
     const footerParts = [`${batches[i].length} member trong batch này`]
     if (batches.length > 1) footerParts.push(`Batch ${i + 1}/${batches.length}`)
