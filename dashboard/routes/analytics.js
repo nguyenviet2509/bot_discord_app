@@ -71,6 +71,91 @@ router.post('/silent-members/scan', async (req, res) => {
   }
 })
 
+// POST: gui thong bao tag toan bo silent members vao channel chi dinh
+// Body: { channel_id, message }
+// message co the chua placeholder {mentions} - neu khong se append vao cuoi
+// Tu dong chia batch de khong vuot 2000 ky tu/message cua Discord
+router.post('/silent-members/notify', async (req, res) => {
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
+  const { channel_id, message } = req.body || {}
+  if (!channel_id || !String(channel_id).trim()) {
+    return res.status(400).json({ error: 'Thiếu channel_id' })
+  }
+  const rawMsg = (message == null ? '' : String(message)).trim()
+  if (!rawMsg) return res.status(400).json({ error: 'Thiếu nội dung tin nhắn' })
+
+  const guildId = GUILD_ID()
+  const members = db.getSilentMembers(guildId, 1000)
+  if (!members.length) return res.status(400).json({ error: 'Không có member nào trong danh sách silent (hãy quét trước)' })
+
+  const targetChannel = String(channel_id).trim()
+  const hasPlaceholder = rawMsg.includes('{mentions}')
+  const baseTemplate = hasPlaceholder ? rawMsg : rawMsg + '\n{mentions}'
+
+  // Chia batch theo gioi han 2000 ky tu cua Discord
+  const DISCORD_LIMIT = 1900 // chua 100 ky tu margin cho header batch info
+  const allMentions = members.map(m => `<@${m.user_id}>`)
+  const fixedPart = baseTemplate.replace('{mentions}', '')
+  const fixedLen = fixedPart.length
+
+  const batches = []
+  let current = []
+  let currentLen = fixedLen
+  for (const tag of allMentions) {
+    const add = (current.length ? 1 : 0) + tag.length
+    if (currentLen + add > DISCORD_LIMIT && current.length > 0) {
+      batches.push(current)
+      current = [tag]
+      currentLen = fixedLen + tag.length
+    } else {
+      current.push(tag)
+      currentLen += add
+    }
+  }
+  if (current.length) batches.push(current)
+
+  const url = `https://discord.com/api/v10/channels/${targetChannel}/messages`
+  const results = { sent: 0, failed: 0, total_members: allMentions.length, batches: batches.length, errors: [] }
+
+  for (let i = 0; i < batches.length; i++) {
+    const mentionsText = batches[i].join(' ')
+    const content = baseTemplate.replace('{mentions}', mentionsText)
+    const payload = {
+      content,
+      allowed_mentions: { parse: ['users'] },
+    }
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${process.env.BOT_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+      if (!r.ok) {
+        results.failed++
+        const txt = await r.text()
+        results.errors.push(`Batch ${i + 1}: Discord API ${r.status}: ${txt.slice(0, 200)}`)
+        // Neu 401/403/404 ve channel thi dung som
+        if (r.status === 401 || r.status === 403 || r.status === 404) break
+      } else {
+        results.sent++
+      }
+    } catch (err) {
+      results.failed++
+      results.errors.push(`Batch ${i + 1}: ${err.message}`)
+    }
+    // Rate-limit safety: 1.2s giua cac batch
+    if (i < batches.length - 1) await new Promise(r => setTimeout(r, 1200))
+  }
+
+  if (results.failed > 0 && results.sent === 0) {
+    return res.status(500).json({ error: 'Gửi thất bại', ...results })
+  }
+  res.json({ success: true, ...results })
+})
+
 // ============================================================
 // Silent member role filter config
 // ============================================================

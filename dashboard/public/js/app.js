@@ -781,6 +781,12 @@ document.addEventListener('alpine:init', () => {
     silentFilter: { include: '', exclude: '' },
     guildRoles: [],
     loadingFilterSave: false,
+    // Notify silent members
+    showNotifyForm: false,
+    notifyChannelId: localStorage.getItem('silent_notify_channel_id') || '',
+    notifyMessage: localStorage.getItem('silent_notify_message') || 'Chào {mentions}, các bạn đã tham gia server nhưng chưa chat lần nào. Hãy ghé chào mọi người nhé!',
+    notifyLoading: false,
+    notifyResult: null,
     growthDays: '30',
     inactiveDays: '7',
     loading: false,
@@ -884,6 +890,41 @@ document.addEventListener('alpine:init', () => {
       // Reuse moderationSection toast pattern (analytics khong co toast nen alert)
       console.error('[Analytics]', msg)
       alert(msg)
+    },
+
+    // Gui thong bao tag toan bo silent members vao channel chi dinh
+    async sendSilentNotification() {
+      if (!this.notifyChannelId || !this.notifyMessage) return
+      if (this.silentTotal === 0) {
+        this.notifyResult = { ok: false, text: 'Không có member nào trong danh sách' }
+        return
+      }
+      const confirmMsg = `Sẽ tag ${this.silentTotal} member vào channel ${this.notifyChannelId}. Tiếp tục?`
+      if (!confirm(confirmMsg)) return
+      this.notifyLoading = true
+      this.notifyResult = null
+      try {
+        // Luu lai cho lan sau
+        localStorage.setItem('silent_notify_channel_id', this.notifyChannelId.trim())
+        localStorage.setItem('silent_notify_message', this.notifyMessage)
+        const res = await api('POST', '/analytics/silent-members/notify', {
+          channel_id: this.notifyChannelId.trim(),
+          message: this.notifyMessage,
+        })
+        if (res?.error) {
+          this.notifyResult = { ok: false, text: res.error + (res.errors?.length ? ' | ' + res.errors.join('; ') : '') }
+        } else {
+          const parts = [
+            `Đã gửi ${res.sent}/${res.batches} batch`,
+            `tag ${res.total_members} member`,
+          ]
+          if (res.failed > 0) parts.push(`(${res.failed} lỗi: ${(res.errors || []).join('; ')})`)
+          this.notifyResult = { ok: res.failed === 0, text: parts.join(' • ') }
+        }
+      } catch (err) {
+        this.notifyResult = { ok: false, text: err.message }
+      }
+      this.notifyLoading = false
     },
 
     joinedAgo(isoStr) {
