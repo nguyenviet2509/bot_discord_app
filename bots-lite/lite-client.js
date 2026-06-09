@@ -37,7 +37,9 @@ class LiteClient {
 
   async start() {
     if (this.client) return
-    this.client = new Client({ intents: [GatewayIntentBits.Guilds] })
+    // GuildMessages intent: can de fetch lich su channel cho autochat silence-skip
+    // (chi metadata, khong can MessageContent intent).
+    this.client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] })
     this.client.on('error', (err) => this.onError(err))
     this.client.on('shardError', (err) => this.onError(err))
     // Gateway disconnect → flip ready=false. discord.js se tu reconnect; shardResume/shardReady

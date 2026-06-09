@@ -225,6 +225,125 @@ router.post('/restart-all', async (req, res) => {
   res.json({ restarted, failed, total: ids.length })
 })
 
+// === Autochat: cau hinh + messages ===
+
+const CHANNEL_ID_RE = /^\d{17,20}$/
+const MAX_MESSAGE_LENGTH = 2000
+const MIN_MINUTES = 1
+const MAX_MINUTES_LIMIT = 10080 // 1 tuan
+const MAX_SILENCE_HOURS = 168 // 1 tuan
+
+function validateAutochatPatch(patch) {
+  if (patch.channel_id !== undefined && patch.channel_id !== null && patch.channel_id !== '') {
+    if (!CHANNEL_ID_RE.test(String(patch.channel_id))) {
+      return 'channel_id phai la chuoi 17-20 chu so'
+    }
+  }
+  if (patch.min_minutes !== undefined) {
+    const v = Number(patch.min_minutes)
+    if (!Number.isInteger(v) || v < MIN_MINUTES || v > MAX_MINUTES_LIMIT) {
+      return `min_minutes phai trong [${MIN_MINUTES}, ${MAX_MINUTES_LIMIT}]`
+    }
+  }
+  if (patch.max_minutes !== undefined) {
+    const v = Number(patch.max_minutes)
+    if (!Number.isInteger(v) || v < MIN_MINUTES || v > MAX_MINUTES_LIMIT) {
+      return `max_minutes phai trong [${MIN_MINUTES}, ${MAX_MINUTES_LIMIT}]`
+    }
+  }
+  if (patch.min_minutes !== undefined && patch.max_minutes !== undefined) {
+    if (Number(patch.max_minutes) < Number(patch.min_minutes)) {
+      return 'max_minutes phai >= min_minutes'
+    }
+  }
+  if (patch.silence_skip_hours !== undefined) {
+    const v = Number(patch.silence_skip_hours)
+    if (!Number.isInteger(v) || v < 0 || v > MAX_SILENCE_HOURS) {
+      return `silence_skip_hours phai trong [0, ${MAX_SILENCE_HOURS}]`
+    }
+  }
+  return null
+}
+
+router.get('/:id/autochat', (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  const bot = dbManaged.getBot(id)
+  if (!bot) return res.status(404).json({ error: 'Bot khong ton tai' })
+  res.json({
+    config: dbManaged.getAutochatConfig(id),
+    messages: dbManaged.listMessages(id),
+  })
+})
+
+router.put('/:id/autochat', (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  const bot = dbManaged.getBot(id)
+  if (!bot) return res.status(404).json({ error: 'Bot khong ton tai' })
+
+  const allowed = ['enabled', 'channel_id', 'min_minutes', 'max_minutes', 'silence_skip_hours']
+  const patch = {}
+  for (const k of allowed) {
+    if (req.body[k] !== undefined) patch[k] = req.body[k]
+  }
+  // Khi merge voi cau hinh cu de validate cross-field (min/max)
+  const current = dbManaged.getAutochatConfig(id)
+  const merged = { ...current, ...patch }
+  const err = validateAutochatPatch(merged)
+  if (err) return res.status(400).json({ error: err })
+
+  // Normalize channel_id: chuoi rong → null
+  if (patch.channel_id === '') patch.channel_id = null
+
+  dbManaged.updateAutochatConfig(id, patch)
+  const newCfg = dbManaged.getAutochatConfig(id)
+
+  // Apply realtime neu bot dang chay
+  if (manager.isRunning(id)) {
+    if (newCfg.enabled && newCfg.channel_id) {
+      manager.autoChatter.schedule(id, manager.getClient)
+    } else {
+      manager.autoChatter.cancel(id)
+    }
+  }
+
+  res.json({ config: newCfg })
+})
+
+router.post('/:id/autochat/messages', (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  const bot = dbManaged.getBot(id)
+  if (!bot) return res.status(404).json({ error: 'Bot khong ton tai' })
+  const content = (req.body?.content || '').toString().trim()
+  if (!content) return res.status(400).json({ error: 'Noi dung rong' })
+  if (content.length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({ error: `Noi dung toi da ${MAX_MESSAGE_LENGTH} ky tu` })
+  }
+  const msgId = dbManaged.addMessage(id, content)
+  res.status(201).json({ id: msgId, content })
+})
+
+router.delete('/:id/autochat/messages/:msgId', (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  const msgId = parseInt(req.params.msgId, 10)
+  const bot = dbManaged.getBot(id)
+  if (!bot) return res.status(404).json({ error: 'Bot khong ton tai' })
+  const changed = dbManaged.deleteMessage(msgId, id)
+  if (!changed) return res.status(404).json({ error: 'Message khong ton tai' })
+  res.json({ success: true })
+})
+
+router.post('/:id/autochat/test', async (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  const bot = dbManaged.getBot(id)
+  if (!bot) return res.status(404).json({ error: 'Bot khong ton tai' })
+  try {
+    const result = await manager.autoChatter.sendOnce(id, manager.getClient)
+    res.json({ sent: true, ...result })
+  } catch (err) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
 // Multer error handler
 router.use((err, req, res, next) => {
   if (err?.code === 'LIMIT_FILE_SIZE') {

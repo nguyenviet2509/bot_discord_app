@@ -2419,7 +2419,7 @@
               </div>
 
               <!-- Actions -->
-              <div class="flex items-center gap-2 flex-shrink-0">
+              <div class="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
                 <button
                   @click="toggle(bot)"
                   :disabled="actingId === bot.id"
@@ -2427,11 +2427,81 @@
                   class="px-3 py-2 rounded-lg text-xs font-semibold transition disabled:opacity-50"
                   x-text="actingId === bot.id ? '...' : (bot.status === 'running' ? 'Dừng' : 'Khởi động')">
                 </button>
+                <button @click="openAutochat(bot)" class="px-3 py-2 rounded-lg text-xs font-medium bg-indigo-50 hover:bg-indigo-100 text-indigo-700" title="Tự động chat">
+                  <span x-show="bot.autochat_enabled">💬 Auto ✓</span>
+                  <span x-show="!bot.autochat_enabled">💬 Auto</span>
+                </button>
                 <button @click="openEdit(bot)" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700">Sửa</button>
                 <button @click="remove(bot)" class="px-3 py-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50">Xoá</button>
               </div>
             </div>
           </template>
+        </div>
+      </div>
+
+      <!-- Modal Autochat -->
+      <div x-show="showAutochat" x-cloak class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" @click.self="closeAutochat()">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-bold text-slate-800">Tự động chat — <span x-text="autochatBot?.display_name"></span></h3>
+            <button @click="closeAutochat()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+          </div>
+          <div class="p-5 space-y-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" x-model="acForm.enabled" class="w-4 h-4" />
+              <span class="text-sm font-semibold text-slate-700">Bật tự động chat</span>
+            </label>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Channel ID (17-20 chữ số)</label>
+              <input x-model="acForm.channel_id" class="input-field" placeholder="VD: 123456789012345678" />
+              <p class="text-xs text-slate-400 mt-1">Bot phải đã ở guild chứa channel này + có quyền Send Messages.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Min (phút)</label>
+                <input type="number" min="1" x-model.number="acForm.min_minutes" class="input-field" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Max (phút)</label>
+                <input type="number" min="1" x-model.number="acForm.max_minutes" class="input-field" />
+              </div>
+            </div>
+            <p class="text-xs text-slate-400 -mt-2">Khoảng random giữa các tin nhắn.</p>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">Skip nếu channel im lặng quá (giờ, 0 = tắt)</label>
+              <input type="number" min="0" max="168" x-model.number="acForm.silence_skip_hours" class="input-field" />
+              <p class="text-xs text-slate-400 mt-1">Tránh bot chat một mình khi channel vắng người thật.</p>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100">
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs font-semibold text-slate-600">Danh sách câu chat (<span x-text="acMessages.length"></span>)</label>
+              </div>
+              <div class="space-y-2 max-h-48 overflow-y-auto mb-2">
+                <template x-for="m in acMessages" :key="m.id">
+                  <div class="flex items-start gap-2 p-2 bg-slate-50 rounded-lg">
+                    <span class="text-xs text-slate-700 flex-1 break-words" x-text="m.content"></span>
+                    <button @click="deleteMessage(m.id)" class="text-red-500 hover:text-red-700 text-xs flex-shrink-0">Xoá</button>
+                  </div>
+                </template>
+                <div x-show="acMessages.length === 0" class="text-xs italic text-slate-400 text-center py-3">Chưa có câu nào</div>
+              </div>
+              <div class="flex gap-2">
+                <input x-model="acNewMessage" @keydown.enter="addMessage()" maxlength="2000" class="input-field flex-1" placeholder="Nhập câu mới..." />
+                <button @click="addMessage()" :disabled="!acNewMessage.trim()" class="btn-primary disabled:opacity-50">+ Thêm</button>
+              </div>
+            </div>
+          </div>
+          <div class="px-5 py-4 border-t border-slate-100 flex flex-wrap justify-end gap-2">
+            <button @click="testSend()" :disabled="acSaving || !autochatBot || autochatBot.status !== 'running'" class="px-4 py-2 rounded-lg text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 disabled:opacity-50" title="Gửi ngay 1 câu random vào channel để test">
+              ⚡ Test gửi ngay
+            </button>
+            <button @click="closeAutochat()" class="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">Huỷ</button>
+            <button @click="saveAutochat()" :disabled="acSaving" class="btn-primary" x-text="acSaving ? 'Đang lưu...' : 'Lưu cấu hình'"></button>
+          </div>
         </div>
       </div>
 

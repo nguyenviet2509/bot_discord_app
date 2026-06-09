@@ -7,10 +7,12 @@ const fs = require('fs')
 const dbManaged = require('../shared/db-managed-bots')
 const { decrypt } = require('./token-crypto')
 const { LiteClient } = require('./lite-client')
+const autoChatter = require('./auto-chatter')
 
 const USERNAME_COOLDOWN_MS = 30 * 60 * 1000 // 30 phut — safe buffer cho Discord ~2/h
 
 const clients = new Map() // id → LiteClient
+const getClient = (id) => clients.get(id)
 
 function isRunning(id) {
   return clients.get(id)?.isRunning() === true
@@ -67,6 +69,11 @@ async function start(id) {
     await client.start()
     clients.set(id, client)
     dbManaged.updateStatus(id, 'running', null)
+    // Auto-schedule autochat neu da bat
+    const cfg = dbManaged.getAutochatConfig(id)
+    if (cfg?.enabled && cfg.channel_id) {
+      autoChatter.schedule(id, getClient)
+    }
     return { status: 'running' }
   } catch (err) {
     dbManaged.updateStatus(id, 'error', err.message.slice(0, 500))
@@ -75,6 +82,7 @@ async function start(id) {
 }
 
 async function stop(id) {
+  autoChatter.cancel(id)
   const client = clients.get(id)
   if (client) {
     await client.stop()
@@ -116,6 +124,7 @@ async function applyRuntimeChanges(id, patch) {
 }
 
 async function stopAll() {
+  autoChatter.cancelAll()
   const ids = Array.from(clients.keys())
   await Promise.all(ids.map((id) => stop(id).catch(() => {})))
 }
@@ -166,4 +175,6 @@ module.exports = {
   isRunning,
   canChangeUsername,
   USERNAME_COOLDOWN_MS,
+  autoChatter,
+  getClient,
 }

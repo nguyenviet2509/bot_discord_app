@@ -2115,6 +2115,13 @@ document.addEventListener('alpine:init', () => {
     showModal: false,
     editing: null, // null = create, object = edit
     toast: null,
+    // Autochat
+    showAutochat: false,
+    autochatBot: null,
+    acForm: { enabled: false, channel_id: '', min_minutes: 60, max_minutes: 180, silence_skip_hours: 0 },
+    acMessages: [],
+    acNewMessage: '',
+    acSaving: false,
     form: {
       display_name: '',
       token: '',
@@ -2289,6 +2296,104 @@ document.addEventListener('alpine:init', () => {
     flash(msg, ok) {
       this.toast = { msg, ok }
       setTimeout(() => { this.toast = null }, 3000)
+    },
+
+    // === Autochat ===
+
+    async openAutochat(bot) {
+      this.autochatBot = bot
+      this.acNewMessage = ''
+      this.showAutochat = true
+      try {
+        const r = await api('GET', `/managed-bots/${bot.id}/autochat`)
+        if (r?.error) { this.flash(r.error, false); return }
+        this.acForm = {
+          enabled: !!r.config.enabled,
+          channel_id: r.config.channel_id || '',
+          min_minutes: r.config.min_minutes,
+          max_minutes: r.config.max_minutes,
+          silence_skip_hours: r.config.silence_skip_hours || 0,
+        }
+        this.acMessages = r.messages || []
+      } catch (e) {
+        this.flash('Tải cấu hình autochat thất bại', false)
+      }
+    },
+
+    closeAutochat() {
+      this.showAutochat = false
+      this.autochatBot = null
+      this.acMessages = []
+    },
+
+    async saveAutochat() {
+      if (!this.autochatBot) return
+      if (this.acForm.enabled) {
+        if (!/^\d{17,20}$/.test(this.acForm.channel_id || '')) {
+          return this.flash('Channel ID phải là 17-20 chữ số', false)
+        }
+      }
+      if (this.acForm.min_minutes < 1) return this.flash('Min >= 1 phút', false)
+      if (this.acForm.max_minutes < this.acForm.min_minutes) return this.flash('Max >= Min', false)
+      this.acSaving = true
+      try {
+        const r = await api('PUT', `/managed-bots/${this.autochatBot.id}/autochat`, {
+          enabled: this.acForm.enabled,
+          channel_id: this.acForm.channel_id || null,
+          min_minutes: this.acForm.min_minutes,
+          max_minutes: this.acForm.max_minutes,
+          silence_skip_hours: this.acForm.silence_skip_hours || 0,
+        })
+        if (r?.error) { this.flash(r.error, false); return }
+        this.flash('Đã lưu cấu hình', true)
+        await this.load()
+        // Cap nhat autochatBot ref tu list moi de status sync
+        const fresh = this.bots.find(b => b.id === this.autochatBot.id)
+        if (fresh) this.autochatBot = fresh
+      } catch (e) {
+        this.flash('Lưu thất bại: ' + (e?.message || 'lỗi'), false)
+      } finally {
+        this.acSaving = false
+      }
+    },
+
+    async addMessage() {
+      if (!this.autochatBot) return
+      const content = (this.acNewMessage || '').trim()
+      if (!content) return
+      try {
+        const r = await api('POST', `/managed-bots/${this.autochatBot.id}/autochat/messages`, { content })
+        if (r?.error) { this.flash(r.error, false); return }
+        this.acMessages.push({ id: r.id, content: r.content })
+        this.acNewMessage = ''
+      } catch (e) {
+        this.flash('Thêm câu thất bại', false)
+      }
+    },
+
+    async deleteMessage(msgId) {
+      if (!this.autochatBot) return
+      if (!confirm('Xoá câu này?')) return
+      try {
+        await api('DELETE', `/managed-bots/${this.autochatBot.id}/autochat/messages/${msgId}`)
+        this.acMessages = this.acMessages.filter(m => m.id !== msgId)
+      } catch (e) {
+        this.flash('Xoá thất bại', false)
+      }
+    },
+
+    async testSend() {
+      if (!this.autochatBot) return
+      this.acSaving = true
+      try {
+        const r = await api('POST', `/managed-bots/${this.autochatBot.id}/autochat/test`)
+        if (r?.error) this.flash(r.error, false)
+        else this.flash('Đã gửi test thành công', true)
+      } catch (e) {
+        this.flash('Test gửi thất bại: ' + (e?.message || 'lỗi'), false)
+      } finally {
+        this.acSaving = false
+      }
     },
   }))
 
