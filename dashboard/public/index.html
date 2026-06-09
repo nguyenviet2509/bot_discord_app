@@ -2493,6 +2493,17 @@
                 <input x-model="acNewMessage" @keydown.enter="addMessage()" maxlength="2000" class="input-field flex-1" placeholder="Nhập câu mới..." />
                 <button @click="addMessage()" :disabled="!acNewMessage.trim()" class="btn-primary disabled:opacity-50">+ Thêm</button>
               </div>
+              <button @click="acShowBulk = !acShowBulk" class="mt-2 text-xs text-indigo-600 hover:underline">
+                <span x-show="!acShowBulk">📥 Import nhiều câu cùng lúc</span>
+                <span x-show="acShowBulk">▲ Ẩn ô import</span>
+              </button>
+              <div x-show="acShowBulk" x-cloak class="mt-2 space-y-2">
+                <textarea x-model="acBulkText" rows="6" class="input-field font-mono text-xs" placeholder="Mỗi dòng = 1 câu chat. Dán cả khối vào đây rồi bấm Import."></textarea>
+                <div class="flex justify-between items-center">
+                  <span class="text-xs text-slate-500" x-text="acBulkText ? (acBulkText.split(/\r?\n/).filter(l => l.trim()).length + ' câu sẽ được thêm') : ''"></span>
+                  <button @click="bulkImport()" :disabled="!acBulkText.trim() || acSaving" class="btn-primary text-xs disabled:opacity-50">Import</button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="px-5 py-4 border-t border-slate-100 flex flex-wrap justify-end gap-2">

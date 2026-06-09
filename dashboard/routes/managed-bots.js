@@ -322,6 +322,42 @@ router.post('/:id/autochat/messages', (req, res) => {
   res.status(201).json({ id: msgId, content })
 })
 
+// Bulk import: nhan mang content hoac chuoi nhieu dong, tao nhieu messages 1 phat.
+// Bo qua dong trong + truncate qua MAX_MESSAGE_LENGTH (khong fail nguyen batch).
+router.post('/:id/autochat/messages/bulk', (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  const bot = dbManaged.getBot(id)
+  if (!bot) return res.status(404).json({ error: 'Bot khong ton tai' })
+
+  let lines = []
+  if (Array.isArray(req.body?.contents)) {
+    lines = req.body.contents
+  } else if (typeof req.body?.text === 'string') {
+    lines = req.body.text.split(/\r?\n/)
+  } else {
+    return res.status(400).json({ error: 'Body can { contents: [...] } hoac { text: "..." }' })
+  }
+
+  const valid = []
+  const skipped = []
+  for (const raw of lines) {
+    const c = (raw || '').toString().trim()
+    if (!c) continue
+    if (c.length > MAX_MESSAGE_LENGTH) {
+      skipped.push({ content: c.slice(0, 50) + '...', reason: `qua ${MAX_MESSAGE_LENGTH} ky tu` })
+      continue
+    }
+    valid.push(c)
+  }
+
+  if (valid.length === 0) {
+    return res.status(400).json({ error: 'Khong co cau nao hop le', skipped })
+  }
+
+  const added = valid.map((c) => ({ id: dbManaged.addMessage(id, c), content: c }))
+  res.status(201).json({ added: added.length, skipped: skipped.length, messages: added, skipped_details: skipped })
+})
+
 router.delete('/:id/autochat/messages/:msgId', (req, res) => {
   const id = parseInt(req.params.id, 10)
   const msgId = parseInt(req.params.msgId, 10)

@@ -2122,6 +2122,8 @@ document.addEventListener('alpine:init', () => {
     acMessages: [],
     acNewMessage: '',
     acSaving: false,
+    acShowBulk: false,
+    acBulkText: '',
     form: {
       display_name: '',
       token: '',
@@ -2324,6 +2326,8 @@ document.addEventListener('alpine:init', () => {
       this.showAutochat = false
       this.autochatBot = null
       this.acMessages = []
+      this.acShowBulk = false
+      this.acBulkText = ''
     },
 
     async saveAutochat() {
@@ -2368,6 +2372,27 @@ document.addEventListener('alpine:init', () => {
         this.acNewMessage = ''
       } catch (e) {
         this.flash('Thêm câu thất bại', false)
+      }
+    },
+
+    async bulkImport() {
+      if (!this.autochatBot) return
+      const text = (this.acBulkText || '').trim()
+      if (!text) return
+      this.acSaving = true
+      try {
+        const r = await api('POST', `/managed-bots/${this.autochatBot.id}/autochat/messages/bulk`, { text })
+        if (r?.error) { this.flash(r.error, false); return }
+        const added = r.messages || []
+        this.acMessages.push(...added)
+        this.acBulkText = ''
+        this.acShowBulk = false
+        const skipped = r.skipped || 0
+        this.flash(`Đã thêm ${r.added} câu${skipped ? ` (bỏ qua ${skipped})` : ''}`, true)
+      } catch (e) {
+        this.flash('Import thất bại: ' + (e?.message || 'lỗi'), false)
+      } finally {
+        this.acSaving = false
       }
     },
 
