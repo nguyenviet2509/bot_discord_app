@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>Mockup — Thông báo thật gửi tới member chưa chat</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    background: #1e1f22;
+    color: #dbdee1;
+    font-family: 'gg sans', 'Noto Sans', 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  h1 {
+    color: #f2f3f5;
+    font-size: 20px;
+    margin: 0 0 8px;
+  }
+  .subtitle {
+    color: #949ba4;
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+  .discord-window {
+    width: 100%;
+    max-width: 760px;
+    background: #313338;
+    border-radius: 8px;
+    padding: 16px 0;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .channel-header {
+    padding: 0 16px 12px;
+    border-bottom: 1px solid #3f4248;
+    color: #f2f3f5;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .channel-header .hash { color: #949ba4; font-size: 20px; }
+  .message {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+  }
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .message-body { flex: 1; min-width: 0; }
+  .message-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .author {
+    font-size: 15px;
+    font-weight: 600;
+    color: #f2f3f5;
+  }
+  .bot-badge {
+    background: #5865f2;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+  .timestamp {
+    font-size: 12px;
+    color: #949ba4;
+  }
+  .content {
+    font-size: 15px;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    word-wrap: break-word;
+  }
+  .spoiler {
+    background: #202225;
+    color: #202225;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+  }
+  .spoiler:hover { background: #2c2e33; }
+  .spoiler.revealed {
+    background: rgba(255,255,255,0.08);
+    color: inherit;
+    cursor: default;
+  }
+  .mention {
+    background: rgba(88,101,242,0.3);
+    color: #c9cdfb;
+    padding: 0 2px;
+    border-radius: 3px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .mention:hover { background: rgba(88,101,242,0.5); }
+  .embed {
+    margin-top: 4px;
+    max-width: 520px;
+    background: #2b2d31;
+    border-left: 4px solid #6366f1;
+    border-radius: 4px;
+    padding: 12px 16px;
+  }
+  .embed-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f2f3f5;
+    margin-bottom: 6px;
+  }
+  .embed-desc {
+    font-size: 14px;
+    line-height: 1.45;
+    color: #dbdee1;
+    white-space: pre-wrap;
+  }
+  .embed-link {
+    color: #00a8fc;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    margin-top: 12px;
+  }
+  .embed-link:hover { text-decoration: underline; }
+  .embed-footer {
+    font-size: 12px;
+    color: #949ba4;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .embed-footer .dot { color: #4f535c; }
+  .notification-banner {
+    background: #5865f2;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin: 12px 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ping-info {
+    background: #1e3a5f;
+    color: #cce4ff;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 24px 0 0;
+    max-width: 760px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .ping-info code {
+    background: rgba(255,255,255,0.1);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  .legend {
+    margin-top: 16px;
+    max-width: 760px;
+    width: 100%;
+    background: #2b2d31;
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .legend h3 { color: #f2f3f5; margin: 0 0 8px; font-size: 14px; }
+  .legend ul { margin: 0; padding-left: 18px; color: #b5bac1; }
+  .legend kbd {
+    background: #1e1f22;
+    border: 1px solid #3f4248;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-family: inherit;
+  }
+</style>
+</head>
+<body>
+
+<h1>Mockup thông báo thật — gửi tới 34 member chưa chat</h1>
+<div class="subtitle">Setup: spoiler mentions • indigo embed • link "Xem thêm thông báo tại đây →"</div>
+
+<div class="discord-window">
+  <div class="channel-header">
+    <span class="hash">#</span> thong-bao-clan
+  </div>
+
+  <div class="message">
+    <div class="avatar">B</div>
+    <div class="message-body">
+      <div class="message-header">
+        <span class="author">Bot</span>
+        <span class="bot-badge">BOT</span>
+        <span class="timestamp">hôm nay lúc 11:44 SA</span>
+      </div>
+
+      <!-- Content: mentions spoiler -->
+      <div class="content">
+        <span class="spoiler" onclick="this.classList.add('revealed')" title="Click để xem">
+          <span class="mention">@ducchinhvu92</span>
+          <span class="mention">@Sim</span>
+          <span class="mention">@Bota</span>
+          <span class="mention">@Duong</span>
+          <span class="mention">@vvvvvu.</span>
+          <span class="mention">@Minh Thanh</span>
+          <span class="mention">@GiangPham</span>
+          <span class="mention">@Ngọc</span>
+          <span class="mention">@David Lee</span>
+          <span class="mention">@JazRos</span>
+          <span class="mention">@Hà Trung</span>
+          <span class="mention">@Phạm Đăng Khoa</span>
+          <span class="mention">@Laughing</span>
+          <span class="mention">@amendesu</span>
+          <span class="mention">@OptiVT</span>
+          <span class="mention">@mrHHH</span>
+          <span class="mention">@BooHeo1985</span>
+          <span class="mention">@minloc85</span>
+          <span class="mention">@Thiện Hý</span>
+          <span class="mention">@Hoang Maxx</span>
+          <span class="mention">@Nam.Ark</span>
+          <span class="mention">@Panda90</span>
+          <span class="mention">@mrCOC</span>
+          <span class="mention">@Machion</span>
+          <span class="mention">@jualinh</span>
+          <span class="mention">@KIENHD</span>
+          <span class="mention">@Âmbinhcxyzero</span>
+          <span class="mention">@user28</span>
+          <span class="mention">@user29</span>
+          <span class="mention">@user30</span>
+          <span class="mention">@user31</span>
+          <span class="mention">@user32</span>
+          <span class="mention">@user33</span>
+          <span class="mention">@user34</span>
+        </span>
+      </div>
+
+      <!-- Embed -->
+      <div class="embed">
+        <div class="embed-title">📢 Thông báo dành cho bạn</div>
+        <div class="embed-desc">Xin chào , các bạn đã tham gia server nhưng chưa chat lần nào. Hãy ghé chào và tương tác với mọi người trong clan nhé!</div>
+        <a class="embed-link" href="https://discord.com/channels/1502531765187907624/1502548563563909120/1510499311715094678" target="_blank">
+          Xem thêm thông báo tại đây →
+        </a>
+        <div class="embed-footer">
+          <span>34 member trong batch này</span>
+          <span class="dot">•</span>
+          <span>hôm nay lúc 11:44 SA</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ping-info">
+  📲 <b>34 member trong list sẽ nhận:</b>
+  notification popup desktop, đèn đỏ Discord, badge red bubble channel, mobile push notification, ping sound (nếu bật).
+  Spoiler chỉ ẩn HIỂN THỊ chứ KHÔNG block notification.
+</div>
+
+<div class="legend">
+  <h3>So sánh với bản TEST</h3>
+  <ul>
+    <li>Title: <code>📢 Thông báo dành cho bạn</code> (thật) vs <code>🧪 [TEST] Thông báo cho member chưa chat</code> (test)</li>
+    <li>Màu vạch: <b style="color:#6366f1">Indigo</b> (thật) vs <b style="color:#f59e0b">Amber</b> (test)</li>
+    <li>Mentions: <b>ngoài embed</b>, có ping (thật) vs <b>trong embed</b>, không ping (test)</li>
+    <li>Footer: <code>34 member trong batch này</code> (thật) vs <code>Test • Sample 3/34 member • Style: spoiler • Không ping</code> (test)</li>
+  </ul>
+  <h3 style="margin-top:14px;">Tương tác trong mockup này</h3>
+  <ul>
+    <li><kbd>Click vào thanh đen spoiler</kbd> để mở 34 mentions ra (giống Discord thật)</li>
+    <li><kbd>Click vào link "Xem thêm..."</kbd> sẽ mở Discord ở channel/message thật</li>
+  </ul>
+</div>
+
+</body>
+</html>
