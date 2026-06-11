@@ -154,6 +154,42 @@ function listEvents(license_id) {
     .all(license_id)
 }
 
+// Lay tat ca licenses (chua revoke) cua mot Discord user — dung cho bot /license info & revoke target
+function listByDiscordUser(discord_user_id) {
+  return db()
+    .prepare('SELECT * FROM licenses WHERE discord_user_id = ? ORDER BY id DESC')
+    .all(discord_user_id)
+}
+
+// Tim license active dau tien cua mot Discord user (dung khi revoke/reset target = @user)
+function findActiveByDiscordUser(discord_user_id) {
+  return db()
+    .prepare('SELECT * FROM licenses WHERE discord_user_id = ? AND revoked = 0 ORDER BY id DESC LIMIT 1')
+    .get(discord_user_id)
+}
+
+// Tim license theo 4 ky tu dau cua token (token mask prefix) — dung khi target = "abcd****ef12"
+// Returns ALL matches (array) so callers can detect ambiguous prefix collisions.
+function findByTokenPrefix(prefix) {
+  return db()
+    .prepare("SELECT * FROM licenses WHERE token LIKE ? ORDER BY id DESC")
+    .all(prefix + '%')
+}
+
+// Lay cac license_events chua duoc bot xu ly (id > lastSeenId), loc theo type
+function listNewEvents(lastId, types) {
+  const placeholders = types.map(() => '?').join(', ')
+  return db()
+    .prepare(
+      `SELECT e.*, l.token, l.machine_id_short, l.discord_user_id, l.user_label
+       FROM license_events e
+       LEFT JOIN licenses l ON l.id = e.license_id
+       WHERE e.id > ? AND e.type IN (${placeholders})
+       ORDER BY e.id ASC LIMIT 50`
+    )
+    .all(lastId, ...types)
+}
+
 module.exports = {
   initLicensesSchema,
   createToken,
@@ -165,6 +201,10 @@ module.exports = {
   resetMachine,
   update,
   list,
+  listByDiscordUser,
+  findActiveByDiscordUser,
+  findByTokenPrefix,
   recordEvent,
   listEvents,
+  listNewEvents,
 }

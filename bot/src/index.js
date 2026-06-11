@@ -146,6 +146,53 @@ client.once('ready', async () => {
       }
     }
   })
+  // License event poller: poll every 5s for new activate/reject events from dashboard.
+  // Started here (inside ready) so client.channels.fetch() is safe to call.
+  ;(function startLicensePoller() {
+    const licenseDb = require('../../shared/db-licenses')
+    const notifier  = require('../../shared/license-notifier')
+    const meta      = require('../../shared/db').getDb()
+
+    meta.exec(`CREATE TABLE IF NOT EXISTS bot_meta (key TEXT PRIMARY KEY, value TEXT)`)
+
+    function getLastSeen() {
+      const row = meta.prepare('SELECT value FROM bot_meta WHERE key = ?').get('license_last_event_id')
+      return row ? parseInt(row.value, 10) : 0
+    }
+    function setLastSeen(id) {
+      meta.prepare('INSERT OR REPLACE INTO bot_meta (key, value) VALUES (?, ?)').run('license_last_event_id', String(id))
+    }
+
+    const POLL_TYPES = ['activate', 'reject', 'expired-attempt', 'verify-reject']
+
+    setInterval(async () => {
+      try {
+        const lastId = getLastSeen()
+        const events = licenseDb.listNewEvents(lastId, POLL_TYPES)
+        for (const ev of events) {
+          const mask = ev.token ? `${ev.token.slice(0, 4)}****${ev.token.slice(-4)}` : null
+          const result = await notifier.logAuditEvent(client, process.env.LICENSE_AUDIT_CHANNEL_ID, {
+            type:          ev.type,
+            user_id:       ev.discord_user_id || null,
+            token_mask:    mask,
+            machine_short: ev.machine_id_short || null,
+            ip:            ev.ip || null,
+            label:         ev.user_label || null,
+          })
+          // Only advance lastSeen if post succeeded — prevents silently losing events on Discord outage
+          if (result && result.ok) {
+            setLastSeen(ev.id)
+          } else {
+            // Channel unreachable: stop processing this batch, retry on next tick
+            break
+          }
+        }
+      } catch (err) {
+        console.error('[license poller]', err.message)
+      }
+    }, 5000)
+  })()
+
   // Watcher: check va auto-unban moi 60s
   setInterval(async () => {
     const nowSec = Math.floor(Date.now() / 1000)
