@@ -18,6 +18,10 @@ if (!process.env.DASHBOARD_SECRET || process.env.DASHBOARD_SECRET.length < 16) {
   console.warn('[Dashboard] ⚠️  DASHBOARD_SECRET quá ngắn hoặc chưa được đặt (tối thiểu 16 ký tự)!')
 }
 
+// Trust proxy: Railway uses 1 hop; override via TRUST_PROXY env (0 = no proxy, 1 = single hop, etc.)
+const trustProxy = process.env.TRUST_PROXY !== undefined ? (isNaN(process.env.TRUST_PROXY) ? process.env.TRUST_PROXY : parseInt(process.env.TRUST_PROXY, 10)) : 1
+app.set('trust proxy', trustProxy)
+
 const corsOrigins = [`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]
 if (process.env.BASE_URL) corsOrigins.push(process.env.BASE_URL)
 app.use(cors({ origin: corsOrigins }))
@@ -29,6 +33,12 @@ app.use(express.static(path.join(__dirname, 'public')))
 
 // API routes
 const auth = require('./middleware/auth')
+const rateLimit = require('express-rate-limit')
+
+// PUBLIC license routes — mount BEFORE auth chain, rate-limited 10 req/min/IP
+const licenseLimiter = rateLimit({ windowMs: 60_000, max: 10, standardHeaders: true, legacyHeaders: false })
+app.use('/api/license', licenseLimiter, require('./routes/license-public'))
+
 app.use('/api/auth', require('./routes/auth'))
 app.use('/api/rewards', auth, require('./routes/rewards'))
 app.use('/api/members', auth, require('./routes/members'))
@@ -48,6 +58,7 @@ app.use('/api/automod', auth, require('./routes/automod'))
 app.use('/api/events', auth, require('./routes/events'))
 app.use('/api/managed-bots', auth, require('./routes/managed-bots'))
 app.use('/api/roll-history', auth, require('./routes/roll-history'))
+app.use('/api/admin/licenses', auth, require('./routes/licenses-admin'))
 
 // Graceful shutdown: stop tat ca lite bot dang chay
 const litebotManager = require('../bots-lite')

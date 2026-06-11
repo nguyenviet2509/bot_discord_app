@@ -348,6 +348,9 @@ function initDb() {
   // Schema cho module Quan ly Bot Phu (multi lite bots)
   require('./db-managed-bots').initManagedBotsSchema(database)
 
+  // Schema cho module License Activation
+  require('./db-licenses').initLicensesSchema(database)
+
   return database
 }
 

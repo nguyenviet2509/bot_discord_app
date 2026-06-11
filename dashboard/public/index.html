@@ -138,6 +138,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
         <span>Quản lý Bot</span>
       </div>
+      <div @click="tab='licenses'; sidebarOpen=false" :class="tab==='licenses' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Licenses</span>
+      </div>
       <div @click="tab='settings'; sidebarOpen=false" :class="tab==='settings' ? 'active' : ''" class="nav-item">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M19.07 4.93 4.93 19.07"/><path d="M12 2v2M12 20v2M4.93 4.93 6.34 6.34M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07 6.34 17.66M17.66 6.34l1.41-1.41"/></svg>
         <span>Cấu hình</span>
@@ -2576,7 +2580,220 @@
       </div>
     </div>
 
+    <!-- LICENSES TAB -->
+    <div x-show="tab === 'licenses'" x-data="licensesSection" x-init="init()">
+      <!-- Header -->
+      <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div class="pl-12 md:pl-0">
+          <h1 class="text-sm md:text-xl font-bold text-slate-800">🔐 Licenses</h1>
+          <p class="text-xs md:text-sm text-slate-400 mt-0.5">Quản lý license key cho WindowHelper</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button @click="load()" :disabled="loading" class="btn-refresh">
+            <svg :class="loading ? 'spin' : ''" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+            <span x-text="loading ? 'Đang tải...' : 'Làm mới'"></span>
+          </button>
+          <button @click="openCreate()" class="btn-primary flex items-center gap-2 shadow-sm shadow-indigo-200">
+            <span class="text-xs md:text-lg leading-none font-light">+</span> Tạo license
+          </button>
+        </div>
+      </div>
+
+      <div class="p-4 md:p-8">
+        <!-- Toast -->
+        <div x-show="toast" x-cloak
+          :style="toast?.color==='green' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d' : 'background:#fef2f2;border-color:#fecaca;color:#b91c1c'"
+          class="mb-6 px-4 py-3 border rounded-xl text-xs md:text-sm font-medium" x-text="toast?.msg"></div>
+
+        <!-- Loading -->
+        <div x-show="loading" class="text-center py-24 text-slate-400 text-sm">Đang tải...</div>
+
+        <!-- Empty -->
+        <div x-show="!loading && licenses.length === 0" class="text-center py-24">
+          <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <p class="text-slate-600 font-semibold mb-1">Chưa có license nào</p>
+          <p class="text-slate-400 text-sm mb-6">Tạo license key để cấp quyền dùng WindowHelper</p>
+          <button @click="openCreate()" class="btn-primary">+ Tạo license đầu tiên</button>
+        </div>
+
+        <!-- Table -->
+        <div x-show="!loading && licenses.length > 0" class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs md:text-sm">
+              <thead>
+                <tr class="border-b border-slate-100 bg-slate-50">
+                  <th class="text-left px-4 py-3 font-semibold text-slate-500">Token</th>
+                  <th class="text-left px-4 py-3 font-semibold text-slate-500">Label</th>
+                  <th class="text-left px-4 py-3 font-semibold text-slate-500">Trạng thái</th>
+                  <th class="text-left px-4 py-3 font-semibold text-slate-500 hidden md:table-cell">Machine</th>
+                  <th class="text-left px-4 py-3 font-semibold text-slate-500 hidden md:table-cell">Hết hạn</th>
+                  <th class="text-left px-4 py-3 font-semibold text-slate-500 hidden lg:table-cell">Lần cuối</th>
+                  <th class="text-right px-4 py-3 font-semibold text-slate-500">Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="lic in licenses" :key="lic.id">
+                  <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3 font-mono text-slate-700" x-text="lic.token"></td>
+                    <td class="px-4 py-3 text-slate-600" x-text="lic.user_label || '—'"></td>
+                    <td class="px-4 py-3">
+                      <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                        :class="statusBadge(lic).cls"
+                        x-text="statusBadge(lic).label"></span>
+                    </td>
+                    <td class="px-4 py-3 text-slate-500 hidden md:table-cell font-mono text-xs"
+                        x-text="lic.machine_id_short || (lic.machine_id ? lic.machine_id.slice(0,8)+'…' : '—')"></td>
+                    <td class="px-4 py-3 text-slate-500 hidden md:table-cell" x-text="formatDate(lic.expires_at)"></td>
+                    <td class="px-4 py-3 text-slate-500 hidden lg:table-cell" x-text="formatDateTime(lic.last_seen)"></td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-end gap-1">
+                        <button @click="viewEvents(lic)" title="Xem events"
+                          class="w-7 h-7 rounded-lg hover:bg-blue-50 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        </button>
+                        <button @click="openEdit(lic)" title="Chỉnh sửa"
+                          class="w-7 h-7 rounded-lg hover:bg-indigo-50 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button @click="resetMachine(lic)" title="Reset machine" x-show="lic.machine_id && !lic.revoked"
+                          class="w-7 h-7 rounded-lg hover:bg-amber-50 flex items-center justify-center text-slate-400 hover:text-amber-600 transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+                        </button>
+                        <button @click="revoke(lic)" title="Revoke" x-show="!lic.revoked"
+                          class="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREATE MODAL -->
+      <div x-show="showCreate" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="!newToken && closeCreate()"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 md:p-7 z-10">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-base md:text-lg font-bold text-slate-800">Tạo License Key</h2>
+            <button @click="closeCreate()" class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-light">&times;</button>
+          </div>
+
+          <!-- Form tao moi -->
+          <div x-show="!newToken" class="space-y-4">
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Label (tên người dùng)</label>
+              <input x-model="createForm.user_label" type="text" placeholder="VD: Nguyen Van A" class="input-field" />
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Hết hạn sau (ngày) <span class="font-normal text-slate-400">— để trống = không hết hạn</span></label>
+              <input x-model="createForm.expires_days" type="number" min="1" max="3650" placeholder="365" class="input-field" />
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Ghi chú</label>
+              <textarea x-model="createForm.note" rows="2" placeholder="Ghi chú nội bộ..." class="input-field resize-none"></textarea>
+            </div>
+            <div class="flex gap-3 pt-1">
+              <button @click="closeCreate()" class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">Hủy</button>
+              <button @click="submitCreate()" :disabled="creating" class="flex-1 btn-primary">
+                <span x-text="creating ? 'Đang tạo...' : 'Tạo license'"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hien thi token 1 lan -->
+          <div x-show="newToken" class="space-y-4">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <p class="text-amber-800 text-xs font-semibold mb-1">⚠️ Chỉ hiển thị 1 lần duy nhất!</p>
+              <p class="text-amber-700 text-xs">Copy và lưu ngay. Sau khi đóng modal này bạn sẽ không xem lại được token plaintext.</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Token</label>
+              <div class="flex gap-2">
+                <code class="flex-1 px-3 py-2.5 bg-slate-900 text-green-400 rounded-xl text-xs font-mono break-all" x-text="newToken"></code>
+              </div>
+            </div>
+            <button @click="copyToken()" class="w-full btn-primary flex items-center justify-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy Token
+            </button>
+            <button @click="closeCreate()" class="w-full py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">Đóng</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDIT MODAL -->
+      <div x-show="showEdit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showEdit=false"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 md:p-7 z-10">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-base md:text-lg font-bold text-slate-800">Chỉnh sửa License</h2>
+            <button @click="showEdit=false" class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-light">&times;</button>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Label</label>
+              <input x-model="editForm.user_label" type="text" class="input-field" />
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Gia hạn thêm (ngày) <span class="font-normal text-slate-400">— để trống = giữ nguyên</span></label>
+              <input x-model="editForm.expires_days" type="number" min="1" max="3650" class="input-field" />
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-slate-700 block mb-1.5">Ghi chú</label>
+              <textarea x-model="editForm.note" rows="2" class="input-field resize-none"></textarea>
+            </div>
+            <div class="flex gap-3 pt-1">
+              <button @click="showEdit=false" class="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">Hủy</button>
+              <button @click="submitEdit()" :disabled="saving" class="flex-1 btn-primary">
+                <span x-text="saving ? 'Đang lưu...' : 'Lưu'"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EVENTS DRAWER -->
+      <div x-show="showEvents" x-cloak class="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showEvents=false"></div>
+        <div class="relative bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-2xl max-h-[80vh] flex flex-col z-10">
+          <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">Event Log</h2>
+              <p class="text-xs text-slate-400 mt-0.5" x-text="eventsLicense?.user_label || eventsLicense?.token"></p>
+            </div>
+            <button @click="showEvents=false" class="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-light">&times;</button>
+          </div>
+          <div class="overflow-y-auto flex-1 px-5 py-3">
+            <div x-show="eventsLoading" class="text-center py-10 text-slate-400 text-sm">Đang tải...</div>
+            <div x-show="!eventsLoading && events.length === 0" class="text-center py-10 text-slate-400 text-sm">Chưa có event nào</div>
+            <div x-show="!eventsLoading && events.length > 0" class="space-y-2">
+              <template x-for="ev in events" :key="ev.id">
+                <div class="flex items-start gap-3 py-2 border-b border-slate-50">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 mt-0.5"
+                    :class="eventTypeCls(ev.type)"
+                    x-text="eventTypeLabel(ev.type)"></span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs text-slate-500" x-text="formatDateTime(ev.ts)"></div>
+                    <div x-show="ev.ip" class="text-xs text-slate-400 font-mono" x-text="ev.ip"></div>
+                    <div x-show="ev.meta_json" class="text-xs text-slate-400 mt-0.5 break-all" x-text="ev.meta_json"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- END LICENSES TAB -->
+
   </main>
 </div>
+<script src="/js/licenses.js"></script>
 </body>
 </html>
