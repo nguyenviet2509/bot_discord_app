@@ -2618,12 +2618,31 @@
           <button @click="openCreate()" class="btn-primary">+ Tạo license đầu tiên</button>
         </div>
 
+        <!-- Bulk action bar -->
+        <div x-show="!loading && selectedIds.length > 0" x-cloak
+             class="mb-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-between gap-3">
+          <div class="text-sm text-indigo-800">
+            Đã chọn <span class="font-semibold" x-text="selectedIds.length"></span> license
+          </div>
+          <div class="flex items-center gap-2">
+            <button @click="clearSelection()" class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-white rounded-lg">Bỏ chọn</button>
+            <button @click="deleteSelected()" class="px-3 py-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg flex items-center gap-1.5">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+              Xóa đã chọn
+            </button>
+          </div>
+        </div>
+
         <!-- Table -->
         <div x-show="!loading && licenses.length > 0" class="card overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-xs md:text-sm">
               <thead>
                 <tr class="border-b border-slate-100 bg-slate-50">
+                  <th class="px-3 py-3 w-10">
+                    <input type="checkbox" :checked="allOnPageSelected" @change="toggleSelectPage()"
+                           class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                  </th>
                   <th class="text-left px-4 py-3 font-semibold text-slate-500">Token</th>
                   <th class="text-left px-4 py-3 font-semibold text-slate-500">Label</th>
                   <th class="text-left px-4 py-3 font-semibold text-slate-500">Trạng thái</th>
@@ -2634,8 +2653,13 @@
                 </tr>
               </thead>
               <tbody>
-                <template x-for="lic in licenses" :key="lic.id">
-                  <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                <template x-for="lic in pagedLicenses" :key="lic.id">
+                  <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors"
+                      :class="isSelected(lic.id) ? 'bg-indigo-50/50' : ''">
+                    <td class="px-3 py-3">
+                      <input type="checkbox" :checked="isSelected(lic.id)" @change="toggleSelect(lic.id)"
+                             class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                    </td>
                     <td class="px-4 py-3 font-mono text-slate-700" x-text="lic.token"></td>
                     <td class="px-4 py-3 text-slate-600" x-text="lic.user_label || '—'"></td>
                     <td class="px-4 py-3">
@@ -2665,12 +2689,40 @@
                           class="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                         </button>
+                        <button @click="deleteOne(lic)" title="Xóa license"
+                          class="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-600 transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
                       </div>
                     </td>
                   </tr>
                 </template>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination footer -->
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-4 py-3 border-t border-slate-100 bg-slate-50/50">
+            <div class="text-xs text-slate-500">
+              Hiển thị <span class="font-semibold text-slate-700" x-text="pageStart"></span>–<span class="font-semibold text-slate-700" x-text="pageEnd"></span>
+              / <span class="font-semibold text-slate-700" x-text="licenses.length"></span> license
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-slate-500 hidden md:inline">Mỗi trang:</label>
+              <select x-model.number="pageSize" @change="page = 1" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option :value="10">10</option>
+                <option :value="20">20</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <button @click="goPage(page - 1)" :disabled="page <= 1"
+                class="px-2.5 py-1 text-xs border border-slate-200 rounded-lg bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">‹ Trước</button>
+              <span class="text-xs text-slate-600">
+                Trang <span class="font-semibold" x-text="page"></span> / <span x-text="totalPages"></span>
+              </span>
+              <button @click="goPage(page + 1)" :disabled="page >= totalPages"
+                class="px-2.5 py-1 text-xs border border-slate-200 rounded-lg bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">Sau ›</button>
+            </div>
           </div>
         </div>
       </div>

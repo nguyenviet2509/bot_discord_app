@@ -25,6 +25,95 @@ document.addEventListener('alpine:init', () => {
     editForm: { id: null, user_label: '', expires_days: '', note: '' },
     saving: false,
 
+    // Pagination
+    page: 1,
+    pageSize: 10,
+
+    // Bulk selection: tap ID
+    selectedIds: [],
+
+    get totalPages() {
+      return Math.max(1, Math.ceil((this.licenses?.length || 0) / this.pageSize))
+    },
+
+    get pagedLicenses() {
+      const start = (this.page - 1) * this.pageSize
+      return this.licenses.slice(start, start + this.pageSize)
+    },
+
+    get pageStart() {
+      if (!this.licenses.length) return 0
+      return (this.page - 1) * this.pageSize + 1
+    },
+
+    get pageEnd() {
+      return Math.min(this.page * this.pageSize, this.licenses.length)
+    },
+
+    goPage(p) {
+      const tp = this.totalPages
+      if (p < 1) p = 1
+      if (p > tp) p = tp
+      this.page = p
+    },
+
+    isSelected(id) {
+      return this.selectedIds.includes(id)
+    },
+
+    toggleSelect(id) {
+      const i = this.selectedIds.indexOf(id)
+      if (i >= 0) this.selectedIds.splice(i, 1)
+      else this.selectedIds.push(id)
+    },
+
+    get allOnPageSelected() {
+      const ids = this.pagedLicenses.map((l) => l.id)
+      return ids.length > 0 && ids.every((id) => this.selectedIds.includes(id))
+    },
+
+    toggleSelectPage() {
+      const ids = this.pagedLicenses.map((l) => l.id)
+      if (this.allOnPageSelected) {
+        this.selectedIds = this.selectedIds.filter((id) => !ids.includes(id))
+      } else {
+        const set = new Set(this.selectedIds)
+        ids.forEach((id) => set.add(id))
+        this.selectedIds = Array.from(set)
+      }
+    },
+
+    clearSelection() {
+      this.selectedIds = []
+    },
+
+    async deleteOne(lic) {
+      if (!confirm(`Xoa han license "${lic.user_label || lic.token}"?\nHanh dong nay khong the hoan tac (du lieu va event log se mat).`)) return
+      const data = await api('DELETE', `/admin/licenses/${lic.id}`)
+      if (data?.ok) {
+        this.selectedIds = this.selectedIds.filter((id) => id !== lic.id)
+        this.showToast('Da xoa license')
+        await this.load()
+        if (this.page > this.totalPages) this.page = this.totalPages
+      } else {
+        this.showToast(data?.error || 'Loi xoa', 'red')
+      }
+    },
+
+    async deleteSelected() {
+      if (this.selectedIds.length === 0) return
+      if (!confirm(`Xoa han ${this.selectedIds.length} license da chon?\nHanh dong nay khong the hoan tac.`)) return
+      const data = await api('POST', '/admin/licenses/bulk-delete', { ids: this.selectedIds })
+      if (data?.ok) {
+        this.showToast(`Da xoa ${data.deleted} license`)
+        this.selectedIds = []
+        await this.load()
+        if (this.page > this.totalPages) this.page = this.totalPages
+      } else {
+        this.showToast(data?.error || 'Loi xoa hang loat', 'red')
+      }
+    },
+
     async init() {
       await this.load()
     },

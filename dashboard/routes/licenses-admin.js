@@ -107,6 +107,25 @@ router.patch('/:id', (req, res) => {
   res.json(dbLic.getById(id))
 })
 
+// ---- POST /bulk-delete — xoa nhieu license cung luc ----
+// Body: { ids: number[] }
+router.post('/bulk-delete', (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n)) : []
+  if (ids.length === 0) return res.status(400).json({ error: 'ids rong' })
+  const deleted = dbLic.removeMany(ids)
+  res.json({ ok: true, deleted })
+})
+
+// ---- DELETE /:id — xoa han 1 license ----
+router.delete('/:id', (req, res) => {
+  const id = parseInt(req.params.id, 10)
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'id khong hop le' })
+  const lic = dbLic.getById(id)
+  if (!lic) return res.status(404).json({ error: 'License khong ton tai' })
+  dbLic.remove(id)
+  res.json({ ok: true })
+})
+
 // ---- POST /:id/revoke ----
 router.post('/:id/revoke', (req, res) => {
   const id = parseInt(req.params.id, 10)

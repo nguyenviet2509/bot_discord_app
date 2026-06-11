@@ -105,6 +105,18 @@ function revoke(id) {
   db().prepare('UPDATE licenses SET revoked = 1 WHERE id = ?').run(id)
 }
 
+// Xoa han 1 license (kem cascade license_events nho FK ON DELETE CASCADE)
+function remove(id) {
+  return db().prepare('DELETE FROM licenses WHERE id = ?').run(id).changes
+}
+
+// Xoa nhieu license trong 1 transaction
+function removeMany(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return 0
+  const placeholders = ids.map(() => '?').join(',')
+  return db().prepare(`DELETE FROM licenses WHERE id IN (${placeholders})`).run(...ids).changes
+}
+
 function resetMachine(id) {
   db().prepare(
     'UPDATE licenses SET machine_id = NULL, machine_id_short = NULL, activated_at = NULL WHERE id = ?'
@@ -198,6 +210,8 @@ module.exports = {
   bindMachine,
   touchSeen,
   revoke,
+  remove,
+  removeMany,
   resetMachine,
   update,
   list,
