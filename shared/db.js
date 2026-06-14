@@ -343,8 +343,8 @@ function initDb() {
       enabled INTEGER NOT NULL DEFAULT 0,
       notify_channel_id TEXT,
       watched_channels TEXT NOT NULL DEFAULT '[]',
-      join_template TEXT NOT NULL DEFAULT '🔊 {user} vừa vào **{channel}** lúc {time}',
-      leave_template TEXT NOT NULL DEFAULT '👋 {username} đã rời **{channel}** lúc {time}',
+      join_template TEXT NOT NULL DEFAULT '{user} đã vào kênh \`{channel}\` .',
+      leave_template TEXT NOT NULL DEFAULT '{user} đã rời kênh \`{channel}\` .',
       updated_at INTEGER DEFAULT (unixepoch())
     );
   `)
@@ -1265,8 +1265,8 @@ const VOICE_LOG_DEFAULTS = {
   enabled: 0,
   notify_channel_id: null,
   watched_channels: [],
-  join_template: '🔊 {user} vừa vào **{channel}** lúc {time}',
-  leave_template: '👋 {username} đã rời **{channel}** lúc {time}',
+  join_template: '{user} đã vào kênh `{channel}` .',
+  leave_template: '{user} đã rời kênh `{channel}` .',
 }
 
 function getVoiceLogSettings(guildId) {
