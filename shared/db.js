@@ -336,6 +336,19 @@ function initDb() {
   try { database.exec(`ALTER TABLE honor_settings ADD COLUMN bronze_emoji TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE honor_settings ADD COLUMN last_banner_url TEXT`) } catch (_) {}
 
+  // Voice in/out notifications: per-guild config (whitelist voice channels + notify text channel + templates)
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS voice_log_settings (
+      guild_id TEXT PRIMARY KEY,
+      enabled INTEGER NOT NULL DEFAULT 0,
+      notify_channel_id TEXT,
+      watched_channels TEXT NOT NULL DEFAULT '[]',
+      join_template TEXT NOT NULL DEFAULT '🔊 {user} vừa vào **{channel}** lúc {time}',
+      leave_template TEXT NOT NULL DEFAULT '👋 {username} đã rời **{channel}** lúc {time}',
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+  `)
+
   // Schema cho module system & mini-game PvP (tach file rieng)
   require('./db-mini-game').initMiniGameSchema(database)
 
@@ -1246,6 +1259,51 @@ function upsertWelcomeTemplate({ guild_id, enabled, message, image_url }) {
     })
 }
 
+// ===== Voice In/Out Notification Settings =====
+
+const VOICE_LOG_DEFAULTS = {
+  enabled: 0,
+  notify_channel_id: null,
+  watched_channels: [],
+  join_template: '🔊 {user} vừa vào **{channel}** lúc {time}',
+  leave_template: '👋 {username} đã rời **{channel}** lúc {time}',
+}
+
+function getVoiceLogSettings(guildId) {
+  const row = getDb()
+    .prepare('SELECT * FROM voice_log_settings WHERE guild_id = ?')
+    .get(guildId)
+  if (!row) return { guild_id: guildId, ...VOICE_LOG_DEFAULTS }
+  let watched = []
+  try { watched = JSON.parse(row.watched_channels || '[]') } catch (_) { watched = [] }
+  if (!Array.isArray(watched)) watched = []
+  return { ...row, watched_channels: watched }
+}
+
+function upsertVoiceLogSettings({ guild_id, enabled, notify_channel_id, watched_channels, join_template, leave_template }) {
+  const channels = Array.isArray(watched_channels) ? watched_channels.map(String) : []
+  return getDb()
+    .prepare(`
+      INSERT INTO voice_log_settings (guild_id, enabled, notify_channel_id, watched_channels, join_template, leave_template, updated_at)
+      VALUES (@guild_id, @enabled, @notify_channel_id, @watched_channels, @join_template, @leave_template, unixepoch())
+      ON CONFLICT(guild_id) DO UPDATE SET
+        enabled = excluded.enabled,
+        notify_channel_id = excluded.notify_channel_id,
+        watched_channels = excluded.watched_channels,
+        join_template = excluded.join_template,
+        leave_template = excluded.leave_template,
+        updated_at = unixepoch()
+    `)
+    .run({
+      guild_id,
+      enabled: enabled ? 1 : 0,
+      notify_channel_id: notify_channel_id || null,
+      watched_channels: JSON.stringify(channels),
+      join_template: join_template || VOICE_LOG_DEFAULTS.join_template,
+      leave_template: leave_template || VOICE_LOG_DEFAULTS.leave_template,
+    })
+}
+
 function getChannelsWithLinks(guildId) {
   return getDb()
     .prepare('SELECT DISTINCT channel_id, channel_name FROM links WHERE guild_id = ? ORDER BY channel_name ASC')
@@ -1397,4 +1455,6 @@ module.exports = {
   listLevelupReactConfig,
   upsertLevelupReactEmoji,
   setLevelupReactChance,
+  getVoiceLogSettings,
+  upsertVoiceLogSettings,
 }

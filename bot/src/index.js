@@ -22,6 +22,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildVoiceStates,
   ],
   // Reaction tren tin nhan cu (truoc khi bot online) -> Discord chi gui partial,
   // can dang ky de su kien messageReactionAdd van fire.
