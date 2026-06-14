@@ -348,6 +348,11 @@ function initDb() {
       updated_at INTEGER DEFAULT (unixepoch())
     );
   `)
+  try { database.exec(`ALTER TABLE voice_log_settings ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
+  try { database.exec(`ALTER TABLE voice_log_settings ADD COLUMN embed_color_join TEXT DEFAULT '#22c55e'`) } catch (_) {}
+  try { database.exec(`ALTER TABLE voice_log_settings ADD COLUMN embed_color_leave TEXT DEFAULT '#ef4444'`) } catch (_) {}
+  try { database.exec(`ALTER TABLE voice_log_settings ADD COLUMN show_author INTEGER NOT NULL DEFAULT 1`) } catch (_) {}
+  try { database.exec(`ALTER TABLE voice_log_settings ADD COLUMN show_footer INTEGER NOT NULL DEFAULT 1`) } catch (_) {}
 
   // Schema cho module system & mini-game PvP (tach file rieng)
   require('./db-mini-game').initMiniGameSchema(database)
@@ -1267,6 +1272,11 @@ const VOICE_LOG_DEFAULTS = {
   watched_channels: [],
   join_template: '{user} đã vào kênh `{channel}` .',
   leave_template: '{user} đã rời kênh `{channel}` .',
+  use_embed: 0,
+  embed_color_join: '#22c55e',
+  embed_color_leave: '#ef4444',
+  show_author: 1,
+  show_footer: 1,
 }
 
 function getVoiceLogSettings(guildId) {
@@ -1280,18 +1290,39 @@ function getVoiceLogSettings(guildId) {
   return { ...row, watched_channels: watched }
 }
 
-function upsertVoiceLogSettings({ guild_id, enabled, notify_channel_id, watched_channels, join_template, leave_template }) {
+function upsertVoiceLogSettings(input) {
+  const {
+    guild_id, enabled, notify_channel_id, watched_channels,
+    join_template, leave_template,
+    use_embed, embed_color_join, embed_color_leave, show_author, show_footer,
+  } = input
   const channels = Array.isArray(watched_channels) ? watched_channels.map(String) : []
+  const isHexColor = c => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)
   return getDb()
     .prepare(`
-      INSERT INTO voice_log_settings (guild_id, enabled, notify_channel_id, watched_channels, join_template, leave_template, updated_at)
-      VALUES (@guild_id, @enabled, @notify_channel_id, @watched_channels, @join_template, @leave_template, unixepoch())
+      INSERT INTO voice_log_settings (
+        guild_id, enabled, notify_channel_id, watched_channels,
+        join_template, leave_template,
+        use_embed, embed_color_join, embed_color_leave, show_author, show_footer,
+        updated_at
+      )
+      VALUES (
+        @guild_id, @enabled, @notify_channel_id, @watched_channels,
+        @join_template, @leave_template,
+        @use_embed, @embed_color_join, @embed_color_leave, @show_author, @show_footer,
+        unixepoch()
+      )
       ON CONFLICT(guild_id) DO UPDATE SET
         enabled = excluded.enabled,
         notify_channel_id = excluded.notify_channel_id,
         watched_channels = excluded.watched_channels,
         join_template = excluded.join_template,
         leave_template = excluded.leave_template,
+        use_embed = excluded.use_embed,
+        embed_color_join = excluded.embed_color_join,
+        embed_color_leave = excluded.embed_color_leave,
+        show_author = excluded.show_author,
+        show_footer = excluded.show_footer,
         updated_at = unixepoch()
     `)
     .run({
@@ -1301,6 +1332,11 @@ function upsertVoiceLogSettings({ guild_id, enabled, notify_channel_id, watched_
       watched_channels: JSON.stringify(channels),
       join_template: join_template || VOICE_LOG_DEFAULTS.join_template,
       leave_template: leave_template || VOICE_LOG_DEFAULTS.leave_template,
+      use_embed: use_embed ? 1 : 0,
+      embed_color_join: isHexColor(embed_color_join) ? embed_color_join : VOICE_LOG_DEFAULTS.embed_color_join,
+      embed_color_leave: isHexColor(embed_color_leave) ? embed_color_leave : VOICE_LOG_DEFAULTS.embed_color_leave,
+      show_author: show_author == null ? 1 : (show_author ? 1 : 0),
+      show_footer: show_footer == null ? 1 : (show_footer ? 1 : 0),
     })
 }
 

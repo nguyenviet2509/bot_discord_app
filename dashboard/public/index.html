@@ -2425,6 +2425,105 @@
             </div>
           </div>
         </div>
+
+        <!-- EMBED CONFIG + PREVIEW -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <div class="bg-white border border-slate-200 rounded-2xl p-6">
+            <h3 class="font-bold text-slate-800 mb-4">Định dạng Embed</h3>
+
+            <label class="flex items-center gap-2.5 mb-5 cursor-pointer select-none">
+              <input type="checkbox" x-model="form.use_embed" class="w-4 h-4 accent-indigo-600">
+              <span class="text-xs md:text-sm font-semibold text-slate-700">Hiển thị dạng embed (có color bar, avatar, footer)</span>
+            </label>
+
+            <div x-show="form.use_embed" class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Màu JOIN</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" x-model="form.embed_color_join" class="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer">
+                    <input type="text" x-model="form.embed_color_join" pattern="^#[0-9a-fA-F]{6}$" placeholder="#22c55e" class="input-field flex-1 font-mono text-xs">
+                  </div>
+                </div>
+                <div>
+                  <label class="text-xs md:text-sm font-semibold text-slate-700 block mb-1.5">Màu LEAVE</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" x-model="form.embed_color_leave" class="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer">
+                    <input type="text" x-model="form.embed_color_leave" pattern="^#[0-9a-fA-F]{6}$" placeholder="#ef4444" class="input-field flex-1 font-mono text-xs">
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input type="checkbox" x-model="form.show_author" class="w-4 h-4 accent-indigo-600">
+                  <span class="text-xs md:text-sm text-slate-700">Hiển thị author (tên + avatar thành viên)</span>
+                </label>
+                <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input type="checkbox" x-model="form.show_footer" class="w-4 h-4 accent-indigo-600">
+                  <span class="text-xs md:text-sm text-slate-700">Hiển thị footer (tên kênh • thời gian)</span>
+                </label>
+              </div>
+            </div>
+
+            <div x-show="!form.use_embed" class="text-xs text-slate-500 italic">
+              Đang dùng chế độ tin nhắn văn bản thường. Bật embed để có color bar + avatar + footer.
+            </div>
+          </div>
+
+          <!-- PREVIEW -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-6">
+            <h3 class="font-bold text-slate-800 mb-4">Xem trước</h3>
+            <div class="rounded-xl p-4" style="background:#313338">
+              <!-- JOIN preview -->
+              <template x-if="form.use_embed">
+                <div class="mb-3">
+                  <div class="flex" :style="'border-left:4px solid '+form.embed_color_join+';background:#2b2d31;border-radius:4px;padding:8px 12px'">
+                    <div class="flex-1">
+                      <template x-if="form.show_author">
+                        <div class="flex items-center gap-2 mb-1">
+                          <div class="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">B</div>
+                          <span class="text-xs font-semibold" style="color:#fff">TênThànhViên</span>
+                        </div>
+                      </template>
+                      <div class="text-xs md:text-sm" style="color:#dbdee1" x-html="renderPreview(form.join_template)"></div>
+                      <template x-if="form.show_footer">
+                        <div class="text-[11px] mt-1.5" style="color:#949ba4">GoldenStar • 14:14 14/06/2026</div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <template x-if="!form.use_embed">
+                <div class="text-xs md:text-sm mb-2" style="color:#dbdee1" x-html="renderPreview(form.join_template)"></div>
+              </template>
+
+              <!-- LEAVE preview -->
+              <template x-if="form.use_embed">
+                <div>
+                  <div class="flex" :style="'border-left:4px solid '+form.embed_color_leave+';background:#2b2d31;border-radius:4px;padding:8px 12px'">
+                    <div class="flex-1">
+                      <template x-if="form.show_author">
+                        <div class="flex items-center gap-2 mb-1">
+                          <div class="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">B</div>
+                          <span class="text-xs font-semibold" style="color:#fff">TênThànhViên</span>
+                        </div>
+                      </template>
+                      <div class="text-xs md:text-sm" style="color:#dbdee1" x-html="renderPreview(form.leave_template)"></div>
+                      <template x-if="form.show_footer">
+                        <div class="text-[11px] mt-1.5" style="color:#949ba4">GoldenStar • 14:14 14/06/2026</div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <template x-if="!form.use_embed">
+                <div class="text-xs md:text-sm" style="color:#dbdee1" x-html="renderPreview(form.leave_template)"></div>
+              </template>
+            </div>
+            <p class="text-xs text-slate-500 mt-3">Bản xem trước minh hoạ — tên thành viên & kênh sẽ thay bằng dữ liệu thực khi gửi.</p>
+          </div>
+        </div>
       </div>
     </div>
     <!-- END VOICE LOG TAB -->
