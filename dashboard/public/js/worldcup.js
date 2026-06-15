@@ -115,6 +115,15 @@ function worldcupTab() {
       } catch (err) { this.flash(err.message, false) }
     },
 
+    async testSendMatch(m) {
+      if (!this.config.channel_id) { this.flash('Cấu hình channel trước', false); return }
+      if (!confirm(`Gửi thử thông báo trận ${m.team1_name} vs ${m.team2_name}?`)) return
+      try {
+        await api('POST', '/api/worldcup/test-send', { matchId: m.id })
+        this.flash(`Đã gửi: ${m.team1_name} vs ${m.team2_name}`, true)
+      } catch (err) { this.flash(err.message, false) }
+    },
+
     // ===== Teams =====
     openCreateTeam() { this.editingTeam = { code: '', name: '' } },
     openEditTeam(t) { this.editingTeam = { ...t } },

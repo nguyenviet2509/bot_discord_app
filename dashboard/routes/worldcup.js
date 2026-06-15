@@ -162,18 +162,26 @@ router.get('/preview', (req, res) => {
   })
 })
 
-// Test send: gui ngay 1 tin embed (match upcoming gan nhat) qua Discord REST API
+// Test send: gui ngay 1 tin embed qua Discord REST API.
+// - Neu co matchId trong body -> gui chinh tran do
+// - Khong co -> gui tran upcoming gan nhat
 router.post('/test-send', async (req, res) => {
   if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua duoc cau hinh' })
   const { buildMatchPayload } = require('../../bot/src/utils/worldcup-notifier')
   const config = wc.getGuildConfig(GUILD_ID())
   if (!config.channel_id) return res.status(400).json({ error: 'Chua cau hinh channel' })
 
-  const matches = wc.findUpcomingMatches({ fromMs: Date.now() - 7 * 24 * 60 * 60_000, toMs: Date.now() + 365 * 24 * 60 * 60_000 })
-  if (matches.length === 0) return res.status(400).json({ error: 'Chua co tran dau de preview' })
-
-  const next = matches.sort((a, b) => a.kick_off_at - b.kick_off_at)[0]
-  const payload = buildMatchPayload(next, config)
+  let target
+  const matchId = req.body && req.body.matchId
+  if (matchId) {
+    target = wc.getMatch(Number(matchId))
+    if (!target) return res.status(404).json({ error: 'Khong tim thay tran dau' })
+  } else {
+    const matches = wc.findUpcomingMatches({ fromMs: Date.now() - 7 * 24 * 60 * 60_000, toMs: Date.now() + 365 * 24 * 60 * 60_000 })
+    if (matches.length === 0) return res.status(400).json({ error: 'Chua co tran dau de preview' })
+    target = matches.sort((a, b) => a.kick_off_at - b.kick_off_at)[0]
+  }
+  const payload = buildMatchPayload(target, config)
   const body = {
     content: `**[TEST]** ${payload.content || ''}`.trim(),
     embeds: [payload.embeds[0].toJSON()],

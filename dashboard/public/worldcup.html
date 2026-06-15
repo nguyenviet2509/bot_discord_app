@@ -24,6 +24,9 @@
     .btn-test:hover { background: #fef3c7; }
     .btn-soft-primary { background: #eef2ff; color: #4338ca; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
     .btn-soft-danger { background: #fef2f2; color: #b91c1c; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+    .btn-soft-warning { background: #fffbeb; color: #b45309; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+    .btn-soft-warning:hover:not(:disabled) { background: #fef3c7; }
+    .btn-soft-warning:disabled { opacity: .4; cursor: not-allowed; }
     .field-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
     .badge-group { background: #dbeafe; color: #1e40af; }
@@ -246,7 +249,9 @@
                       x-text="m.status === 'scheduled' ? '● Sắp diễn ra' : ('● ' + m.status)"></span>
               </td>
               <td class="text-right whitespace-nowrap">
-                <button class="btn-soft-primary" @click="openEditMatch(m)">Sửa</button>
+                <button class="btn-soft-warning" @click="testSendMatch(m)" :disabled="!config.channel_id"
+                        :title="config.channel_id ? 'Gửi thử trận này lên channel đã cấu hình' : 'Cần cấu hình channel trước'">Test</button>
+                <button class="btn-soft-primary ml-1" @click="openEditMatch(m)">Sửa</button>
                 <button class="btn-soft-danger ml-1" @click="deleteMatch(m)">Xoá</button>
               </td>
             </tr>
