@@ -11,6 +11,7 @@ const { buildPayload } = require('../../shared/build-scheduled-payload')
 const { buildLeaderboardText, mergeContentWithLeaderboard } = require('../../shared/build-leaderboard-text')
 const { isDueByClock, isDueByInterval } = require('../../shared/schedule-time-helper')
 const { scheduleDaily } = require('./utils/daily-cron')
+const worldcupNotifier = require('./utils/worldcup-notifier')
 
 initDb()
 console.log('[DB] Database initialized')
@@ -135,6 +136,9 @@ client.once('ready', async () => {
       }
     }
   }, 60_000)
+
+  // Worldcup notifier: tick 60s + catch-up on boot, gui tin embed truoc kick-off N phut
+  worldcupNotifier.start(client)
 
   // Cron: 00:00 moi ngay → quet silent members cho tat ca guild bot dang join
   scheduleDaily('scan-silent-members', async () => {

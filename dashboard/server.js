@@ -61,6 +61,7 @@ app.use('/api/managed-bots', auth, require('./routes/managed-bots'))
 app.use('/api/roll-history', auth, require('./routes/roll-history'))
 app.use('/api/admin/licenses', auth, require('./routes/licenses-admin'))
 app.use('/api/voice-log', auth, require('./routes/voice-log'))
+app.use('/api/worldcup', auth, require('./routes/worldcup'))
 
 // Graceful shutdown: stop tat ca lite bot dang chay
 const litebotManager = require('../bots-lite')

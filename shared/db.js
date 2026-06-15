@@ -369,6 +369,9 @@ function initDb() {
   // Schema cho module License Activation
   require('./db-licenses').initLicensesSchema(database)
 
+  // Schema cho feature Worldcup match notifications (tach file rieng)
+  require('./db-worldcup').initWorldcupSchema(database)
+
   return database
 }
 

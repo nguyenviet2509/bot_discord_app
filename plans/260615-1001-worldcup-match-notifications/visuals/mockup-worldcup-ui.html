@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mockup — Worldcup UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  * { font-family: 'Inter', -apple-system, sans-serif; }
+  body { background: #f1f5f9; }
+  .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
+  .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; outline: none; }
+  .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
+  .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+  .btn-primary:hover { background: #4f46e5; }
+  .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; white-space: nowrap; }
+  .btn-refresh:hover { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
+  .btn-soft-danger { background: #fef2f2; color: #b91c1c; padding: 7px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; }
+  .btn-soft-primary { background: #eef2ff; color: #4338ca; padding: 7px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; }
+  .field-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
+  .tab-btn { padding: 9px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; color: #64748b; background: transparent; border: none; cursor: pointer; }
+  .tab-btn.active { background: #eef2ff; color: #4338ca; }
+  table.matches { width: 100%; border-collapse: collapse; }
+  table.matches th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; padding: 12px 14px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+  table.matches td { padding: 14px; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: #1e293b; }
+  table.matches tr:hover td { background: #f8fafc; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge-group { background: #dbeafe; color: #1e40af; }
+  .badge-r16 { background: #fee2e2; color: #b91c1c; }
+  .badge-final { background: #fef9c3; color: #854d0e; }
+  .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 999px; transition: .2s; }
+  .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .2s; }
+  input:checked + .toggle-slider { background: #6366f1; }
+  input:checked + .toggle-slider:before { transform: translateX(20px); }
+  /* Discord embed mock */
+  .discord-wrap { background: #313338; padding: 16px 20px; border-radius: 8px; color: #dbdee1; font-size: 14px; }
+  .discord-msg { display: flex; gap: 12px; }
+  .discord-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #ec4899); flex-shrink: 0; }
+  .discord-author { color: #f2f3f5; font-weight: 600; font-size: 15px; }
+  .discord-time { color: #949ba4; font-size: 12px; margin-left: 8px; }
+  .discord-content { color: #dbdee1; margin: 4px 0; }
+  .ping { color: #c9cdfb; background: rgba(88,101,242,.3); padding: 0 2px; border-radius: 3px; cursor: pointer; }
+  .embed { margin-top: 6px; max-width: 520px; background: #2b2d31; border-left: 4px solid #3b82f6; border-radius: 4px; padding: 14px 16px; }
+  .embed.knockout { border-left-color: #ef4444; }
+  .embed.final { border-left-color: #facc15; }
+  .embed-title { color: #f2f3f5; font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+  .embed-desc { color: #dbdee1; font-size: 15px; margin-bottom: 10px; line-height: 1.5; }
+  .embed-field { margin-top: 8px; }
+  .embed-field-name { color: #f2f3f5; font-weight: 600; font-size: 13px; }
+  .embed-field-value { color: #dbdee1; font-size: 14px; }
+  .embed-footer { color: #949ba4; font-size: 12px; margin-top: 10px; }
+  .scroll-x { overflow-x: auto; }
+  /* Sidebar mock */
+  .sidebar-bg { background: linear-gradient(180deg, #4338ca 0%, #6366f1 100%); }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: rgba(255,255,255,.85); font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 10px; margin: 2px 10px; }
+  .nav-item:hover { background: rgba(255,255,255,.1); }
+  .nav-item.active { background: rgba(255,255,255,.18); color: white; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="flex min-h-screen">
+
+  <!-- Sidebar mock -->
+  <aside class="sidebar-bg w-60 min-h-screen flex flex-col py-5">
+    <div class="px-6 mb-6">
+      <h2 class="text-white font-bold text-lg">Bot Dashboard</h2>
+      <p class="text-indigo-200 text-xs mt-1">VietNT Discord Bot</p>
+    </div>
+    <nav class="flex-1">
+      <div class="nav-item">📊 Tổng quan</div>
+      <div class="nav-item">💬 Tin nhắn Level Up</div>
+      <div class="nav-item">📢 Tin nhắn định kỳ</div>
+      <div class="nav-item">👋 Welcome</div>
+      <div class="nav-item">🛡 Auto-Mod</div>
+      <div class="nav-item">🏆 Vinh danh</div>
+      <div class="nav-item">🔊 Voice log</div>
+      <div class="nav-item active">⚽ Worldcup</div>
+      <div class="nav-item">⚙ Cài đặt</div>
+    </nav>
+  </aside>
+
+  <main class="flex-1 min-w-0">
+
+    <!-- Sticky Header -->
+    <div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-slate-800">Worldcup</h1>
+        <p class="text-sm text-slate-400 mt-0.5">Quản lý lịch trận đấu &amp; cấu hình thông báo</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-emerald-600">Đã lưu lúc 10:14</span>
+        <button class="btn-refresh">↻ Làm mới</button>
+        <button class="btn-primary">Lưu thay đổi</button>
+      </div>
+    </div>
+
+    <!-- Tab strip -->
+    <div class="px-8 pt-6">
+      <div class="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm w-fit">
+        <button class="tab-btn active">Quản lý lịch (Owner)</button>
+        <button class="tab-btn">Thông báo guild này</button>
+      </div>
+    </div>
+
+    <div class="p-8 max-w-6xl mx-auto space-y-5">
+
+      <!-- ============================================== -->
+      <!--   TAB 1: OWNER — CRUD MATCHES                  -->
+      <!-- ============================================== -->
+
+      <!-- Admin role config card -->
+      <div class="card p-7">
+        <div class="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800 mb-1">Cấu hình quyền quản lý</h2>
+            <p class="text-sm text-slate-400">Chỉ thành viên có role này (trong guild gốc) mới CRUD được lịch trận đấu.</p>
+          </div>
+          <span class="badge badge-group">Owner only</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="md:col-span-2">
+            <label class="field-label">Role admin Worldcup</label>
+            <select class="input-field">
+              <option>@WC Admin</option>
+              <option>@Bot Owner</option>
+              <option>@Moderator</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button class="btn-primary w-full">Lưu role</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teams card (collapsible / compact view) -->
+      <div class="card p-7">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800 mb-1">Đội tuyển</h2>
+            <p class="text-sm text-slate-400">32 đội đã seed sẵn. Có thể thêm/sửa nếu cần.</p>
+          </div>
+          <button class="btn-refresh">+ Thêm đội</button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <span class="badge badge-group">Qatar</span>
+          <span class="badge badge-group">Ecuador</span>
+          <span class="badge badge-group">Senegal</span>
+          <span class="badge badge-group">Hà Lan</span>
+          <span class="badge badge-group">Anh</span>
+          <span class="badge badge-group">Mỹ</span>
+          <span class="badge badge-group">Brazil</span>
+          <span class="badge badge-group">Argentina</span>
+          <span class="badge badge-group">Pháp</span>
+          <span class="badge badge-group">Đức</span>
+          <span class="badge badge-group">Tây Ban Nha</span>
+          <span class="badge badge-group">Bồ Đào Nha</span>
+          <span class="badge" style="background:#f1f5f9;color:#64748b">+ 20 đội khác</span>
+        </div>
+      </div>
+
+      <!-- Add match form card -->
+      <div class="card p-7">
+        <h2 class="text-base font-bold text-slate-800 mb-1">Thêm trận đấu</h2>
+        <p class="text-sm text-slate-400 mb-5">Lưu giờ kick-off theo UTC, hiển thị theo múi giờ guild khi gửi tin.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="field-label">Đội 1</label>
+            <select class="input-field">
+              <option>Brazil</option>
+              <option>Brazil</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Đội 2</label>
+            <select class="input-field">
+              <option>Brazil</option>
+              <option>Argentina</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Giờ kick-off (local)</label>
+            <input type="datetime-local" class="input-field" value="2026-06-15T22:00" />
+          </div>
+          <div>
+            <label class="field-label">Múi giờ nhập</label>
+            <select class="input-field">
+              <option>Asia/Saigon (UTC+7)</option>
+              <option>UTC</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Vòng đấu</label>
+            <select class="input-field">
+              <option>Vòng bảng</option>
+              <option>Vòng 1/8</option>
+              <option>Tứ kết</option>
+              <option>Bán kết</option>
+              <option>Tranh hạng 3</option>
+              <option>Chung kết</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Bảng (nếu vòng bảng)</label>
+            <input class="input-field" placeholder="A" maxlength="1" />
+          </div>
+        </div>
+        <div class="flex justify-end">
+          <button class="btn-primary">Tạo trận đấu</button>
+        </div>
+      </div>
+
+      <!-- Matches list -->
+      <div class="card overflow-hidden">
+        <div class="p-7 pb-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-800 mb-1">Danh sách trận đấu</h2>
+            <p class="text-sm text-slate-400">Sắp xếp theo giờ kick-off</p>
+          </div>
+          <div class="flex gap-2">
+            <select class="input-field" style="width:auto">
+              <option>Tất cả vòng</option>
+              <option>Vòng bảng</option>
+              <option>Vòng 1/8</option>
+            </select>
+          </div>
+        </div>
+        <div class="scroll-x">
+          <table class="matches">
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Trận</th>
+                <th>Vòng</th>
+                <th>Trạng thái</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="font-semibold">15/06 22:00</div>
+                  <div class="text-xs text-slate-400">UTC: 15:00</div>
+                </td>
+                <td>
+                  <span class="font-semibold">Brazil</span>
+                  <span class="text-slate-400 mx-2">vs</span>
+                  <span class="font-semibold">Argentina</span>
+                </td>
+                <td><span class="badge badge-group">Vòng bảng A</span></td>
+                <td><span class="text-emerald-600 text-xs font-semibold">● Sắp diễn ra</span></td>
+                <td class="text-right whitespace-nowrap">
+                  <button class="btn-soft-primary">Sửa</button>
+                  <button class="btn-soft-danger ml-1">Xoá</button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="font-semibold">16/06 02:00</div>
+                  <div class="text-xs text-slate-400">UTC: 19:00 (15/06)</div>
+                </td>
+                <td>
+                  <span class="font-semibold">Pháp</span>
+                  <span class="text-slate-400 mx-2">vs</span>
+                  <span class="font-semibold">Đức</span>
+                </td>
+                <td><span class="badge badge-r16">Vòng 1/8</span></td>
+                <td><span class="text-emerald-600 text-xs font-semibold">● Sắp diễn ra</span></td>
+                <td class="text-right whitespace-nowrap">
+                  <button class="btn-soft-primary">Sửa</button>
+                  <button class="btn-soft-danger ml-1">Xoá</button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="font-semibold">19/07 22:00</div>
+                  <div class="text-xs text-slate-400">UTC: 15:00</div>
+                </td>
+                <td>
+                  <span class="font-semibold">Brazil</span>
+                  <span class="text-slate-400 mx-2">vs</span>
+                  <span class="font-semibold">Đức</span>
+                </td>
+                <td><span class="badge badge-final">Chung kết</span></td>
+                <td><span class="text-slate-400 text-xs font-semibold">● Lên lịch</span></td>
+                <td class="text-right whitespace-nowrap">
+                  <button class="btn-soft-primary">Sửa</button>
+                  <button class="btn-soft-danger ml-1">Xoá</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!--   TAB 2: GUILD CONFIG                          -->
+      <!-- ============================================== -->
+
+      <div class="card p-7" style="margin-top: 48px; border-top: 4px solid #6366f1;">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-base font-bold text-slate-800">Thông báo guild này</h2>
+          <span class="badge badge-group">Per-guild</span>
+        </div>
+        <p class="text-sm text-slate-400 mb-5">Cấu hình kênh nhận thông báo trận đấu sắp diễn ra cho server hiện tại.</p>
+
+        <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl mb-5">
+          <div>
+            <div class="text-sm font-semibold text-slate-800">Bật thông báo trận đấu</div>
+            <div class="text-xs text-slate-400 mt-0.5">Bot sẽ tự động gửi tin trước kick-off N phút</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="field-label">Kênh thông báo</label>
+            <select class="input-field">
+              <option>#world-cup</option>
+              <option>#thông-báo</option>
+              <option>#chung</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Gửi trước trận (phút)</label>
+            <input type="number" class="input-field" value="30" min="5" max="1440" />
+          </div>
+          <div>
+            <label class="field-label">Role ping (tùy chọn)</label>
+            <select class="input-field">
+              <option>— Không ping —</option>
+              <option>@worldcup-fans</option>
+              <option>@everyone</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Múi giờ hiển thị</label>
+            <select class="input-field">
+              <option>Asia/Saigon (UTC+7)</option>
+              <option>Asia/Tokyo (UTC+9)</option>
+              <option>Europe/London (UTC+0)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-5">
+          <button class="btn-refresh" style="color:#b45309;border-color:#fde68a;background:#fffbeb">Gửi thử ngay</button>
+          <button class="btn-primary">Lưu cấu hình</button>
+        </div>
+      </div>
+
+      <!-- Discord embed preview -->
+      <div class="card p-7">
+        <h2 class="text-base font-bold text-slate-800 mb-1">Preview tin nhắn Discord</h2>
+        <p class="text-sm text-slate-400 mb-5">Đây là dạng tin bot sẽ gửi vào kênh đã chọn.</p>
+
+        <div class="discord-wrap">
+          <div class="discord-msg">
+            <div class="discord-avatar"></div>
+            <div class="flex-1">
+              <div>
+                <span class="discord-author">VietNT Bot</span>
+                <span style="display:inline-block;background:#5865f2;color:white;font-size:10px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:6px;vertical-align:middle">BOT</span>
+                <span class="discord-time">Hôm nay lúc 21:30</span>
+              </div>
+              <div class="discord-content">
+                <span class="ping">@worldcup-fans</span>
+              </div>
+              <div class="embed">
+                <div class="embed-title">🏆 Trận đấu Worldcup sắp diễn ra</div>
+                <div class="embed-desc">
+                  <strong>Brazil</strong> &nbsp;<span style="color:#949ba4">vs</span>&nbsp; <strong>Argentina</strong>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="embed-field">
+                    <div class="embed-field-name">⏰ Giờ thi đấu</div>
+                    <div class="embed-field-value">22:00 (Asia/Saigon)<br/><span style="color:#949ba4;font-size:12px">còn ~30 phút</span></div>
+                  </div>
+                  <div class="embed-field">
+                    <div class="embed-field-name">📋 Vòng đấu</div>
+                    <div class="embed-field-value">Vòng bảng A</div>
+                  </div>
+                </div>
+                <div class="embed-footer">VietNT Bot · Worldcup notifications</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alt preview: knockout -->
+        <div class="text-xs text-slate-400 mt-6 mb-2">Ví dụ knockout (viền đỏ):</div>
+        <div class="discord-wrap">
+          <div class="discord-msg">
+            <div class="discord-avatar"></div>
+            <div class="flex-1">
+              <div><span class="discord-author">VietNT Bot</span><span class="discord-time">Hôm nay lúc 01:30</span></div>
+              <div class="embed knockout">
+                <div class="embed-title">🏆 Trận đấu Worldcup sắp diễn ra</div>
+                <div class="embed-desc"><strong>Pháp</strong> <span style="color:#949ba4">vs</span> <strong>Đức</strong></div>
+                <div class="embed-field">
+                  <div class="embed-field-name">⏰ Giờ thi đấu</div>
+                  <div class="embed-field-value">02:00 (Asia/Saigon) — còn ~30 phút</div>
+                </div>
+                <div class="embed-field">
+                  <div class="embed-field-name">📋 Vòng đấu</div>
+                  <div class="embed-field-value">Vòng 1/8</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alt preview: final -->
+        <div class="text-xs text-slate-400 mt-6 mb-2">Ví dụ chung kết (viền vàng):</div>
+        <div class="discord-wrap">
+          <div class="discord-msg">
+            <div class="discord-avatar"></div>
+            <div class="flex-1">
+              <div><span class="discord-author">VietNT Bot</span><span class="discord-time">19/07 lúc 21:30</span></div>
+              <div class="embed final">
+                <div class="embed-title">🏆 Trận đấu Worldcup sắp diễn ra</div>
+                <div class="embed-desc"><strong>Brazil</strong> <span style="color:#949ba4">vs</span> <strong>Argentina</strong></div>
+                <div class="embed-field">
+                  <div class="embed-field-name">⏰ Giờ thi đấu</div>
+                  <div class="embed-field-value">22:00 (Asia/Saigon) — còn ~30 phút</div>
+                </div>
+                <div class="embed-field">
+                  <div class="embed-field-name">📋 Vòng đấu</div>
+                  <div class="embed-field-value">Chung kết</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

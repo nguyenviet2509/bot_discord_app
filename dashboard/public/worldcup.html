@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Worldcup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    * { font-family: 'Inter', -apple-system, sans-serif; }
+    body { background: #f1f5f9; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
+    .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; outline: none; }
+    .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; white-space: nowrap; }
+    .btn-refresh:hover { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
+    .btn-test { background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; padding: 9px 16px; border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .btn-test:hover { background: #fef3c7; }
+    .btn-soft-primary { background: #eef2ff; color: #4338ca; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+    .btn-soft-danger { background: #fef2f2; color: #b91c1c; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+    .field-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .badge-group { background: #dbeafe; color: #1e40af; }
+    .badge-r16, .badge-qf, .badge-sf, .badge-3rd { background: #fee2e2; color: #b91c1c; }
+    .badge-final { background: #fef9c3; color: #854d0e; }
+    .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 999px; transition: .2s; }
+    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .2s; }
+    input:checked + .toggle-slider { background: #6366f1; }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
+    table.matches { width: 100%; border-collapse: collapse; }
+    table.matches th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; padding: 12px 14px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+    table.matches td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: #1e293b; }
+    table.matches tr:hover td { background: #f8fafc; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+    .modal { background: white; border-radius: 16px; padding: 24px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="min-h-screen" x-data="worldcupTab()" x-init="init()">
+
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="pl-12 md:pl-0">
+    <h1 class="text-sm md:text-xl font-bold text-slate-800">Worldcup</h1>
+    <p class="text-xs md:text-sm text-slate-400 mt-0.5">Quản lý lịch trận đấu &amp; cấu hình thông báo</p>
+  </div>
+  <div class="flex items-center gap-3 flex-wrap">
+    <span x-text="saveStatus" :class="saveStatusClass" class="text-xs md:text-sm"></span>
+    <button @click="loadAll()" class="btn-refresh">↻ Làm mới</button>
+  </div>
+</div>
+
+<div class="p-4 md:p-8 max-w-6xl mx-auto space-y-5">
+
+  <!-- ============================================== -->
+  <!-- 1. CẤU HÌNH THÔNG BÁO                          -->
+  <!-- ============================================== -->
+  <div class="card p-7">
+    <h2 class="text-base font-bold text-slate-800 mb-1">Cấu hình thông báo</h2>
+    <p class="text-sm text-slate-400 mb-5">Kênh nhận thông báo trận đấu sắp diễn ra và thời điểm gửi.</p>
+
+    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl mb-5">
+      <div>
+        <div class="text-sm font-semibold text-slate-800">Bật thông báo trận đấu</div>
+        <div class="text-xs text-slate-400 mt-0.5">Bot tự động gửi tin trước kick-off N phút</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" x-model="config.enabled" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="field-label">Kênh thông báo</label>
+        <select class="input-field" x-model="config.channel_id">
+          <option value="">— Chọn kênh —</option>
+          <template x-for="ch in channels" :key="ch.id">
+            <option :value="ch.id" x-text="'#' + ch.name"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Gửi trước trận (phút)</label>
+        <input type="number" class="input-field" min="5" max="1440" x-model.number="config.notify_before_minutes" />
+      </div>
+      <div>
+        <label class="field-label">Role ping (tuỳ chọn)</label>
+        <select class="input-field" x-model="config.role_ping_id">
+          <option value="">— Không ping —</option>
+          <template x-for="r in roles" :key="r.id">
+            <option :value="r.id" x-text="'@' + r.name"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Múi giờ hiển thị</label>
+        <select class="input-field" x-model="config.timezone">
+          <option>Asia/Saigon</option>
+          <option>Asia/Tokyo</option>
+          <option>Asia/Seoul</option>
+          <option>Asia/Bangkok</option>
+          <option>Europe/London</option>
+          <option>America/New_York</option>
+          <option>UTC</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 mt-5">
+      <button class="btn-test" @click="testSend()" :disabled="!config.channel_id">Gửi thử ngay</button>
+      <button class="btn-primary" @click="saveConfig()">Lưu cấu hình</button>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- 2. ĐỘI TUYỂN                                   -->
+  <!-- ============================================== -->
+  <div class="card p-7">
+    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <div>
+        <h2 class="text-base font-bold text-slate-800 mb-1">Đội tuyển</h2>
+        <p class="text-sm text-slate-400">Đã seed 32 đội. Có thể thêm/sửa khi cần.</p>
+      </div>
+      <button class="btn-refresh" @click="openCreateTeam()">+ Thêm đội</button>
+    </div>
+    <div class="flex flex-wrap gap-2 mt-3">
+      <template x-for="t in teams" :key="t.id">
+        <span class="badge badge-group cursor-pointer hover:opacity-75" @click="openEditTeam(t)"
+              :title="'Sửa: ' + t.code">
+          <span x-text="t.name"></span>
+          <span class="text-blue-700 opacity-50 ml-1" x-text="'(' + t.code + ')'"></span>
+        </span>
+      </template>
+      <template x-if="teams.length === 0">
+        <span class="text-sm text-slate-400 italic">Chưa có đội nào</span>
+      </template>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- 3. THÊM TRẬN ĐẤU                               -->
+  <!-- ============================================== -->
+  <div class="card p-7">
+    <h2 class="text-base font-bold text-slate-800 mb-1">Thêm trận đấu</h2>
+    <p class="text-sm text-slate-400 mb-5">Giờ kick-off nhập theo giờ local hiện tại của trình duyệt, sẽ convert sang UTC khi lưu.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="field-label">Đội 1</label>
+        <select class="input-field" x-model.number="newMatch.team1Id">
+          <option value="">— Chọn đội —</option>
+          <template x-for="t in teams" :key="t.id">
+            <option :value="t.id" x-text="t.name + ' (' + t.code + ')'"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Đội 2</label>
+        <select class="input-field" x-model.number="newMatch.team2Id">
+          <option value="">— Chọn đội —</option>
+          <template x-for="t in teams" :key="t.id">
+            <option :value="t.id" x-text="t.name + ' (' + t.code + ')'"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Giờ kick-off (local)</label>
+        <input type="datetime-local" class="input-field" x-model="newMatch.kickOffLocal" />
+      </div>
+      <div>
+        <label class="field-label">Vòng đấu</label>
+        <select class="input-field" x-model="newMatch.round">
+          <option value="group">Vòng bảng</option>
+          <option value="r16">Vòng 1/8</option>
+          <option value="qf">Tứ kết</option>
+          <option value="sf">Bán kết</option>
+          <option value="3rd">Tranh hạng 3</option>
+          <option value="final">Chung kết</option>
+        </select>
+      </div>
+      <div x-show="newMatch.round === 'group'">
+        <label class="field-label">Bảng (A–H)</label>
+        <input class="input-field" maxlength="1" x-model="newMatch.groupName" placeholder="A" />
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button class="btn-primary" @click="createMatch()">Tạo trận đấu</button>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- 4. DANH SÁCH TRẬN ĐẤU                          -->
+  <!-- ============================================== -->
+  <div class="card overflow-hidden">
+    <div class="p-7 pb-4 flex items-center justify-between flex-wrap gap-2">
+      <div>
+        <h2 class="text-base font-bold text-slate-800 mb-1">Danh sách trận đấu</h2>
+        <p class="text-sm text-slate-400">Sắp xếp theo giờ kick-off</p>
+      </div>
+      <select class="input-field" style="width:auto" x-model="filterRound" @change="loadMatches()">
+        <option value="">Tất cả vòng</option>
+        <option value="group">Vòng bảng</option>
+        <option value="r16">Vòng 1/8</option>
+        <option value="qf">Tứ kết</option>
+        <option value="sf">Bán kết</option>
+        <option value="3rd">Tranh hạng 3</option>
+        <option value="final">Chung kết</option>
+      </select>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="matches">
+        <thead>
+          <tr>
+            <th>Thời gian</th>
+            <th>Trận đấu</th>
+            <th>Vòng</th>
+            <th>Trạng thái</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="m in matches" :key="m.id">
+            <tr>
+              <td>
+                <div class="font-semibold" x-text="formatLocalDateTime(m.kick_off_at)"></div>
+                <div class="text-xs text-slate-400" x-text="'UTC: ' + formatUtcDateTime(m.kick_off_at)"></div>
+              </td>
+              <td>
+                <span class="font-semibold" x-text="m.team1_name"></span>
+                <span class="text-slate-400 mx-2">vs</span>
+                <span class="font-semibold" x-text="m.team2_name"></span>
+              </td>
+              <td>
+                <span class="badge" :class="'badge-' + m.round" x-text="roundLabel(m)"></span>
+              </td>
+              <td>
+                <span class="text-xs font-semibold"
+                      :class="m.status === 'scheduled' ? 'text-emerald-600' : 'text-slate-400'"
+                      x-text="m.status === 'scheduled' ? '● Sắp diễn ra' : ('● ' + m.status)"></span>
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <button class="btn-soft-primary" @click="openEditMatch(m)">Sửa</button>
+                <button class="btn-soft-danger ml-1" @click="deleteMatch(m)">Xoá</button>
+              </td>
+            </tr>
+          </template>
+          <template x-if="matches.length === 0">
+            <tr><td colspan="5" class="text-center text-slate-400 py-8 italic">Chưa có trận đấu nào</td></tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Edit team modal -->
+<div class="modal-backdrop" x-show="editingTeam" x-cloak @click.self="editingTeam = null">
+  <div class="modal" x-show="editingTeam">
+    <h3 class="text-lg font-bold text-slate-800 mb-4" x-text="editingTeam?.id ? 'Sửa đội' : 'Thêm đội mới'"></h3>
+    <div class="space-y-3">
+      <div>
+        <label class="field-label">Mã đội (3 ký tự)</label>
+        <input class="input-field" x-model="editingTeam.code" maxlength="8" placeholder="VN, BR, AR..." />
+      </div>
+      <div>
+        <label class="field-label">Tên đội</label>
+        <input class="input-field" x-model="editingTeam.name" placeholder="Brazil" />
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 mt-5">
+      <button class="btn-soft-danger" x-show="editingTeam?.id" @click="deleteTeam(editingTeam)">Xoá</button>
+      <button class="btn-refresh" @click="editingTeam = null">Huỷ</button>
+      <button class="btn-primary" @click="saveTeam()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit match modal -->
+<div class="modal-backdrop" x-show="editingMatch" x-cloak @click.self="editingMatch = null">
+  <div class="modal" x-show="editingMatch">
+    <h3 class="text-lg font-bold text-slate-800 mb-4">Sửa trận đấu</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="field-label">Đội 1</label>
+        <select class="input-field" x-model.number="editingMatch.team1_id">
+          <template x-for="t in teams" :key="t.id">
+            <option :value="t.id" x-text="t.name"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Đội 2</label>
+        <select class="input-field" x-model.number="editingMatch.team2_id">
+          <template x-for="t in teams" :key="t.id">
+            <option :value="t.id" x-text="t.name"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Giờ kick-off (local)</label>
+        <input type="datetime-local" class="input-field" x-model="editingMatch._kickOffLocal" />
+      </div>
+      <div>
+        <label class="field-label">Vòng đấu</label>
+        <select class="input-field" x-model="editingMatch.round">
+          <option value="group">Vòng bảng</option>
+          <option value="r16">Vòng 1/8</option>
+          <option value="qf">Tứ kết</option>
+          <option value="sf">Bán kết</option>
+          <option value="3rd">Tranh hạng 3</option>
+          <option value="final">Chung kết</option>
+        </select>
+      </div>
+      <div x-show="editingMatch?.round === 'group'">
+        <label class="field-label">Bảng</label>
+        <input class="input-field" maxlength="1" x-model="editingMatch.group_name" />
+      </div>
+      <div>
+        <label class="field-label">Trạng thái</label>
+        <select class="input-field" x-model="editingMatch.status">
+          <option value="scheduled">Lên lịch</option>
+          <option value="finished">Đã đấu</option>
+          <option value="cancelled">Đã huỷ</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 mt-5">
+      <button class="btn-refresh" @click="editingMatch = null">Huỷ</button>
+      <button class="btn-primary" @click="saveMatch()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/worldcup.js"></script>
+</body>
+</html>
