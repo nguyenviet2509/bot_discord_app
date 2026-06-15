@@ -558,14 +558,29 @@ function getTopChannels(guildId, limit = 10) {
 }
 
 // Inactive members: user co last_message_at < (now - days)
+// Liet ke member inactive: last_message_at cu hon N ngay.
+// Loai bo user da roi server: dua tren member_events, neu event moi nhat la 'leave' thi exclude.
+// Note: user joined truoc khi bot bat dau log events (khong co event) van duoc giu lai (mac dinh dang trong server).
 function getInactiveMembers(guildId, days = 7, limit = 100) {
   const threshold = Math.floor(Date.now() / 1000) - days * 86400
   return getDb()
     .prepare(`
-      SELECT id, username, global_name, nickname, avatar, xp, level, last_message_at
-      FROM users
-      WHERE guild_id = ? AND last_message_at IS NOT NULL AND last_message_at < ?
-      ORDER BY last_message_at ASC
+      SELECT u.id, u.username, u.global_name, u.nickname, u.avatar, u.xp, u.level, u.last_message_at
+      FROM users u
+      WHERE u.guild_id = ?
+        AND u.last_message_at IS NOT NULL
+        AND u.last_message_at < ?
+        AND NOT EXISTS (
+          SELECT 1 FROM member_events me
+          WHERE me.guild_id = u.guild_id
+            AND me.user_id = u.id
+            AND me.event_type = 'leave'
+            AND me.occurred_at = (
+              SELECT MAX(occurred_at) FROM member_events me2
+              WHERE me2.guild_id = me.guild_id AND me2.user_id = me.user_id
+            )
+        )
+      ORDER BY u.last_message_at ASC
       LIMIT ?
     `)
     .all(guildId, threshold, limit)
