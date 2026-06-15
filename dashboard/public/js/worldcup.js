@@ -41,8 +41,18 @@ function worldcupTab() {
     editingTeam: null,
     editingMatch: null,
     filterRound: '',
+    page: 1,
+    pageSize: 10,
     saveStatus: '',
     saveStatusClass: '',
+
+    get totalPages() {
+      return Math.max(1, Math.ceil(this.matches.length / this.pageSize))
+    },
+    get pagedMatches() {
+      const start = (this.page - 1) * this.pageSize
+      return this.matches.slice(start, start + this.pageSize)
+    },
 
     async init() {
       await this.loadAll()
@@ -76,6 +86,8 @@ function worldcupTab() {
     async loadMatches() {
       try {
         this.matches = await api('GET', `/api/worldcup/matches${this.filterRound ? '?round=' + this.filterRound : ''}`)
+        // Clamp page neu vuot qua so trang hien tai (vd sau khi xoa)
+        if (this.page > this.totalPages) this.page = this.totalPages
       } catch (err) { this.flash(err.message, false) }
     },
 

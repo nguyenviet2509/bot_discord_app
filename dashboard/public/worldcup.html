@@ -204,7 +204,7 @@
         <h2 class="text-base font-bold text-slate-800 mb-1">Danh sách trận đấu</h2>
         <p class="text-sm text-slate-400">Sắp xếp theo giờ kick-off</p>
       </div>
-      <select class="input-field" style="width:auto" x-model="filterRound" @change="loadMatches()">
+      <select class="input-field" style="width:auto" x-model="filterRound" @change="page = 1; loadMatches()">
         <option value="">Tất cả vòng</option>
         <option value="group">Vòng bảng</option>
         <option value="r16">Vòng 1/8</option>
@@ -226,7 +226,7 @@
           </tr>
         </thead>
         <tbody>
-          <template x-for="m in matches" :key="m.id">
+          <template x-for="m in pagedMatches" :key="m.id">
             <tr>
               <td>
                 <div class="font-semibold" x-text="formatLocalDateTime(m.kick_off_at)"></div>
@@ -256,6 +256,31 @@
           </template>
         </tbody>
       </table>
+    </div>
+    <!-- Pagination -->
+    <div class="flex items-center justify-between px-7 py-3 border-t border-slate-100 text-sm text-slate-500 flex-wrap gap-2"
+         x-show="matches.length > 0">
+      <div>
+        <span x-text="`Hiển thị ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, matches.length)} / ${matches.length} trận`"></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-slate-400">Mỗi trang:</label>
+        <select x-model.number="pageSize" @change="page = 1"
+                class="px-2 py-1 border border-slate-200 rounded-lg text-sm bg-white">
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+          <option :value="50">50</option>
+        </select>
+        <button class="px-3 py-1 border border-slate-200 rounded-lg bg-white disabled:opacity-40"
+                :disabled="page === 1" @click="page = 1">«</button>
+        <button class="px-3 py-1 border border-slate-200 rounded-lg bg-white disabled:opacity-40"
+                :disabled="page === 1" @click="page--">‹</button>
+        <span class="px-2" x-text="`${page} / ${totalPages}`"></span>
+        <button class="px-3 py-1 border border-slate-200 rounded-lg bg-white disabled:opacity-40"
+                :disabled="page >= totalPages" @click="page++">›</button>
+        <button class="px-3 py-1 border border-slate-200 rounded-lg bg-white disabled:opacity-40"
+                :disabled="page >= totalPages" @click="page = totalPages">»</button>
+      </div>
     </div>
   </div>
 
