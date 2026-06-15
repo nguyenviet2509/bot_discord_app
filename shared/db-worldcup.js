@@ -47,8 +47,8 @@ const SCHEMA_SQL = `
   );
 `
 
-// Seed danh sach doi du Worldcup 2026 (47 doi theo 5 lien doan).
-// AFC 9 + CAF 10 + CONCACAF 6 + CONMEBOL 6 + UEFA 16
+// Seed danh sach doi du Worldcup 2026 (48 doi theo 6 lien doan).
+// AFC 9 + CAF 10 + CONCACAF 6 + CONMEBOL 6 + OFC 1 + UEFA 16
 const SEED_TEAMS = [
   // AFC (chau A)
   { code: 'AUS', name: 'Úc' }, { code: 'IRN', name: 'Iran' },
@@ -70,6 +70,8 @@ const SEED_TEAMS = [
   { code: 'ARG', name: 'Argentina' }, { code: 'BRA', name: 'Brazil' },
   { code: 'COL', name: 'Colombia' }, { code: 'ECU', name: 'Ecuador' },
   { code: 'PAR', name: 'Paraguay' }, { code: 'URU', name: 'Uruguay' },
+  // OFC (chau Dai Duong)
+  { code: 'NZL', name: 'New Zealand' },
   // UEFA (chau Au)
   { code: 'AUT', name: 'Áo' }, { code: 'BEL', name: 'Bỉ' },
   { code: 'BIH', name: 'Bosna và Herzegovina' }, { code: 'CRO', name: 'Croatia' },
