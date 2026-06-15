@@ -47,38 +47,101 @@ const SCHEMA_SQL = `
   );
 `
 
-// Seed 32 doi WC 2022 (code + ten Viet hoa).
+// Seed danh sach doi du Worldcup 2026 (47 doi theo 5 lien doan).
+// AFC 9 + CAF 10 + CONCACAF 6 + CONMEBOL 6 + UEFA 16
 const SEED_TEAMS = [
-  { code: 'QAT', name: 'Qatar' }, { code: 'ECU', name: 'Ecuador' },
-  { code: 'SEN', name: 'Senegal' }, { code: 'NED', name: 'Hà Lan' },
-  { code: 'ENG', name: 'Anh' }, { code: 'IRN', name: 'Iran' },
-  { code: 'USA', name: 'Mỹ' }, { code: 'WAL', name: 'Wales' },
-  { code: 'ARG', name: 'Argentina' }, { code: 'KSA', name: 'Ả Rập Xê Út' },
-  { code: 'MEX', name: 'Mexico' }, { code: 'POL', name: 'Ba Lan' },
-  { code: 'FRA', name: 'Pháp' }, { code: 'AUS', name: 'Úc' },
-  { code: 'DEN', name: 'Đan Mạch' }, { code: 'TUN', name: 'Tunisia' },
-  { code: 'ESP', name: 'Tây Ban Nha' }, { code: 'CRC', name: 'Costa Rica' },
-  { code: 'GER', name: 'Đức' }, { code: 'JPN', name: 'Nhật Bản' },
-  { code: 'BEL', name: 'Bỉ' }, { code: 'CAN', name: 'Canada' },
-  { code: 'MAR', name: 'Maroc' }, { code: 'CRO', name: 'Croatia' },
-  { code: 'BRA', name: 'Brazil' }, { code: 'SRB', name: 'Serbia' },
-  { code: 'SUI', name: 'Thụy Sĩ' }, { code: 'CMR', name: 'Cameroon' },
-  { code: 'POR', name: 'Bồ Đào Nha' }, { code: 'GHA', name: 'Ghana' },
-  { code: 'URU', name: 'Uruguay' }, { code: 'KOR', name: 'Hàn Quốc' },
+  // AFC (chau A)
+  { code: 'AUS', name: 'Úc' }, { code: 'IRN', name: 'Iran' },
+  { code: 'IRQ', name: 'Iraq' }, { code: 'JPN', name: 'Nhật Bản' },
+  { code: 'JOR', name: 'Jordan' }, { code: 'KOR', name: 'Hàn Quốc' },
+  { code: 'KSA', name: 'Saudi Arabia' }, { code: 'QAT', name: 'Qatar' },
+  { code: 'UZB', name: 'Uzbekistan' },
+  // CAF (chau Phi)
+  { code: 'ALG', name: 'Algeria' }, { code: 'CIV', name: 'Bờ Biển Ngà' },
+  { code: 'CPV', name: 'Cabo Verde' }, { code: 'CGO', name: 'Congo' },
+  { code: 'EGY', name: 'Ai Cập' }, { code: 'GHA', name: 'Ghana' },
+  { code: 'MAR', name: 'Morocco' }, { code: 'RSA', name: 'Nam Phi' },
+  { code: 'SEN', name: 'Senegal' }, { code: 'TUN', name: 'Tunisia' },
+  // CONCACAF (Bac, Trung My va Caribe)
+  { code: 'CAN', name: 'Canada' }, { code: 'USA', name: 'Mỹ' },
+  { code: 'MEX', name: 'Mexico' }, { code: 'CUW', name: 'Curaçao' },
+  { code: 'HAI', name: 'Haiti' }, { code: 'PAN', name: 'Panama' },
+  // CONMEBOL (Nam My)
+  { code: 'ARG', name: 'Argentina' }, { code: 'BRA', name: 'Brazil' },
+  { code: 'COL', name: 'Colombia' }, { code: 'ECU', name: 'Ecuador' },
+  { code: 'PAR', name: 'Paraguay' }, { code: 'URU', name: 'Uruguay' },
+  // UEFA (chau Au)
+  { code: 'AUT', name: 'Áo' }, { code: 'BEL', name: 'Bỉ' },
+  { code: 'BIH', name: 'Bosna và Herzegovina' }, { code: 'CRO', name: 'Croatia' },
+  { code: 'CZE', name: 'Czech' }, { code: 'ENG', name: 'Anh' },
+  { code: 'FRA', name: 'Pháp' }, { code: 'GER', name: 'Đức' },
+  { code: 'NED', name: 'Hà Lan' }, { code: 'NOR', name: 'Na Uy' },
+  { code: 'POR', name: 'Bồ Đào Nha' }, { code: 'SCO', name: 'Scotland' },
+  { code: 'ESP', name: 'Tây Ban Nha' }, { code: 'SWE', name: 'Thụy Điển' },
+  { code: 'SUI', name: 'Thụy Sĩ' }, { code: 'TUR', name: 'Thổ Nhĩ Kỳ' },
 ]
 
 function initWorldcupSchema(database) {
   database.exec(SCHEMA_SQL)
-  // Seed teams neu rong
-  const count = database.prepare('SELECT COUNT(*) AS c FROM worldcup_teams').get().c
-  if (count === 0) {
-    const stmt = database.prepare('INSERT INTO worldcup_teams (code, name) VALUES (?, ?)')
-    const tx = database.transaction((rows) => {
-      for (const r of rows) stmt.run(r.code, r.name)
-    })
-    tx(SEED_TEAMS)
+
+  const currentCount = database.prepare('SELECT COUNT(*) AS c FROM worldcup_teams').get().c
+  const seedCodes = new Set(SEED_TEAMS.map(t => t.code))
+
+  // Truong hop 1: chua co data -> seed lan dau
+  if (currentCount === 0) {
+    bulkInsertTeams(database, SEED_TEAMS)
     console.log(`[Worldcup] Seeded ${SEED_TEAMS.length} teams`)
+    return
   }
+
+  // Truong hop 2: da co data -> kiem tra co can refresh list khong
+  const existingCodes = new Set(
+    database.prepare('SELECT code FROM worldcup_teams').all().map(r => r.code)
+  )
+  const sameSet =
+    existingCodes.size === seedCodes.size &&
+    [...seedCodes].every(c => existingCodes.has(c))
+
+  if (sameSet) return // da match seed moi nhat
+
+  // Co the cap nhat ten doi (UPSERT theo code) + them doi moi
+  const upsert = database.prepare(`
+    INSERT INTO worldcup_teams (code, name) VALUES (?, ?)
+    ON CONFLICT(code) DO UPDATE SET name = excluded.name
+  `)
+  const txUpsert = database.transaction((rows) => {
+    for (const r of rows) upsert.run(r.code, r.name)
+  })
+  txUpsert(SEED_TEAMS)
+
+  // Xoa doi cu khong nam trong seed mo i — chi xoa neu khong co match reference
+  const stale = [...existingCodes].filter(c => !seedCodes.has(c))
+  if (stale.length > 0) {
+    const checkRef = database.prepare(`
+      SELECT COUNT(*) AS c FROM worldcup_matches m
+      JOIN worldcup_teams t ON t.id = m.team1_id OR t.id = m.team2_id
+      WHERE t.code = ?
+    `)
+    const delTeam = database.prepare('DELETE FROM worldcup_teams WHERE code = ?')
+    let removed = 0
+    for (const code of stale) {
+      if (checkRef.get(code).c === 0) {
+        delTeam.run(code)
+        removed++
+      }
+    }
+    console.log(`[Worldcup] Updated team list (added/renamed via upsert, removed ${removed} stale teams)`)
+  } else {
+    console.log('[Worldcup] Team list refreshed (added new teams, renamed existing)')
+  }
+}
+
+function bulkInsertTeams(database, rows) {
+  const stmt = database.prepare('INSERT INTO worldcup_teams (code, name) VALUES (?, ?)')
+  const tx = database.transaction((items) => {
+    for (const r of items) stmt.run(r.code, r.name)
+  })
+  tx(rows)
 }
 
 // Lazy resolver de tranh circular require voi db.js
