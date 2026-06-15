@@ -1183,11 +1183,11 @@
         </div>
 
         <!-- Top channels + Inactive members 2 col -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="card p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <div class="card p-6 flex flex-col">
             <h2 class="font-bold text-slate-800 mb-4">Top channels</h2>
             <div x-show="topChannels.length === 0" class="text-xs md:text-sm text-slate-400 italic">Chưa có dữ liệu</div>
-            <div class="space-y-2">
+            <div class="space-y-2 flex-1 overflow-y-auto">
               <template x-for="(c, idx) in topChannels" :key="c.channel_id">
                 <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
                   <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center" x-text="idx + 1"></div>
@@ -1204,7 +1204,7 @@
             </div>
           </div>
 
-          <div class="card p-6">
+          <div class="card p-6 flex flex-col">
             <div class="flex items-center justify-between mb-4">
               <h2 class="font-bold text-slate-800">Inactive members</h2>
               <select x-model="inactiveDays" @change="loadInactive()" class="text-xs md:text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
@@ -1215,7 +1215,7 @@
               </select>
             </div>
             <div x-show="inactive.length === 0" class="text-xs md:text-sm text-slate-400 italic">Không có member nào inactive</div>
-            <div class="space-y-2 max-h-96 overflow-y-auto">
+            <div class="space-y-2 flex-1 overflow-y-auto">
               <template x-for="m in inactive" :key="m.id">
                 <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
                   <img x-show="m.avatar" :src="getAvatarUrl(m.id, m.avatar)" class="w-8 h-8 rounded-full" />
