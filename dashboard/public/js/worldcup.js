@@ -115,6 +115,23 @@ function worldcupTab() {
       } catch (err) { this.flash(err.message, false) }
     },
 
+    async wipeAll() {
+      const answer = prompt(
+        'CẢNH BÁO: Hành động này sẽ xoá toàn bộ trận đấu, log thông báo và cấu hình thông báo Worldcup.\n' +
+        '48 đội seed sẵn sẽ được giữ lại.\n\n' +
+        'Gõ "XOA" (không dấu, in hoa) để xác nhận:'
+      )
+      if (answer !== 'XOA') {
+        if (answer != null) this.flash('Đã huỷ — xác nhận không khớp', false)
+        return
+      }
+      try {
+        const result = await api('POST', '/api/worldcup/wipe-all', { confirm: 'XOA' })
+        this.flash(`Đã xoá ${result.deleted.matches} trận, ${result.deleted.logs} log, ${result.deleted.configs} config`, true)
+        await this.loadAll()
+      } catch (err) { this.flash(err.message, false) }
+    },
+
     async testSendMatch(m) {
       if (!this.config.channel_id) { this.flash('Cấu hình channel trước', false); return }
       if (!confirm(`Gửi thử thông báo trận ${m.team1_name} vs ${m.team2_name}?`)) return

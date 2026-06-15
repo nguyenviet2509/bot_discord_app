@@ -323,6 +323,23 @@ function markNotificationSent(matchId, guildId, sentAt) {
     .run(matchId, guildId, sentAt || Date.now())
 }
 
+// ============================================================
+// Reset/wipe: xoa toan bo matches + log + reset config (giu teams seed).
+// Tra ve so luong da xoa de UI thong bao.
+function wipeAllData() {
+  const database = db()
+  const tx = database.transaction(() => {
+    const matchCount = database.prepare('SELECT COUNT(*) AS c FROM worldcup_matches').get().c
+    const logCount = database.prepare('SELECT COUNT(*) AS c FROM worldcup_notification_log').get().c
+    const cfgCount = database.prepare('SELECT COUNT(*) AS c FROM worldcup_guild_config').get().c
+    database.prepare('DELETE FROM worldcup_notification_log').run()
+    database.prepare('DELETE FROM worldcup_matches').run()
+    database.prepare('DELETE FROM worldcup_guild_config').run()
+    return { matches: matchCount, logs: logCount, configs: cfgCount }
+  })
+  return tx()
+}
+
 module.exports = {
   initWorldcupSchema,
   // teams
@@ -333,4 +350,6 @@ module.exports = {
   getGuildConfig, upsertGuildConfig, listEnabledConfigs,
   // notification log
   hasSentNotification, markNotificationSent,
+  // admin
+  wipeAllData,
 }

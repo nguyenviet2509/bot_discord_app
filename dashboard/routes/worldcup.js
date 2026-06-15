@@ -202,4 +202,20 @@ router.post('/test-send', async (req, res) => {
   }
 })
 
+// ============================================================
+// Wipe toan bo du lieu: xoa matches + log + config. Giu lai 48 doi seed.
+// Yeu cau body { confirm: 'XOA' } de tranh nham.
+router.post('/wipe-all', (req, res) => {
+  const confirm = req.body && req.body.confirm
+  if (confirm !== 'XOA') {
+    return res.status(400).json({ error: 'Yeu cau xac nhan: truyen { confirm: "XOA" } trong body' })
+  }
+  try {
+    const result = wc.wipeAllData()
+    res.json({ ok: true, deleted: result })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 module.exports = router
