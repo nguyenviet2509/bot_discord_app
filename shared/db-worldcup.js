@@ -217,6 +217,37 @@ function getMatch(id) {
   `).get(id)
 }
 
+// Bulk insert nhieu match trong 1 transaction. Bo qua duplicate (same teams + same kickOffAt).
+function bulkCreateMatches(rows) {
+  const database = db()
+  const insert = database.prepare(`
+    INSERT INTO worldcup_matches (team1_id, team2_id, kick_off_at, round, group_name)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+  const findDup = database.prepare(`
+    SELECT id FROM worldcup_matches
+    WHERE kick_off_at = ?
+      AND ((team1_id = ? AND team2_id = ?) OR (team1_id = ? AND team2_id = ?))
+  `)
+  let inserted = 0, skipped = 0
+  const tx = database.transaction(() => {
+    for (const r of rows) {
+      const dup = findDup.get(r.kickOffAt, r.team1Id, r.team2Id, r.team2Id, r.team1Id)
+      if (dup) { skipped++; continue }
+      insert.run(r.team1Id, r.team2Id, r.kickOffAt, r.round, r.groupName || null)
+      inserted++
+    }
+  })
+  tx()
+  return { inserted, skipped }
+}
+
+// Lookup nhanh team id theo code, dung cho seed script
+function getTeamIdByCode(code) {
+  const row = db().prepare('SELECT id FROM worldcup_teams WHERE code = ?').get(code)
+  return row ? row.id : null
+}
+
 function createMatch({ team1Id, team2Id, kickOffAt, round, groupName }) {
   const info = db().prepare(`
     INSERT INTO worldcup_matches (team1_id, team2_id, kick_off_at, round, group_name)
@@ -346,6 +377,7 @@ module.exports = {
   listTeams, getTeam, createTeam, updateTeam, deleteTeam,
   // matches
   listMatches, getMatch, createMatch, updateMatch, deleteMatch, findUpcomingMatches,
+  bulkCreateMatches, getTeamIdByCode,
   // guild config
   getGuildConfig, upsertGuildConfig, listEnabledConfigs,
   // notification log

@@ -115,6 +115,17 @@ function worldcupTab() {
       } catch (err) { this.flash(err.message, false) }
     },
 
+    async seedWC2026() {
+      if (!confirm('Nhập lịch vòng bảng WC 2026 (72 trận, parse từ lịch phát sóng VTV — best-effort).\n\nTrận đã tồn tại cùng giờ + cùng cặp đội sẽ tự skip.\n\nTiếp tục?')) return
+      try {
+        const result = await api('POST', '/api/worldcup/seed-wc2026')
+        let msg = `Đã import ${result.inserted}/${result.total} trận (skip ${result.skipped} trùng)`
+        if (result.missingCodes?.length) msg += `, thiếu code: ${result.missingCodes.join(',')}`
+        this.flash(msg, true)
+        await this.loadMatches()
+      } catch (err) { this.flash(err.message, false) }
+    },
+
     async wipeAll() {
       const answer = prompt(
         'CẢNH BÁO: Hành động này sẽ xoá toàn bộ trận đấu, log thông báo và cấu hình thông báo Worldcup.\n' +

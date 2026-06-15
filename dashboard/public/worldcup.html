@@ -152,7 +152,13 @@
   <!-- 3. THÊM TRẬN ĐẤU                               -->
   <!-- ============================================== -->
   <div class="card p-7">
-    <h2 class="text-base font-bold text-slate-800 mb-1">Thêm trận đấu</h2>
+    <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+      <h2 class="text-base font-bold text-slate-800">Thêm trận đấu</h2>
+      <button class="btn-refresh" @click="seedWC2026()"
+              :title="'Import lịch vòng bảng WC 2026 (parse từ lịch phát sóng VTV, best-effort)'">
+        ⚡ Tự động seed WC 2026
+      </button>
+    </div>
     <p class="text-sm text-slate-400 mb-5">Giờ kick-off nhập theo giờ local hiện tại của trình duyệt, sẽ convert sang UTC khi lưu.</p>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
       <div>

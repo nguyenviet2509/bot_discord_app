@@ -203,6 +203,32 @@ router.post('/test-send', async (req, res) => {
 })
 
 // ============================================================
+// Seed nhanh lich vong bang WC 2026 (parse tu lich phat song VTV, best-effort).
+// Idempotent: skip duplicate.
+router.post('/seed-wc2026', (req, res) => {
+  try {
+    const { buildRows } = require('../../tools/seed-wc2026-group-stage')
+    const rows = buildRows()
+    const codeToId = new Map(wc.listTeams().map(t => [t.code, t.id]))
+    const missing = new Set()
+    const bulk = []
+    for (const r of rows) {
+      const t1 = codeToId.get(r.code1)
+      const t2 = codeToId.get(r.code2)
+      if (!t1) missing.add(r.code1)
+      if (!t2) missing.add(r.code2)
+      if (t1 && t2) {
+        bulk.push({ team1Id: t1, team2Id: t2, kickOffAt: r.kickOffAt, round: r.round, groupName: r.group })
+      }
+    }
+    const result = wc.bulkCreateMatches(bulk)
+    res.json({ ok: true, ...result, total: rows.length, missingCodes: [...missing] })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// ============================================================
 // Wipe toan bo du lieu: xoa matches + log + config. Giu lai 48 doi seed.
 // Yeu cau body { confirm: 'XOA' } de tranh nham.
 router.post('/wipe-all', (req, res) => {
