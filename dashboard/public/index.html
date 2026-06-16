@@ -1396,7 +1396,14 @@
                   <td class="px-6 py-3 text-xs md:text-sm text-slate-600" x-text="a.moderator_tag || '—'"></td>
                   <td class="px-6 py-3 text-xs md:text-sm text-slate-600 max-w-xs truncate" :title="a.reason" x-text="a.reason || '—'"></td>
                   <td class="px-6 py-3 text-xs md:text-sm text-slate-600">
-                    <span x-show="a.duration_ms" x-text="formatMs(a.duration_ms)"></span>
+                    <div x-show="a.duration_ms" class="flex flex-col gap-0.5">
+                      <span x-text="formatMs(a.duration_ms)"></span>
+                      <template x-if="a.expires_at">
+                        <span class="text-[10px] font-semibold"
+                          :class="(a.expires_at * 1000) <= Date.now() ? 'text-emerald-600' : 'text-amber-600'"
+                          x-text="(a.expires_at * 1000) <= Date.now() ? '✅ Đã thả' : ('⏳ Còn ' + remainingTime(a.expires_at))"></span>
+                      </template>
+                    </div>
                     <span x-show="!a.duration_ms" class="text-slate-300">—</span>
                   </td>
                   <td class="px-6 py-3 text-xs text-slate-500" x-text="timeAgo(a.created_at)"></td>

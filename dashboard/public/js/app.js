@@ -1405,6 +1405,13 @@ document.addEventListener('alpine:init', () => {
       return Math.floor(ms / 86400000) + 'd'
     },
 
+    // Tinh thoi gian con lai tu now den expires_at (unix seconds)
+    remainingTime(expiresAtSec) {
+      const ms = expiresAtSec * 1000 - Date.now()
+      if (ms <= 0) return '0s'
+      return this.formatMs(ms)
+    },
+
     formatTimestamp(unixSec) {
       if (!unixSec) return '—'
       return new Date(unixSec * 1000).toLocaleString('vi-VN')
