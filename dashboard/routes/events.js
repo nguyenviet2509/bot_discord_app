@@ -56,6 +56,7 @@ function pickAnnounceFields(body) {
     'announce_on_enable', 'announce_on_start', 'announce_role_ping_id',
     'recurrence_type', 'recurrence_day_of_week', 'recurrence_time',
     'recurrence_pool_role_id', 'recurrence_template',
+    'recurrence_use_embed', 'recurrence_embed_title', 'recurrence_embed_color', 'recurrence_image_url',
     'announce_recur_type', 'announce_recur_day_of_week', 'announce_recur_time',
   ]
   for (const k of keys) if (body[k] !== undefined) out[k] = body[k]
@@ -281,7 +282,14 @@ router.post('/:id/test-result', async (req, res) => {
     if (candidates.length === 0) return res.status(400).json({ error: 'Khong co thanh vien nao trong role nay' })
     const picked = candidates[Math.floor(Math.random() * candidates.length)]
     const content = event.recurrence_template.replace(/\{member\}/g, `<@${picked.user.id}>`)
-    const shaped = { ...event, announce_content: content, announce_use_embed: 0, announce_image_url: null }
+    const shaped = {
+      ...event,
+      announce_content: content,
+      announce_use_embed: event.recurrence_use_embed,
+      announce_embed_title: event.recurrence_embed_title,
+      announce_embed_color: event.recurrence_embed_color,
+      announce_image_url: event.recurrence_image_url,
+    }
     const result = await sendEventAnnouncement(shaped)
     if (!result.ok) return res.status(result.status || 500).json({ error: result.error })
     const name = picked.nick || picked.user.global_name || picked.user.username || picked.user.id

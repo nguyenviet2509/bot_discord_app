@@ -275,6 +275,10 @@ function eventsTab() {
         recurrence_time: ev.recurrence_time || '09:00',
         recurrence_pool_role_id: ev.recurrence_pool_role_id || '',
         recurrence_template: ev.recurrence_template || '',
+        recurrence_use_embed: !!ev.recurrence_use_embed,
+        recurrence_embed_title: ev.recurrence_embed_title || '',
+        recurrence_embed_color: ev.recurrence_embed_color || '#6366f1',
+        recurrence_image_url: ev.recurrence_image_url || '',
         announce_recur_type: ev.announce_recur_type || 'none',
         announce_recur_day_of_week: ev.announce_recur_day_of_week ?? 1,
         announce_recur_time: ev.announce_recur_time || '09:00',
@@ -330,6 +334,10 @@ function eventsTab() {
         recurrence_time: f.recurrence_type === 'weekly' ? (f.recurrence_time || null) : null,
         recurrence_pool_role_id: f.recurrence_type === 'weekly' ? (f.recurrence_pool_role_id || null) : null,
         recurrence_template: f.recurrence_type === 'weekly' ? (f.recurrence_template || null) : null,
+        recurrence_use_embed: !!f.recurrence_use_embed,
+        recurrence_embed_title: f.recurrence_embed_title || null,
+        recurrence_embed_color: f.recurrence_embed_color || null,
+        recurrence_image_url: f.recurrence_image_url || null,
         announce_recur_type: f.announce_recur_type || 'none',
         announce_recur_day_of_week: f.announce_recur_type === 'weekly' ? (f.announce_recur_day_of_week ?? 1) : null,
         announce_recur_time: f.announce_recur_type === 'weekly' ? (f.announce_recur_time || null) : null,
@@ -361,7 +369,7 @@ function eventsTab() {
       }
     },
 
-    async uploadImage(event) {
+    async uploadImage(event, targetField = 'announce_image_url') {
       const file = event.target.files?.[0]
       if (!file) return
       if (file.size > 5 * 1024 * 1024) {
@@ -390,7 +398,7 @@ function eventsTab() {
           throw new Error(err)
         }
         const data = await r.json()
-        this.eventForm.announce_image_url = data.url
+        this.eventForm[targetField] = data.url
         this.flash('Upload OK')
       } catch (err) {
         this.flash('Upload lỗi: ' + err.message, false)
@@ -487,6 +495,10 @@ function emptyEventForm() {
     recurrence_time: '09:00',
     recurrence_pool_role_id: '',
     recurrence_template: '',
+    recurrence_use_embed: false,
+    recurrence_embed_title: '',
+    recurrence_embed_color: '#6366f1',
+    recurrence_image_url: '',
     announce_recur_type: 'none',
     announce_recur_day_of_week: 1,
     announce_recur_time: '09:00',

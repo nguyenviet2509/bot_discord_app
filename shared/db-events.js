@@ -63,6 +63,11 @@ function initEventsSchema(database) {
     `ALTER TABLE events ADD COLUMN announce_recur_day_of_week INTEGER`,
     `ALTER TABLE events ADD COLUMN announce_recur_time TEXT`,
     `ALTER TABLE events ADD COLUMN announce_recur_last_run_at INTEGER`,
+    // Embed + image cho thong bao KET QUA (random pick)
+    `ALTER TABLE events ADD COLUMN recurrence_use_embed INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE events ADD COLUMN recurrence_embed_title TEXT`,
+    `ALTER TABLE events ADD COLUMN recurrence_embed_color TEXT DEFAULT '#6366f1'`,
+    `ALTER TABLE events ADD COLUMN recurrence_image_url TEXT`,
   ]
   for (const sql of migrations) { try { database.exec(sql) } catch (_) {} }
 }
@@ -158,6 +163,7 @@ function createEvent({
   announce_channel_id, announce_content, announce_use_embed, announce_embed_title, announce_embed_color, announce_image_url,
   announce_on_enable, announce_on_start, announce_role_ping_id,
   recurrence_type, recurrence_day_of_week, recurrence_time, recurrence_pool_role_id, recurrence_template,
+  recurrence_use_embed, recurrence_embed_title, recurrence_embed_color, recurrence_image_url,
   announce_recur_type, announce_recur_day_of_week, announce_recur_time,
 }) {
   const isNull = group_id === null || group_id === undefined
@@ -172,9 +178,10 @@ function createEvent({
         announce_channel_id, announce_content, announce_use_embed, announce_embed_title, announce_embed_color, announce_image_url,
         announce_on_enable, announce_on_start, announce_role_ping_id,
         recurrence_type, recurrence_day_of_week, recurrence_time, recurrence_pool_role_id, recurrence_template,
+        recurrence_use_embed, recurrence_embed_title, recurrence_embed_color, recurrence_image_url,
         announce_recur_type, announce_recur_day_of_week, announce_recur_time
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       guild_id,
@@ -200,6 +207,10 @@ function createEvent({
       recurrence_time || null,
       recurrence_pool_role_id || null,
       recurrence_template || null,
+      recurrence_use_embed ? 1 : 0,
+      recurrence_embed_title || null,
+      recurrence_embed_color || null,
+      recurrence_image_url || null,
       announce_recur_type || 'none',
       announce_recur_day_of_week != null ? Number(announce_recur_day_of_week) : null,
       announce_recur_time || null
@@ -233,6 +244,10 @@ function updateEvent(id, guildId, fields) {
   if (fields.recurrence_time !== undefined)       { sets.push('recurrence_time = @recurrence_time'); params.recurrence_time = fields.recurrence_time || null }
   if (fields.recurrence_pool_role_id !== undefined){ sets.push('recurrence_pool_role_id = @recurrence_pool_role_id'); params.recurrence_pool_role_id = fields.recurrence_pool_role_id || null }
   if (fields.recurrence_template !== undefined)   { sets.push('recurrence_template = @recurrence_template'); params.recurrence_template = fields.recurrence_template || null }
+  if (fields.recurrence_use_embed !== undefined)  { sets.push('recurrence_use_embed = @recurrence_use_embed'); params.recurrence_use_embed = fields.recurrence_use_embed ? 1 : 0 }
+  if (fields.recurrence_embed_title !== undefined){ sets.push('recurrence_embed_title = @recurrence_embed_title'); params.recurrence_embed_title = fields.recurrence_embed_title || null }
+  if (fields.recurrence_embed_color !== undefined){ sets.push('recurrence_embed_color = @recurrence_embed_color'); params.recurrence_embed_color = fields.recurrence_embed_color || null }
+  if (fields.recurrence_image_url !== undefined)  { sets.push('recurrence_image_url = @recurrence_image_url'); params.recurrence_image_url = fields.recurrence_image_url || null }
   if (fields.recurrence_last_run_at !== undefined){ sets.push('recurrence_last_run_at = @recurrence_last_run_at'); params.recurrence_last_run_at = fields.recurrence_last_run_at || null }
   if (fields.announce_recur_type !== undefined)        { sets.push('announce_recur_type = @announce_recur_type'); params.announce_recur_type = fields.announce_recur_type || 'none' }
   if (fields.announce_recur_day_of_week !== undefined) { sets.push('announce_recur_day_of_week = @announce_recur_day_of_week'); params.announce_recur_day_of_week = fields.announce_recur_day_of_week != null && fields.announce_recur_day_of_week !== '' ? Number(fields.announce_recur_day_of_week) : null }

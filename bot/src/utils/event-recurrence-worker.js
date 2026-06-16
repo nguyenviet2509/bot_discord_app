@@ -71,8 +71,15 @@ async function tick(client) {
         continue
       }
       const content = (ev.recurrence_template || '').replace(/\{member\}/g, `<@${member.id}>`)
-      // Plain content de mention ping that su (khong dung embed)
-      const shaped = { ...ev, announce_content: content, announce_use_embed: 0, announce_image_url: null }
+      // Map recurrence_* sang announce_* cho sender
+      const shaped = {
+        ...ev,
+        announce_content: content,
+        announce_use_embed: ev.recurrence_use_embed,
+        announce_embed_title: ev.recurrence_embed_title,
+        announce_embed_color: ev.recurrence_embed_color,
+        announce_image_url: ev.recurrence_image_url,
+      }
       const result = await sendEventAnnouncement(shaped)
       if (result.ok) {
         eventsDb.markRecurrenceRun(ev.id)
