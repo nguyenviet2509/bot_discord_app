@@ -93,13 +93,14 @@ const SCHEDULE = {
   ],
 }
 
-// Parse "MM-DD" + "HH:mm" trong timezone Asia/Saigon -> unix ms UTC
+// Parse "MM-DD" + "HH:mm" trong timezone Asia/Saigon -> unix ms UTC.
+// SHIFT +1h: lich phat song ban dau bi som hon thuc te 1 tieng (DST USA),
+// nen cong them 3600s de match gio kick-off thuc te tai Viet Nam.
 function toUtcMs(monthDay, hhmm) {
-  // Construct ISO with +07:00 offset
   const iso = `2026-${monthDay}T${hhmm}:00+07:00`
   const ms = Date.parse(iso)
   if (isNaN(ms)) throw new Error(`Invalid date: ${iso}`)
-  return ms
+  return ms + 60 * 60 * 1000
 }
 
 function buildRows() {

@@ -241,16 +241,22 @@ function worldcupTab() {
       return m.round === 'group' && m.group_name ? `${base} ${m.group_name}` : base
     },
 
+    // Format theo timezone da chon trong config (24h)
     formatLocalDateTime(unixMs) {
-      const d = new Date(unixMs)
-      const pad = (n) => String(n).padStart(2, '0')
-      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+      const tz = this.config.timezone || 'Asia/Saigon'
+      return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit', month: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+        hour12: false, timeZone: tz,
+      }).format(new Date(unixMs)).replace(',', '')
     },
 
     formatUtcDateTime(unixMs) {
-      const d = new Date(unixMs)
-      const pad = (n) => String(n).padStart(2, '0')
-      return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`
+      return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit', month: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+        hour12: false, timeZone: 'UTC',
+      }).format(new Date(unixMs)).replace(',', '')
     },
 
     flash(msg, ok) {
