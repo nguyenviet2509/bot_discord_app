@@ -41,17 +41,27 @@ function worldcupTab() {
     editingTeam: null,
     editingMatch: null,
     filterRound: '',
+    filterDate: '',
     page: 1,
     pageSize: 10,
     saveStatus: '',
     saveStatusClass: '',
 
+    // Loc theo ngay (YYYY-MM-DD) theo timezone trong config
+    get filteredMatches() {
+      if (!this.filterDate) return this.matches
+      const tz = this.config.timezone || 'Asia/Saigon'
+      const fmt = new Intl.DateTimeFormat('en-CA', {
+        year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz,
+      })
+      return this.matches.filter(m => fmt.format(new Date(m.kick_off_at)) === this.filterDate)
+    },
     get totalPages() {
-      return Math.max(1, Math.ceil(this.matches.length / this.pageSize))
+      return Math.max(1, Math.ceil(this.filteredMatches.length / this.pageSize))
     },
     get pagedMatches() {
       const start = (this.page - 1) * this.pageSize
-      return this.matches.slice(start, start + this.pageSize)
+      return this.filteredMatches.slice(start, start + this.pageSize)
     },
 
     async init() {

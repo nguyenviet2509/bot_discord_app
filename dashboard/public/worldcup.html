@@ -213,15 +213,22 @@
         <h2 class="text-base font-bold text-slate-800 mb-1">Danh sách trận đấu</h2>
         <p class="text-sm text-slate-400">Sắp xếp theo giờ kick-off</p>
       </div>
-      <select class="input-field" style="width:auto" x-model="filterRound" @change="page = 1; loadMatches()">
-        <option value="">Tất cả vòng</option>
-        <option value="group">Vòng bảng</option>
-        <option value="r16">Vòng 1/8</option>
-        <option value="qf">Tứ kết</option>
-        <option value="sf">Bán kết</option>
-        <option value="3rd">Tranh hạng 3</option>
-        <option value="final">Chung kết</option>
-      </select>
+      <div class="flex items-center gap-2 flex-wrap">
+        <input type="date" class="input-field" style="width:auto" x-model="filterDate" @change="page = 1"
+               :title="'Lọc theo ngày (theo timezone ' + (config.timezone || 'Asia/Saigon') + ')'" />
+        <button class="btn-refresh" style="padding: 8px 12px; font-size: 13px;"
+                x-show="filterDate" @click="filterDate = ''; page = 1"
+                title="Xoá filter ngày">✕</button>
+        <select class="input-field" style="width:auto" x-model="filterRound" @change="page = 1; loadMatches()">
+          <option value="">Tất cả vòng</option>
+          <option value="group">Vòng bảng</option>
+          <option value="r16">Vòng 1/8</option>
+          <option value="qf">Tứ kết</option>
+          <option value="sf">Bán kết</option>
+          <option value="3rd">Tranh hạng 3</option>
+          <option value="final">Chung kết</option>
+        </select>
+      </div>
     </div>
     <div class="overflow-x-auto">
       <table class="matches">
@@ -262,17 +269,18 @@
               </td>
             </tr>
           </template>
-          <template x-if="matches.length === 0">
-            <tr><td colspan="5" class="text-center text-slate-400 py-8 italic">Chưa có trận đấu nào</td></tr>
+          <template x-if="filteredMatches.length === 0">
+            <tr><td colspan="5" class="text-center text-slate-400 py-8 italic"
+                    x-text="filterDate ? 'Không có trận đấu nào ngày ' + filterDate : 'Chưa có trận đấu nào'"></td></tr>
           </template>
         </tbody>
       </table>
     </div>
     <!-- Pagination -->
     <div class="flex items-center justify-between px-7 py-3 border-t border-slate-100 text-sm text-slate-500 flex-wrap gap-2"
-         x-show="matches.length > 0">
+         x-show="filteredMatches.length > 0">
       <div>
-        <span x-text="`Hiển thị ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, matches.length)} / ${matches.length} trận`"></span>
+        <span x-text="`Hiển thị ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, filteredMatches.length)} / ${filteredMatches.length} trận`"></span>
       </div>
       <div class="flex items-center gap-2">
         <label class="text-xs text-slate-400">Mỗi trang:</label>
