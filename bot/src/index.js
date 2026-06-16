@@ -3,7 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../../.env') }
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js')
 const path = require('path')
 const fs = require('fs')
-const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, logModAction, getDueScheduledMessages, markScheduledMessageSent } = require('../../shared/db')
+const { initDb, getSettings, memberHasAccess, getExpiredBans, removeTempBan, getExpiredChannelHides, removeTempChannelHide, logModAction, getDueScheduledMessages, markScheduledMessageSent } = require('../../shared/db')
 const eventsDb = require('../../shared/db-events')
 const { sendEventAnnouncement } = require('../../shared/send-event-announcement')
 const { scanSilentMembers } = require('../../shared/scan-silent-members')
@@ -224,6 +224,34 @@ client.once('ready', async () => {
         console.log(`[TempBan] Đã auto-unban user ${row.user_id} trong guild ${row.guild_id}`)
       } catch (err) {
         console.error('[TempBan] Lỗi auto-unban:', err.message)
+      }
+    }
+  }, 60_000)
+
+  // Watcher: auto-unhide channel khi het han moi 60s
+  setInterval(async () => {
+    const nowSec = Math.floor(Date.now() / 1000)
+    const expired = getExpiredChannelHides(nowSec)
+    for (const row of expired) {
+      try {
+        const guild = client.guilds.cache.get(row.guild_id)
+        if (!guild) { removeTempChannelHide(row.guild_id, row.channel_id, row.user_id); continue }
+        const channel = guild.channels.cache.get(row.channel_id) || await guild.channels.fetch(row.channel_id).catch(() => null)
+        if (!channel) { removeTempChannelHide(row.guild_id, row.channel_id, row.user_id); continue }
+        await channel.permissionOverwrites.delete(row.user_id, 'Tự động gỡ ẩn (hết hạn)').catch(() => {})
+        removeTempChannelHide(row.guild_id, row.channel_id, row.user_id)
+        logModAction({
+          guild_id: row.guild_id,
+          action_type: 'channel_unhide',
+          user_id: row.user_id,
+          user_tag: null, user_avatar: null,
+          moderator_id: client.user?.id || null,
+          moderator_tag: 'Bot (auto-unhide)',
+          reason: `[#${channel.name}] Hết hạn ẩn channel`,
+        })
+        console.log(`[TempChannelHide] Đã auto-unhide channel ${row.channel_id} cho user ${row.user_id}`)
+      } catch (err) {
+        console.error('[TempChannelHide] Lỗi auto-unhide:', err.message)
       }
     }
   }, 60_000)

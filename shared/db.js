@@ -198,6 +198,17 @@ function initDb() {
       PRIMARY KEY (guild_id, user_id)
     );
 
+    -- An channel doi voi 1 user co thoi han (deny ViewChannel overwrite)
+    CREATE TABLE IF NOT EXISTS temp_channel_hides (
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      unhide_at INTEGER NOT NULL,
+      reason TEXT,
+      created_at INTEGER DEFAULT (unixepoch()),
+      PRIMARY KEY (guild_id, channel_id, user_id)
+    );
+
     CREATE TABLE IF NOT EXISTS links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       guild_id TEXT NOT NULL,
@@ -1050,6 +1061,31 @@ function getExpiredBans(nowSec) {
     .all(nowSec)
 }
 
+// ============================================================
+// Temp Channel Hides (an channel co thoi han)
+// ============================================================
+function addTempChannelHide(guildId, channelId, userId, unhideAt, reason) {
+  return getDb()
+    .prepare(`
+      INSERT INTO temp_channel_hides (guild_id, channel_id, user_id, unhide_at, reason)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(guild_id, channel_id, user_id) DO UPDATE SET unhide_at = excluded.unhide_at, reason = excluded.reason
+    `)
+    .run(guildId, channelId, userId, unhideAt, reason || null)
+}
+
+function removeTempChannelHide(guildId, channelId, userId) {
+  return getDb()
+    .prepare('DELETE FROM temp_channel_hides WHERE guild_id = ? AND channel_id = ? AND user_id = ?')
+    .run(guildId, channelId, userId)
+}
+
+function getExpiredChannelHides(nowSec) {
+  return getDb()
+    .prepare('SELECT * FROM temp_channel_hides WHERE unhide_at <= ?')
+    .all(nowSec)
+}
+
 // Helper: check member co quyen su dung bot khong
 function memberHasAccess(member, allowedRoleIds) {
   if (!allowedRoleIds || allowedRoleIds.length === 0) return true // open mode
@@ -1465,6 +1501,9 @@ module.exports = {
   addTempBan,
   removeTempBan,
   getExpiredBans,
+  addTempChannelHide,
+  removeTempChannelHide,
+  getExpiredChannelHides,
   logModAction,
   getModActions,
   countModActions,
