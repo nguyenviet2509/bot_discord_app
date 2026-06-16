@@ -341,9 +341,12 @@
           </div>
           <div>
             <label class="field-label">Mẫu tin nhắn (dùng <code>{member}</code> để chèn tên người được chọn)</label>
-            <textarea class="input-field" rows="2" x-model="eventForm.recurrence_template"
-                      placeholder="Hôm nay may mắn lại mỉm cười với {member} rồi 🎉"></textarea>
-            <p class="text-xs text-slate-400 mt-1"><code>{member}</code> sẽ thay bằng mention <code>&lt;@id&gt;</code> → thành viên được tag thật sự.</p>
+            <textarea class="input-field" rows="5" x-model="eventForm.recurrence_template"
+                      placeholder="Hôm nay may mắn lại mỉm cười với {member} rồi 🎉&#10;Chúc mừng {member} trúng giải tuần này 🎁&#10;{member} là người may mắn nhất tuần! 🥳"></textarea>
+            <p class="text-xs text-slate-400 mt-1">
+              <code>{member}</code> sẽ thay bằng mention <code>&lt;@id&gt;</code> → thành viên được tag thật sự.<br/>
+              <span class="text-amber-400">Mẹo:</span> nhập <strong>nhiều dòng</strong>, mỗi dòng = 1 câu — bot sẽ <strong>random 1 dòng</strong> mỗi lần gửi để tránh trùng lặp.
+            </p>
           </div>
           <div>
             <label class="field-label">Ảnh thông báo kết quả</label>

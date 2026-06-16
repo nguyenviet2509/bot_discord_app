@@ -6,6 +6,7 @@
 
 const eventsDb = require('../../../shared/db-events')
 const { sendEventAnnouncement } = require('../../../shared/send-event-announcement')
+const { pickRandomTemplate } = require('../../../shared/pick-random-template')
 
 const TZ = 'Asia/Saigon'
 
@@ -70,7 +71,8 @@ async function tick(client) {
         console.warn(`[event-recurrence] No eligible member for event id=${ev.id} role=${ev.recurrence_pool_role_id}`)
         continue
       }
-      const content = (ev.recurrence_template || '').replace(/\{member\}/g, `<@${member.id}>`)
+      const tpl = pickRandomTemplate(ev.recurrence_template)
+      const content = tpl.replace(/\{member\}/g, `<@${member.id}>`)
       // Map recurrence_* sang announce_* cho sender
       const shaped = {
         ...ev,

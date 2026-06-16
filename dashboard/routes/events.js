@@ -20,6 +20,7 @@ const fs = require('fs')
 const crypto = require('crypto')
 const eventsDb = require('../../shared/db-events')
 const { sendEventAnnouncement } = require('../../shared/send-event-announcement')
+const { pickRandomTemplate } = require('../../shared/pick-random-template')
 
 const router = express.Router()
 
@@ -281,7 +282,8 @@ router.post('/:id/test-result', async (req, res) => {
     const candidates = members.filter(m => !m.user?.bot && Array.isArray(m.roles) && m.roles.includes(event.recurrence_pool_role_id))
     if (candidates.length === 0) return res.status(400).json({ error: 'Khong co thanh vien nao trong role nay' })
     const picked = candidates[Math.floor(Math.random() * candidates.length)]
-    const content = event.recurrence_template.replace(/\{member\}/g, `<@${picked.user.id}>`)
+    const tpl = pickRandomTemplate(event.recurrence_template)
+    const content = tpl.replace(/\{member\}/g, `<@${picked.user.id}>`)
     const shaped = {
       ...event,
       announce_content: content,
