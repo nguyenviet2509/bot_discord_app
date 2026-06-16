@@ -58,6 +58,11 @@ function initEventsSchema(database) {
     `ALTER TABLE events ADD COLUMN recurrence_pool_role_id TEXT`,
     `ALTER TABLE events ADD COLUMN recurrence_template TEXT`,
     `ALTER TABLE events ADD COLUMN recurrence_last_run_at INTEGER`,
+    // Lich dinh ky cho thong bao SU KIEN (dung announce_content hien co)
+    `ALTER TABLE events ADD COLUMN announce_recur_type TEXT NOT NULL DEFAULT 'none'`,
+    `ALTER TABLE events ADD COLUMN announce_recur_day_of_week INTEGER`,
+    `ALTER TABLE events ADD COLUMN announce_recur_time TEXT`,
+    `ALTER TABLE events ADD COLUMN announce_recur_last_run_at INTEGER`,
   ]
   for (const sql of migrations) { try { database.exec(sql) } catch (_) {} }
 }
@@ -153,6 +158,7 @@ function createEvent({
   announce_channel_id, announce_content, announce_use_embed, announce_embed_title, announce_embed_color, announce_image_url,
   announce_on_enable, announce_on_start, announce_role_ping_id,
   recurrence_type, recurrence_day_of_week, recurrence_time, recurrence_pool_role_id, recurrence_template,
+  announce_recur_type, announce_recur_day_of_week, announce_recur_time,
 }) {
   const isNull = group_id === null || group_id === undefined
   const maxRow = isNull
@@ -165,9 +171,10 @@ function createEvent({
         guild_id, group_id, name, description, type, status, start_at, end_at, sort_order,
         announce_channel_id, announce_content, announce_use_embed, announce_embed_title, announce_embed_color, announce_image_url,
         announce_on_enable, announce_on_start, announce_role_ping_id,
-        recurrence_type, recurrence_day_of_week, recurrence_time, recurrence_pool_role_id, recurrence_template
+        recurrence_type, recurrence_day_of_week, recurrence_time, recurrence_pool_role_id, recurrence_template,
+        announce_recur_type, announce_recur_day_of_week, announce_recur_time
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       guild_id,
@@ -192,7 +199,10 @@ function createEvent({
       recurrence_day_of_week != null ? Number(recurrence_day_of_week) : null,
       recurrence_time || null,
       recurrence_pool_role_id || null,
-      recurrence_template || null
+      recurrence_template || null,
+      announce_recur_type || 'none',
+      announce_recur_day_of_week != null ? Number(announce_recur_day_of_week) : null,
+      announce_recur_time || null
     )
 }
 
@@ -224,6 +234,10 @@ function updateEvent(id, guildId, fields) {
   if (fields.recurrence_pool_role_id !== undefined){ sets.push('recurrence_pool_role_id = @recurrence_pool_role_id'); params.recurrence_pool_role_id = fields.recurrence_pool_role_id || null }
   if (fields.recurrence_template !== undefined)   { sets.push('recurrence_template = @recurrence_template'); params.recurrence_template = fields.recurrence_template || null }
   if (fields.recurrence_last_run_at !== undefined){ sets.push('recurrence_last_run_at = @recurrence_last_run_at'); params.recurrence_last_run_at = fields.recurrence_last_run_at || null }
+  if (fields.announce_recur_type !== undefined)        { sets.push('announce_recur_type = @announce_recur_type'); params.announce_recur_type = fields.announce_recur_type || 'none' }
+  if (fields.announce_recur_day_of_week !== undefined) { sets.push('announce_recur_day_of_week = @announce_recur_day_of_week'); params.announce_recur_day_of_week = fields.announce_recur_day_of_week != null && fields.announce_recur_day_of_week !== '' ? Number(fields.announce_recur_day_of_week) : null }
+  if (fields.announce_recur_time !== undefined)        { sets.push('announce_recur_time = @announce_recur_time'); params.announce_recur_time = fields.announce_recur_time || null }
+  if (fields.announce_recur_last_run_at !== undefined) { sets.push('announce_recur_last_run_at = @announce_recur_last_run_at'); params.announce_recur_last_run_at = fields.announce_recur_last_run_at || null }
   if (sets.length === 0) return { changes: 0 }
   sets.push('updated_at = unixepoch()')
   return db()
@@ -299,6 +313,26 @@ function markRecurrenceRun(id) {
     .run(id)
 }
 
+// Events co lich dinh ky cho thong bao SU KIEN
+function getActiveAnnounceRecurringEvents() {
+  return db()
+    .prepare(`
+      SELECT * FROM events
+      WHERE status = 1
+        AND announce_recur_type = 'weekly'
+        AND announce_recur_day_of_week IS NOT NULL
+        AND announce_recur_time IS NOT NULL
+        AND announce_channel_id IS NOT NULL
+    `)
+    .all()
+}
+
+function markAnnounceRecurrenceRun(id) {
+  return db()
+    .prepare('UPDATE events SET announce_recur_last_run_at = unixepoch(), updated_at = unixepoch() WHERE id = ?')
+    .run(id)
+}
+
 // Distinct types trong 1 group + builtin → suggestions cho combobox
 function listTypesForGroup(guildId, groupId) {
   const isNull = groupId === null || groupId === undefined
@@ -331,4 +365,6 @@ module.exports = {
   getDueEventAnnouncements,
   getActiveRecurringEvents,
   markRecurrenceRun,
+  getActiveAnnounceRecurringEvents,
+  markAnnounceRecurrenceRun,
 }

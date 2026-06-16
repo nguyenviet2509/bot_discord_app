@@ -35,13 +35,31 @@ async function pickRandomMember(client, guildId, roleId) {
 
 async function tick(client) {
   const { dayOfWeek, hhmm } = nowInTz()
-  const events = eventsDb.getActiveRecurringEvents()
-  if (events.length === 0) return
-
   const nowSec = Math.floor(Date.now() / 1000)
   const SIX_DAYS = 6 * 24 * 3600
 
-  for (const ev of events) {
+  // 1. Lich dinh ky gui THONG BAO SU KIEN (dung announce_content hien co)
+  const announceEvents = eventsDb.getActiveAnnounceRecurringEvents()
+  for (const ev of announceEvents) {
+    if (ev.announce_recur_day_of_week !== dayOfWeek) continue
+    if (ev.announce_recur_time !== hhmm) continue
+    if (ev.announce_recur_last_run_at && nowSec - ev.announce_recur_last_run_at < SIX_DAYS) continue
+    try {
+      const result = await sendEventAnnouncement(ev)
+      if (result.ok) {
+        eventsDb.markAnnounceRecurrenceRun(ev.id)
+        console.log(`[event-recurrence] Announce sent event id=${ev.id}`)
+      } else {
+        console.warn(`[event-recurrence] Announce send fail id=${ev.id}: ${result.error}`)
+      }
+    } catch (err) {
+      console.error(`[event-recurrence] Announce error id=${ev.id}:`, err.message)
+    }
+  }
+
+  // 2. Lich dinh ky gui THONG BAO KET QUA (random pick member)
+  const resultEvents = eventsDb.getActiveRecurringEvents()
+  for (const ev of resultEvents) {
     if (ev.recurrence_day_of_week !== dayOfWeek) continue
     if (ev.recurrence_time !== hhmm) continue
     if (ev.recurrence_last_run_at && nowSec - ev.recurrence_last_run_at < SIX_DAYS) continue
@@ -53,17 +71,17 @@ async function tick(client) {
         continue
       }
       const content = (ev.recurrence_template || '').replace(/\{member\}/g, `<@${member.id}>`)
-      // Reuse sender voi content override
-      const shaped = { ...ev, announce_content: content, announce_use_embed: 0 } // plain content de mention chac chan ping
+      // Plain content de mention ping that su (khong dung embed)
+      const shaped = { ...ev, announce_content: content, announce_use_embed: 0, announce_image_url: null }
       const result = await sendEventAnnouncement(shaped)
       if (result.ok) {
         eventsDb.markRecurrenceRun(ev.id)
-        console.log(`[event-recurrence] Sent event id=${ev.id} picked=${member.user.tag} (${member.id})`)
+        console.log(`[event-recurrence] Result sent event id=${ev.id} picked=${member.user.tag} (${member.id})`)
       } else {
-        console.warn(`[event-recurrence] Send fail id=${ev.id}: ${result.error}`)
+        console.warn(`[event-recurrence] Result send fail id=${ev.id}: ${result.error}`)
       }
     } catch (err) {
-      console.error(`[event-recurrence] Error id=${ev.id}:`, err.message)
+      console.error(`[event-recurrence] Result error id=${ev.id}:`, err.message)
     }
   }
 }

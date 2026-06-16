@@ -261,6 +261,35 @@
               <span class="text-xs md:text-sm text-slate-700">Tự gửi khi đến thời điểm bắt đầu (start_at)</span>
             </label>
           </div>
+
+          <!-- Lich dinh ky cho thong bao SU KIEN -->
+          <div class="border-t border-slate-100 pt-3 mt-2">
+            <label class="flex items-center gap-2 cursor-pointer mb-2">
+              <input type="checkbox" class="w-4 h-4"
+                     :checked="eventForm.announce_recur_type === 'weekly'"
+                     @change="eventForm.announce_recur_type = $event.target.checked ? 'weekly' : 'none'" />
+              <span class="text-xs md:text-sm font-semibold text-slate-700">Tự gửi định kỳ hàng tuần (thông báo sự kiện này)</span>
+            </label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3" x-show="eventForm.announce_recur_type === 'weekly'">
+              <div>
+                <label class="field-label">Thứ trong tuần</label>
+                <select class="input-field" x-model.number="eventForm.announce_recur_day_of_week">
+                  <option :value="0">Chủ nhật</option>
+                  <option :value="1">Thứ 2</option>
+                  <option :value="2">Thứ 3</option>
+                  <option :value="3">Thứ 4</option>
+                  <option :value="4">Thứ 5</option>
+                  <option :value="5">Thứ 6</option>
+                  <option :value="6">Thứ 7</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Giờ (Asia/Saigon, 24h)</label>
+                <input type="time" class="input-field" x-model="eventForm.announce_recur_time" />
+              </div>
+            </div>
+            <p class="text-xs text-slate-400 mt-1" x-show="eventForm.announce_recur_type === 'weekly'">Gửi đúng "Tin nhắn thông báo" + ảnh + embed như cấu hình phía trên.</p>
+          </div>
           <div class="flex items-center gap-2 pt-2" x-show="editingEvent">
             <button @click="sendTest()" class="btn-refresh" :disabled="sending" type="button" style="color:#b45309; border-color:#fcd34d;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -273,7 +302,8 @@
 
       <!-- Recurrence: weekly random pick -->
       <div class="border-t border-slate-200 pt-4 mt-4">
-        <h3 class="text-xs md:text-sm font-bold text-slate-800 mb-3">Định kỳ + random thành viên</h3>
+        <h3 class="text-xs md:text-sm font-bold text-slate-800 mb-1">Thông báo KẾT QUẢ (random pick)</h3>
+        <p class="text-xs text-slate-400 mb-3">Lịch độc lập với "Tin nhắn thông báo" phía trên — gửi tin random ở thời điểm khác (vd: Thứ 2 thông báo, Chủ nhật trả kết quả).</p>
         <label class="flex items-center gap-2 cursor-pointer mb-3">
           <input type="checkbox" class="w-4 h-4"
                  :checked="eventForm.recurrence_type === 'weekly'"
