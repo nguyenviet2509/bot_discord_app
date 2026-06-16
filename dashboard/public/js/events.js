@@ -95,6 +95,41 @@ function eventsTab() {
     saveStatusClass: 'text-slate-400',
     _eventSortables: [],
     _groupSortable: null,
+    poolMembers: [],
+    poolMemberSearch: '',
+    loadingPoolMembers: false,
+    _lastFetchedRoleId: '',
+
+    get filteredPoolMembers() {
+      const q = (this.poolMemberSearch || '').trim().toLowerCase()
+      if (!q) return this.poolMembers
+      return this.poolMembers.filter(m =>
+        (m.name || '').toLowerCase().includes(q) ||
+        (m.username || '').toLowerCase().includes(q) ||
+        (m.id || '').includes(q)
+      )
+    },
+
+    togglePoolExcluded(userId) {
+      const arr = this.eventForm.recurrence_excluded_user_ids
+      const idx = arr.indexOf(userId)
+      if (idx >= 0) arr.splice(idx, 1)
+      else arr.push(userId)
+    },
+
+    async fetchPoolMembers(roleId) {
+      if (!roleId) { this.poolMembers = []; this._lastFetchedRoleId = ''; return }
+      if (roleId === this._lastFetchedRoleId) return
+      this.loadingPoolMembers = true
+      try {
+        this.poolMembers = await api('GET', `/api/events/role-members/${roleId}`) || []
+        this._lastFetchedRoleId = roleId
+      } catch (_) {
+        this.poolMembers = []
+      } finally {
+        this.loadingPoolMembers = false
+      }
+    },
 
     async init() {
       // Load roles song song voi loadAll (khong block)
@@ -272,8 +307,16 @@ function eventsTab() {
       this.editingEvent = null
       this.eventForm = emptyEventForm()
       this.eventForm.group_id = groupId === undefined ? null : groupId
+      this.poolMembers = []
+      this._lastFetchedRoleId = ''
+      this.poolMemberSearch = ''
       await this.refreshTypeSuggestions(this.eventForm.group_id)
       this.showEventModal = true
+    },
+
+    // Watch role change tu UI (goi tu @change cua select hoac $watch)
+    onPoolRoleChange() {
+      this.fetchPoolMembers(this.eventForm.recurrence_pool_role_id)
     },
 
     async openEditEvent(ev) {
@@ -299,11 +342,11 @@ function eventsTab() {
         recurrence_day_of_week: ev.recurrence_day_of_week ?? 0,
         recurrence_time: ev.recurrence_time || '09:00',
         recurrence_pool_role_id: ev.recurrence_pool_role_id || '',
-        recurrence_excluded_user_ids_str: (() => {
+        recurrence_excluded_user_ids: (() => {
           try {
             const arr = JSON.parse(ev.recurrence_excluded_user_ids || '[]')
-            return Array.isArray(arr) ? arr.join('\n') : ''
-          } catch (_) { return '' }
+            return Array.isArray(arr) ? arr.filter(v => typeof v === 'string') : []
+          } catch (_) { return [] }
         })(),
         recurrence_template: ev.recurrence_template || '',
         recurrence_use_embed: !!ev.recurrence_use_embed,
@@ -314,8 +357,15 @@ function eventsTab() {
         announce_recur_day_of_week: ev.announce_recur_day_of_week ?? 1,
         announce_recur_time: ev.announce_recur_time || '09:00',
       }
+      this.poolMembers = []
+      this._lastFetchedRoleId = ''
+      this.poolMemberSearch = ''
       await this.refreshTypeSuggestions(this.eventForm.group_id)
       this.showEventModal = true
+      // Fetch members cua role pool de hien checklist
+      if (this.eventForm.recurrence_pool_role_id) {
+        this.fetchPoolMembers(this.eventForm.recurrence_pool_role_id)
+      }
     },
 
     async refreshTypeSuggestions(groupId) {
@@ -364,7 +414,7 @@ function eventsTab() {
         recurrence_day_of_week: f.recurrence_type === 'weekly' ? (f.recurrence_day_of_week ?? 0) : null,
         recurrence_time: f.recurrence_type === 'weekly' ? (f.recurrence_time || null) : null,
         recurrence_pool_role_id: f.recurrence_type === 'weekly' ? (f.recurrence_pool_role_id || null) : null,
-        recurrence_excluded_user_ids: f.recurrence_type === 'weekly' ? (f.recurrence_excluded_user_ids_str || '') : '',
+        recurrence_excluded_user_ids: f.recurrence_type === 'weekly' ? (Array.isArray(f.recurrence_excluded_user_ids) ? f.recurrence_excluded_user_ids : []) : [],
         recurrence_template: f.recurrence_type === 'weekly' ? (f.recurrence_template || null) : null,
         recurrence_use_embed: !!f.recurrence_use_embed,
         recurrence_embed_title: f.recurrence_embed_title || null,
@@ -540,7 +590,7 @@ function emptyEventForm() {
     recurrence_day_of_week: 0,
     recurrence_time: '09:00',
     recurrence_pool_role_id: '',
-    recurrence_excluded_user_ids_str: '',
+    recurrence_excluded_user_ids: [],
     recurrence_template: '',
     recurrence_use_embed: false,
     recurrence_embed_title: '',

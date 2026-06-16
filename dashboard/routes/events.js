@@ -122,6 +122,46 @@ router.delete('/groups/:id', (req, res) => {
 })
 
 // ---- Types suggestions ----
+// Cache members theo guild (refresh moi 5 phut)
+const _membersCache = { data: null, expiresAt: 0 }
+async function fetchGuildMembersCached() {
+  const now = Date.now()
+  if (_membersCache.data && _membersCache.expiresAt > now) return _membersCache.data
+  if (!process.env.BOT_TOKEN) return []
+  const guildId = GUILD_ID()
+  try {
+    const r = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members?limit=1000`, {
+      headers: { Authorization: `Bot ${process.env.BOT_TOKEN}` },
+    })
+    if (!r.ok) return _membersCache.data || []
+    const arr = await r.json()
+    _membersCache.data = Array.isArray(arr) ? arr : []
+    _membersCache.expiresAt = now + 5 * 60 * 1000
+    return _membersCache.data
+  } catch (_) {
+    return _membersCache.data || []
+  }
+}
+
+// Lay thanh vien co role cu the (de UI cho chon exclude tu pool random)
+router.get('/role-members/:roleId', async (req, res) => {
+  const roleId = req.params.roleId
+  if (!/^\d{15,22}$/.test(roleId)) return res.status(400).json({ error: 'roleId khong hop le' })
+  const members = await fetchGuildMembersCached()
+  const filtered = members
+    .filter(m => !m.user?.bot && Array.isArray(m.roles) && m.roles.includes(roleId))
+    .map(m => ({
+      id: m.user.id,
+      name: m.nick || m.user.global_name || m.user.username || m.user.id,
+      username: m.user.username,
+      avatar: m.user.avatar
+        ? `https://cdn.discordapp.com/avatars/${m.user.id}/${m.user.avatar}.png?size=64`
+        : null,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+  res.json(filtered)
+})
+
 router.get('/types', (req, res) => {
   const gid = parseGroupId(req.query.group_id)
   if (gid === undefined) return res.status(400).json({ error: 'group_id khong hop le' })

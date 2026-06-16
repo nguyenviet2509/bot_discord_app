@@ -331,7 +331,7 @@
           </div>
           <div>
             <label class="field-label">Role chọn ngẫu nhiên thành viên</label>
-            <select class="input-field" x-model="eventForm.recurrence_pool_role_id">
+            <select class="input-field" x-model="eventForm.recurrence_pool_role_id" @change="onPoolRoleChange()">
               <option value="">— Chọn role —</option>
               <template x-for="r in roles" :key="r.id">
                 <option :value="r.id" x-text="'@' + r.name"></option>
@@ -340,13 +340,42 @@
             <p class="text-xs text-slate-400 mt-1">Bot sẽ random 1 thành viên (loại bot) có role này.</p>
           </div>
           <div>
-            <label class="field-label">Loại thành viên khỏi pool random (tùy chọn)</label>
-            <textarea class="input-field font-mono text-xs" rows="3" x-model="eventForm.recurrence_excluded_user_ids_str"
-                      placeholder="123456789012345678&#10;987654321098765432"></textarea>
-            <p class="text-xs text-slate-400 mt-1">
-              Nhập <strong>User ID</strong> Discord, mỗi dòng (hoặc cách bởi dấu phẩy) 1 ID. Những thành viên này sẽ <strong>không bao giờ</strong> được random pick.<br/>
-              <span class="text-amber-400">Mẹo:</span> bật Developer Mode trong Discord → chuột phải user → "Copy User ID".
-            </p>
+            <div class="flex items-center justify-between mb-1">
+              <label class="field-label !mb-0">Loại thành viên khỏi pool random (tùy chọn)</label>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="text-slate-400">
+                  Đã chọn: <strong x-text="eventForm.recurrence_excluded_user_ids.length"></strong>
+                  / <span x-text="poolMembers.length"></span>
+                </span>
+                <button type="button" class="btn-refresh text-xs" @click="eventForm.recurrence_excluded_user_ids = []" x-show="eventForm.recurrence_excluded_user_ids.length > 0">Bỏ chọn hết</button>
+              </div>
+            </div>
+            <div x-show="!eventForm.recurrence_pool_role_id" class="text-xs text-slate-400 italic px-3 py-2 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+              Hãy chọn "Role chọn ngẫu nhiên thành viên" ở trên trước.
+            </div>
+            <template x-if="eventForm.recurrence_pool_role_id">
+              <div>
+                <input class="input-field text-xs mb-2" placeholder="🔍 Tìm theo tên..." x-model="poolMemberSearch" />
+                <div class="border border-slate-200 rounded-xl max-h-60 overflow-y-auto bg-slate-50">
+                  <div x-show="loadingPoolMembers" class="px-3 py-4 text-center text-xs text-slate-400">Đang tải...</div>
+                  <div x-show="!loadingPoolMembers && poolMembers.length === 0" class="px-3 py-4 text-center text-xs text-slate-400">Role này không có thành viên</div>
+                  <template x-for="m in filteredPoolMembers" :key="m.id">
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-white cursor-pointer border-b border-slate-100 last:border-0">
+                      <input type="checkbox" :value="m.id"
+                        :checked="eventForm.recurrence_excluded_user_ids.includes(m.id)"
+                        @change="togglePoolExcluded(m.id)"
+                        class="w-4 h-4" />
+                      <img x-show="m.avatar" :src="m.avatar" class="w-6 h-6 rounded-full" />
+                      <div class="flex-1 min-w-0 text-xs">
+                        <div class="font-semibold text-slate-700 truncate" x-text="m.name"></div>
+                        <div class="text-slate-400 font-mono text-[10px]" x-text="m.id"></div>
+                      </div>
+                    </label>
+                  </template>
+                </div>
+              </div>
+            </template>
+            <p class="text-xs text-slate-400 mt-1">Tick những thành viên <strong>không bao giờ</strong> được random pick.</p>
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
