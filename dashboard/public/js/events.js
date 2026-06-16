@@ -270,6 +270,11 @@ function eventsTab() {
         announce_on_enable: !!ev.announce_on_enable,
         announce_on_start: !!ev.announce_on_start,
         announce_role_ping_id: ev.announce_role_ping_id || '',
+        recurrence_type: ev.recurrence_type || 'none',
+        recurrence_day_of_week: ev.recurrence_day_of_week ?? 0,
+        recurrence_time: ev.recurrence_time || '09:00',
+        recurrence_pool_role_id: ev.recurrence_pool_role_id || '',
+        recurrence_template: ev.recurrence_template || '',
       }
       await this.refreshTypeSuggestions(this.eventForm.group_id)
       this.showEventModal = true
@@ -317,6 +322,11 @@ function eventsTab() {
         announce_on_enable: !!f.announce_on_enable,
         announce_on_start: !!f.announce_on_start,
         announce_role_ping_id: f.announce_role_ping_id || null,
+        recurrence_type: f.recurrence_type || 'none',
+        recurrence_day_of_week: f.recurrence_type === 'weekly' ? (f.recurrence_day_of_week ?? 0) : null,
+        recurrence_time: f.recurrence_type === 'weekly' ? (f.recurrence_time || null) : null,
+        recurrence_pool_role_id: f.recurrence_type === 'weekly' ? (f.recurrence_pool_role_id || null) : null,
+        recurrence_template: f.recurrence_type === 'weekly' ? (f.recurrence_template || null) : null,
       }
       this.saving = true
       try {
@@ -453,6 +463,11 @@ function emptyEventForm() {
     announce_on_enable: false,
     announce_on_start: false,
     announce_role_ping_id: '',
+    recurrence_type: 'none',
+    recurrence_day_of_week: 0,
+    recurrence_time: '09:00',
+    recurrence_pool_role_id: '',
+    recurrence_template: '',
   }
 }
 

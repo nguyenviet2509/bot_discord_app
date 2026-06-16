@@ -12,6 +12,7 @@ const { buildLeaderboardText, mergeContentWithLeaderboard } = require('../../sha
 const { isDueByClock, isDueByInterval } = require('../../shared/schedule-time-helper')
 const { scheduleDaily } = require('./utils/daily-cron')
 const worldcupNotifier = require('./utils/worldcup-notifier')
+const eventRecurrenceWorker = require('./utils/event-recurrence-worker')
 
 initDb()
 console.log('[DB] Database initialized')
@@ -139,6 +140,9 @@ client.once('ready', async () => {
 
   // Worldcup notifier: tick 60s + catch-up on boot, gui tin embed truoc kick-off N phut
   worldcupNotifier.start(client)
+
+  // Event recurrence worker: tick 60s, gui thong bao random member weekly
+  eventRecurrenceWorker.start(client)
 
   // Cron: 00:00 moi ngay → quet silent members cho tat ca guild bot dang join
   scheduleDaily('scan-silent-members', async () => {

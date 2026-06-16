@@ -54,6 +54,8 @@ function pickAnnounceFields(body) {
     'announce_channel_id', 'announce_content', 'announce_use_embed',
     'announce_embed_title', 'announce_embed_color', 'announce_image_url',
     'announce_on_enable', 'announce_on_start', 'announce_role_ping_id',
+    'recurrence_type', 'recurrence_day_of_week', 'recurrence_time',
+    'recurrence_pool_role_id', 'recurrence_template',
   ]
   for (const k of keys) if (body[k] !== undefined) out[k] = body[k]
   return out
