@@ -299,6 +299,12 @@ function eventsTab() {
         recurrence_day_of_week: ev.recurrence_day_of_week ?? 0,
         recurrence_time: ev.recurrence_time || '09:00',
         recurrence_pool_role_id: ev.recurrence_pool_role_id || '',
+        recurrence_excluded_user_ids_str: (() => {
+          try {
+            const arr = JSON.parse(ev.recurrence_excluded_user_ids || '[]')
+            return Array.isArray(arr) ? arr.join('\n') : ''
+          } catch (_) { return '' }
+        })(),
         recurrence_template: ev.recurrence_template || '',
         recurrence_use_embed: !!ev.recurrence_use_embed,
         recurrence_embed_title: ev.recurrence_embed_title || '',
@@ -358,6 +364,7 @@ function eventsTab() {
         recurrence_day_of_week: f.recurrence_type === 'weekly' ? (f.recurrence_day_of_week ?? 0) : null,
         recurrence_time: f.recurrence_type === 'weekly' ? (f.recurrence_time || null) : null,
         recurrence_pool_role_id: f.recurrence_type === 'weekly' ? (f.recurrence_pool_role_id || null) : null,
+        recurrence_excluded_user_ids: f.recurrence_type === 'weekly' ? (f.recurrence_excluded_user_ids_str || '') : '',
         recurrence_template: f.recurrence_type === 'weekly' ? (f.recurrence_template || null) : null,
         recurrence_use_embed: !!f.recurrence_use_embed,
         recurrence_embed_title: f.recurrence_embed_title || null,
@@ -533,6 +540,7 @@ function emptyEventForm() {
     recurrence_day_of_week: 0,
     recurrence_time: '09:00',
     recurrence_pool_role_id: '',
+    recurrence_excluded_user_ids_str: '',
     recurrence_template: '',
     recurrence_use_embed: false,
     recurrence_embed_title: '',

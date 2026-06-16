@@ -56,7 +56,7 @@ function pickAnnounceFields(body) {
     'announce_embed_title', 'announce_embed_color', 'announce_image_url',
     'announce_on_enable', 'announce_on_start', 'announce_role_ping_id',
     'recurrence_type', 'recurrence_day_of_week', 'recurrence_time',
-    'recurrence_pool_role_id', 'recurrence_template',
+    'recurrence_pool_role_id', 'recurrence_template', 'recurrence_excluded_user_ids',
     'recurrence_use_embed', 'recurrence_embed_title', 'recurrence_embed_color', 'recurrence_image_url',
     'announce_recur_type', 'announce_recur_day_of_week', 'announce_recur_time',
   ]
@@ -281,7 +281,12 @@ router.post('/:id/test-result', async (req, res) => {
     const members = await r.json()
     const candidates = members.filter(m => !m.user?.bot && Array.isArray(m.roles) && m.roles.includes(event.recurrence_pool_role_id))
     if (candidates.length === 0) return res.status(400).json({ error: 'Khong co thanh vien nao trong role nay' })
-    const picked = candidates[Math.floor(Math.random() * candidates.length)]
+    // Strict: loai winner gan nhat + danh sach excluded
+    const excludeSet = new Set(eventsDb.parseExcludedIds(event.recurrence_excluded_user_ids))
+    if (event.recurrence_last_winner_id) excludeSet.add(event.recurrence_last_winner_id)
+    const pool = candidates.filter(m => !excludeSet.has(m.user.id))
+    if (pool.length === 0) return res.status(400).json({ error: 'Khong con thanh vien hop le sau khi loai winner cu va danh sach exclude' })
+    const picked = pool[Math.floor(Math.random() * pool.length)]
     const tpl = pickRandomTemplate(event.recurrence_template)
     const content = tpl.replace(/\{member\}/g, `<@${picked.user.id}>`)
     const shaped = {

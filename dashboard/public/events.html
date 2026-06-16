@@ -340,6 +340,15 @@
             <p class="text-xs text-slate-400 mt-1">Bot sẽ random 1 thành viên (loại bot) có role này.</p>
           </div>
           <div>
+            <label class="field-label">Loại thành viên khỏi pool random (tùy chọn)</label>
+            <textarea class="input-field font-mono text-xs" rows="3" x-model="eventForm.recurrence_excluded_user_ids_str"
+                      placeholder="123456789012345678&#10;987654321098765432"></textarea>
+            <p class="text-xs text-slate-400 mt-1">
+              Nhập <strong>User ID</strong> Discord, mỗi dòng (hoặc cách bởi dấu phẩy) 1 ID. Những thành viên này sẽ <strong>không bao giờ</strong> được random pick.<br/>
+              <span class="text-amber-400">Mẹo:</span> bật Developer Mode trong Discord → chuột phải user → "Copy User ID".
+            </p>
+          </div>
+          <div>
             <div class="flex items-center justify-between mb-1">
               <label class="field-label !mb-0">Mẫu tin nhắn (dùng <code>{member}</code> để chèn tên người được chọn)</label>
               <div class="flex items-center gap-2">

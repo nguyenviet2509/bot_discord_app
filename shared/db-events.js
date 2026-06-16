@@ -68,6 +68,10 @@ function initEventsSchema(database) {
     `ALTER TABLE events ADD COLUMN recurrence_embed_title TEXT`,
     `ALTER TABLE events ADD COLUMN recurrence_embed_color TEXT DEFAULT '#6366f1'`,
     `ALTER TABLE events ADD COLUMN recurrence_image_url TEXT`,
+    // Luu winner gan nhat de tranh trung 2 lan lien tiep
+    `ALTER TABLE events ADD COLUMN recurrence_last_winner_id TEXT`,
+    // Danh sach user ID bi loai khoi pool random (JSON array of strings)
+    `ALTER TABLE events ADD COLUMN recurrence_excluded_user_ids TEXT NOT NULL DEFAULT '[]'`,
   ]
   for (const sql of migrations) { try { database.exec(sql) } catch (_) {} }
 }
@@ -75,6 +79,40 @@ function initEventsSchema(database) {
 // Lazy resolver tranh circular require
 function db() {
   return require('./db').getDb()
+}
+
+// Chuan hoa input excluded user IDs ve JSON string array (loai trung, chi giu snowflake hop le)
+function normalizeExcludedIds(input) {
+  let arr = []
+  if (Array.isArray(input)) {
+    arr = input
+  } else if (typeof input === 'string') {
+    if (input.trim().startsWith('[')) {
+      try { arr = JSON.parse(input) } catch (_) { arr = [] }
+    } else {
+      arr = input.split(/[\s,]+/)
+    }
+  }
+  const seen = new Set()
+  const result = []
+  for (const v of arr) {
+    const s = String(v || '').trim()
+    if (!/^\d{15,22}$/.test(s)) continue
+    if (seen.has(s)) continue
+    seen.add(s)
+    result.push(s)
+  }
+  return JSON.stringify(result)
+}
+
+function parseExcludedIds(jsonStr) {
+  if (!jsonStr) return []
+  try {
+    const arr = JSON.parse(jsonStr)
+    return Array.isArray(arr) ? arr.filter(v => typeof v === 'string') : []
+  } catch (_) {
+    return []
+  }
 }
 
 // ============================================================
@@ -164,6 +202,7 @@ function createEvent({
   announce_on_enable, announce_on_start, announce_role_ping_id,
   recurrence_type, recurrence_day_of_week, recurrence_time, recurrence_pool_role_id, recurrence_template,
   recurrence_use_embed, recurrence_embed_title, recurrence_embed_color, recurrence_image_url,
+  recurrence_excluded_user_ids,
   announce_recur_type, announce_recur_day_of_week, announce_recur_time,
 }) {
   const isNull = group_id === null || group_id === undefined
@@ -179,9 +218,10 @@ function createEvent({
         announce_on_enable, announce_on_start, announce_role_ping_id,
         recurrence_type, recurrence_day_of_week, recurrence_time, recurrence_pool_role_id, recurrence_template,
         recurrence_use_embed, recurrence_embed_title, recurrence_embed_color, recurrence_image_url,
+        recurrence_excluded_user_ids,
         announce_recur_type, announce_recur_day_of_week, announce_recur_time
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       guild_id,
@@ -211,6 +251,7 @@ function createEvent({
       recurrence_embed_title || null,
       recurrence_embed_color || null,
       recurrence_image_url || null,
+      normalizeExcludedIds(recurrence_excluded_user_ids),
       announce_recur_type || 'none',
       announce_recur_day_of_week != null ? Number(announce_recur_day_of_week) : null,
       announce_recur_time || null
@@ -248,6 +289,10 @@ function updateEvent(id, guildId, fields) {
   if (fields.recurrence_embed_title !== undefined){ sets.push('recurrence_embed_title = @recurrence_embed_title'); params.recurrence_embed_title = fields.recurrence_embed_title || null }
   if (fields.recurrence_embed_color !== undefined){ sets.push('recurrence_embed_color = @recurrence_embed_color'); params.recurrence_embed_color = fields.recurrence_embed_color || null }
   if (fields.recurrence_image_url !== undefined)  { sets.push('recurrence_image_url = @recurrence_image_url'); params.recurrence_image_url = fields.recurrence_image_url || null }
+  if (fields.recurrence_excluded_user_ids !== undefined) {
+    sets.push('recurrence_excluded_user_ids = @recurrence_excluded_user_ids')
+    params.recurrence_excluded_user_ids = normalizeExcludedIds(fields.recurrence_excluded_user_ids)
+  }
   if (fields.recurrence_last_run_at !== undefined){ sets.push('recurrence_last_run_at = @recurrence_last_run_at'); params.recurrence_last_run_at = fields.recurrence_last_run_at || null }
   if (fields.announce_recur_type !== undefined)        { sets.push('announce_recur_type = @announce_recur_type'); params.announce_recur_type = fields.announce_recur_type || 'none' }
   if (fields.announce_recur_day_of_week !== undefined) { sets.push('announce_recur_day_of_week = @announce_recur_day_of_week'); params.announce_recur_day_of_week = fields.announce_recur_day_of_week != null && fields.announce_recur_day_of_week !== '' ? Number(fields.announce_recur_day_of_week) : null }
@@ -322,10 +367,10 @@ function getActiveRecurringEvents() {
     .all()
 }
 
-function markRecurrenceRun(id) {
+function markRecurrenceRun(id, winnerId) {
   return db()
-    .prepare('UPDATE events SET recurrence_last_run_at = unixepoch(), updated_at = unixepoch() WHERE id = ?')
-    .run(id)
+    .prepare('UPDATE events SET recurrence_last_run_at = unixepoch(), recurrence_last_winner_id = @winnerId, updated_at = unixepoch() WHERE id = @id')
+    .run({ id, winnerId: winnerId || null })
 }
 
 // Events co lich dinh ky cho thong bao SU KIEN
@@ -382,4 +427,6 @@ module.exports = {
   markRecurrenceRun,
   getActiveAnnounceRecurringEvents,
   markAnnounceRecurrenceRun,
+  parseExcludedIds,
+  normalizeExcludedIds,
 }

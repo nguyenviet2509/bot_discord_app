@@ -22,16 +22,21 @@ function nowInTz() {
   return { dayOfWeek: dayMap[map.weekday], hhmm: `${hh}:${map.minute}` }
 }
 
-async function pickRandomMember(client, guildId, roleId) {
+async function pickRandomMember(client, guildId, roleId, excludeUserId = null, excludedIds = []) {
   const guild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId).catch(() => null)
   if (!guild) return null
   // Fetch tat ca members de role.members cache day du
   try { await guild.members.fetch() } catch (_) {}
   const role = guild.roles.cache.get(roleId)
   if (!role) return null
-  const candidates = [...role.members.values()].filter(m => !m.user.bot)
-  if (candidates.length === 0) return null
-  return candidates[Math.floor(Math.random() * candidates.length)]
+  const all = [...role.members.values()].filter(m => !m.user.bot)
+  if (all.length === 0) return null
+  // Strict: loai winner gan nhat + danh sach excluded; KHONG fallback - rong thi tra null
+  const excludeSet = new Set(excludedIds || [])
+  if (excludeUserId) excludeSet.add(excludeUserId)
+  const pool = all.filter(m => !excludeSet.has(m.id))
+  if (pool.length === 0) return null
+  return pool[Math.floor(Math.random() * pool.length)]
 }
 
 async function tick(client) {
@@ -66,7 +71,8 @@ async function tick(client) {
     if (ev.recurrence_last_run_at && nowSec - ev.recurrence_last_run_at < SIX_DAYS) continue
 
     try {
-      const member = await pickRandomMember(client, ev.guild_id, ev.recurrence_pool_role_id)
+      const excluded = eventsDb.parseExcludedIds(ev.recurrence_excluded_user_ids)
+      const member = await pickRandomMember(client, ev.guild_id, ev.recurrence_pool_role_id, ev.recurrence_last_winner_id, excluded)
       if (!member) {
         console.warn(`[event-recurrence] No eligible member for event id=${ev.id} role=${ev.recurrence_pool_role_id}`)
         continue
@@ -84,7 +90,7 @@ async function tick(client) {
       }
       const result = await sendEventAnnouncement(shaped)
       if (result.ok) {
-        eventsDb.markRecurrenceRun(ev.id)
+        eventsDb.markRecurrenceRun(ev.id, member.id)
         console.log(`[event-recurrence] Result sent event id=${ev.id} picked=${member.user.tag} (${member.id})`)
       } else {
         console.warn(`[event-recurrence] Result send fail id=${ev.id}: ${result.error}`)
