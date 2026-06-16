@@ -51,6 +51,7 @@ function initEventsSchema(database) {
     `ALTER TABLE events ADD COLUMN announce_sent_at INTEGER`,
     `ALTER TABLE events ADD COLUMN announce_on_enable INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE events ADD COLUMN announce_on_start INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE events ADD COLUMN announce_role_ping_id TEXT`,
   ]
   for (const sql of migrations) { try { database.exec(sql) } catch (_) {} }
 }
@@ -144,7 +145,7 @@ function getEventById(id, guildId) {
 function createEvent({
   guild_id, group_id, name, description, type, status, start_at, end_at,
   announce_channel_id, announce_content, announce_use_embed, announce_embed_title, announce_embed_color, announce_image_url,
-  announce_on_enable, announce_on_start,
+  announce_on_enable, announce_on_start, announce_role_ping_id,
 }) {
   const isNull = group_id === null || group_id === undefined
   const maxRow = isNull
@@ -156,9 +157,9 @@ function createEvent({
       INSERT INTO events (
         guild_id, group_id, name, description, type, status, start_at, end_at, sort_order,
         announce_channel_id, announce_content, announce_use_embed, announce_embed_title, announce_embed_color, announce_image_url,
-        announce_on_enable, announce_on_start
+        announce_on_enable, announce_on_start, announce_role_ping_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       guild_id,
@@ -177,7 +178,8 @@ function createEvent({
       announce_embed_color || null,
       announce_image_url || null,
       announce_on_enable ? 1 : 0,
-      announce_on_start ? 1 : 0
+      announce_on_start ? 1 : 0,
+      announce_role_ping_id || null
     )
 }
 
@@ -202,6 +204,7 @@ function updateEvent(id, guildId, fields) {
   if (fields.announce_on_enable !== undefined)  { sets.push('announce_on_enable = @announce_on_enable'); params.announce_on_enable = fields.announce_on_enable ? 1 : 0 }
   if (fields.announce_on_start !== undefined)   { sets.push('announce_on_start = @announce_on_start'); params.announce_on_start = fields.announce_on_start ? 1 : 0 }
   if (fields.announce_sent_at !== undefined)    { sets.push('announce_sent_at = @announce_sent_at'); params.announce_sent_at = fields.announce_sent_at || null }
+  if (fields.announce_role_ping_id !== undefined) { sets.push('announce_role_ping_id = @announce_role_ping_id'); params.announce_role_ping_id = fields.announce_role_ping_id || null }
   if (sets.length === 0) return { changes: 0 }
   sets.push('updated_at = unixepoch()')
   return db()

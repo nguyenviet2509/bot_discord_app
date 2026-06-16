@@ -61,6 +61,7 @@ function eventsTab() {
     sending: false,
     uploading: false,
     groups: [],
+    roles: [],
     showEventModal: false,
     editingEvent: null,
     eventForm: emptyEventForm(),
@@ -71,6 +72,8 @@ function eventsTab() {
     _groupSortable: null,
 
     async init() {
+      // Load roles song song voi loadAll (khong block)
+      api('GET', '/api/discord/roles').then(rs => { this.roles = rs || [] }).catch(() => {})
       await this.loadAll()
     },
 
@@ -266,6 +269,7 @@ function eventsTab() {
         announce_embed_color: ev.announce_embed_color || '#6366f1',
         announce_on_enable: !!ev.announce_on_enable,
         announce_on_start: !!ev.announce_on_start,
+        announce_role_ping_id: ev.announce_role_ping_id || '',
       }
       await this.refreshTypeSuggestions(this.eventForm.group_id)
       this.showEventModal = true
@@ -312,6 +316,7 @@ function eventsTab() {
         announce_embed_color: f.announce_embed_color || null,
         announce_on_enable: !!f.announce_on_enable,
         announce_on_start: !!f.announce_on_start,
+        announce_role_ping_id: f.announce_role_ping_id || null,
       }
       this.saving = true
       try {
@@ -447,6 +452,7 @@ function emptyEventForm() {
     announce_embed_color: '#6366f1',
     announce_on_enable: false,
     announce_on_start: false,
+    announce_role_ping_id: '',
   }
 }
 

@@ -10,8 +10,11 @@ const { buildPayload } = require('./build-scheduled-payload')
 
 // Map event row -> shape ma buildPayload chap nhan
 function eventToMsgShape(event) {
+  // Neu co role ping, prepend <@&id> vao content (buildPayload extractMentions se phat hien va ping)
+  const rolePrefix = event.announce_role_ping_id ? `<@&${event.announce_role_ping_id}> ` : ''
+  const rawContent = event.announce_content || ''
   return {
-    content: event.announce_content || '',
+    content: rolePrefix + rawContent,
     image_url: event.announce_image_url || null,
     use_embed: !!event.announce_use_embed,
     embed_title: event.announce_embed_title || null,

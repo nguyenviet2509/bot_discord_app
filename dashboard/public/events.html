@@ -208,6 +208,16 @@
             <p class="text-xs text-slate-400 mt-1">Bật developer mode trên Discord → chuột phải channel → Copy ID.</p>
           </div>
           <div>
+            <label class="field-label">Role tag (tuỳ chọn)</label>
+            <select class="input-field" x-model="eventForm.announce_role_ping_id">
+              <option value="">— Không ping role —</option>
+              <template x-for="r in roles" :key="r.id">
+                <option :value="r.id" x-text="'@' + r.name"></option>
+              </template>
+            </select>
+            <p class="text-xs text-slate-400 mt-1">Bot sẽ ping role này khi gửi thông báo (chèn vào đầu nội dung).</p>
+          </div>
+          <div>
             <label class="field-label">Nội dung tin nhắn</label>
             <textarea class="input-field" rows="3" x-model="eventForm.announce_content" placeholder="Có thể chứa @everyone, @role, mention..."></textarea>
           </div>
