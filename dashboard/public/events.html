@@ -340,7 +340,17 @@
             <p class="text-xs text-slate-400 mt-1">Bot sẽ random 1 thành viên (loại bot) có role này.</p>
           </div>
           <div>
-            <label class="field-label">Mẫu tin nhắn (dùng <code>{member}</code> để chèn tên người được chọn)</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="field-label !mb-0">Mẫu tin nhắn (dùng <code>{member}</code> để chèn tên người được chọn)</label>
+              <div class="flex items-center gap-2">
+                <button type="button" class="btn-refresh text-xs" @click="importDefaultTemplates('replace')" title="Ghi đè nội dung hiện tại bằng 20 câu mẫu">
+                  📥 Import 20 câu mẫu
+                </button>
+                <button type="button" class="btn-refresh text-xs" @click="importDefaultTemplates('append')" title="Nối 20 câu mẫu vào cuối nội dung hiện tại">
+                  ➕ Nối thêm
+                </button>
+              </div>
+            </div>
             <textarea class="input-field" rows="5" x-model="eventForm.recurrence_template"
                       placeholder="Hôm nay may mắn lại mỉm cười với {member} rồi 🎉&#10;Chúc mừng {member} trúng giải tuần này 🎁&#10;{member} là người may mắn nhất tuần! 🥳"></textarea>
             <p class="text-xs text-slate-400 mt-1">

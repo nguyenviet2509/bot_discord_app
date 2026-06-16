@@ -4,6 +4,31 @@
 const PAGE_LIMIT = 10
 const BUILTIN_TYPES = ['giveaway', 'raffle', 'trivia']
 
+// 20 cau template mau cho thong bao ket qua random pick (GoldenStars clan)
+// Dung {member} -> bot replace bang <@id> khi gui
+const DEFAULT_RESULT_TEMPLATES = [
+  '🍀 Hôm nay may mắn đã mỉm cười với {member}! Xin chúc mừng bạn là chủ nhân của phần quà tuần này!',
+  '⭐ Cuối tuần rồi, và người được xướng tên chính là {member}! Chúc mừng bạn nhé!',
+  '🎁 Chiếc vé may mắn tuần này thuộc về {member}! Chúc mừng và đừng quên nhận quà nào!',
+  '✨ Thần Tài vừa ghé qua Goldenstars và gọi tên {member}! Xin chúc mừng bạn!',
+  '🏆 Vượt qua tất cả những cái tên còn lại, {member} đã trở thành người may mắn của tuần này!',
+  '🎊 Chuông may mắn đã reo vang dành cho {member}! Chúc mừng bạn đã nhận được phần thưởng từ GoldenStars!',
+  '🌟 Chúc mừng {member}! Hôm nay vận may đã chọn bạn giữa hàng loạt thành viên của clan!',
+  '🎉 Kết quả đã có! Người may mắn nhất tuần này là {member}! Xin chúc mừng!',
+  '🍀 Một tràng pháo tay dành cho {member} – người chiến thắng phần quà Chủ Nhật tuần này!',
+  '🎁 GoldenStars xin gọi tên {member}! Chúc mừng bạn đã nhận được món quà đặc biệt tuần này!',
+  '⚔️ Giữa muôn vàn chiến binh Sao Vàng, vận may đã chọn {member}! Xin chúc mừng!',
+  '🌈 Thêm một tuần nữa, và người được nữ thần may mắn ưu ái là {member}!',
+  '⭐ Chúc mừng {member}! Bạn vừa mở khóa thành công danh hiệu "Chiến Binh May Mắn Tuần Này"!',
+  '🎊 Hộp quà bí mật tuần này đã tìm được chủ nhân: {member}! Xin chúc mừng!',
+  '🍀 Không phải ai khác, chính {member} là người được chọn hôm nay! Chúc mừng bạn!',
+  '🏅 Bánh xe may mắn đã dừng lại ở {member}! Xin chúc mừng người chiến thắng!',
+  '🎉 Một tuần mới, một niềm vui mới! Xin chúc mừng {member} đã nhận được phần quà từ clan!',
+  '✨ Chúc mừng {member}! Hôm nay bạn chính là ngôi sao sáng nhất của GoldenStars!',
+  '🎁 Kết quả random đã có! Người nhận quà tuần này là {member}. Chúc mừng bạn nhé!',
+  '🌟 May mắn không gõ cửa hai lần, nhưng hôm nay nó đã gõ đúng cửa của {member}! Xin chúc mừng!',
+]
+
 function getToken() { return localStorage.getItem('token') }
 
 async function api(method, path, body) {
@@ -367,6 +392,20 @@ function eventsTab() {
       } catch (err) {
         this.flash('Lỗi: ' + err.message, false)
       }
+    },
+
+    // Import 20 cau mau vao recurrence_template.
+    // mode: 'replace' = ghi de, 'append' = noi vao cuoi (giu cau cu).
+    importDefaultTemplates(mode = 'replace') {
+      const current = (this.eventForm.recurrence_template || '').trim()
+      if (mode === 'replace') {
+        if (current && !confirm('Ghi đè nội dung mẫu tin nhắn hiện tại bằng 20 câu mẫu?')) return
+        this.eventForm.recurrence_template = DEFAULT_RESULT_TEMPLATES.join('\n')
+      } else {
+        const merged = current ? current + '\n' + DEFAULT_RESULT_TEMPLATES.join('\n') : DEFAULT_RESULT_TEMPLATES.join('\n')
+        this.eventForm.recurrence_template = merged
+      }
+      this.flash(`Đã import ${DEFAULT_RESULT_TEMPLATES.length} câu mẫu`)
     },
 
     async uploadImage(event, targetField = 'announce_image_url') {
