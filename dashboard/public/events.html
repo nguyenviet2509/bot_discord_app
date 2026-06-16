@@ -290,12 +290,12 @@
             </div>
             <p class="text-xs text-slate-400 mt-1" x-show="eventForm.announce_recur_type === 'weekly'">Gửi đúng "Tin nhắn thông báo" + ảnh + embed như cấu hình phía trên.</p>
           </div>
-          <div class="flex items-center gap-2 pt-2" x-show="editingEvent">
+          <div class="flex items-center gap-2 pt-2 flex-wrap" x-show="editingEvent">
             <button @click="sendTest()" class="btn-refresh" :disabled="sending" type="button" style="color:#b45309; border-color:#fcd34d;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              Gửi thử
+              Gửi thử thông báo sự kiện
             </button>
-            <span class="text-xs text-slate-400">Gửi ngay với cấu hình hiện tại (cần lưu trước nếu vừa sửa)</span>
+            <span class="text-xs text-slate-400">Cần lưu trước nếu vừa sửa</span>
           </div>
         </div>
       </div>
@@ -347,6 +347,13 @@
           </div>
           <div class="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700">
             ℹ️ Gửi vào kênh đã chọn ở "Channel gửi" phía trên. Cần status event = Bật để worker kích hoạt.
+          </div>
+          <div class="flex items-center gap-2 pt-2 flex-wrap" x-show="editingEvent">
+            <button @click="sendTestResult()" class="btn-refresh" :disabled="sending" type="button" style="color:#b45309; border-color:#fcd34d;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Gửi thử thông báo kết quả
+            </button>
+            <span class="text-xs text-slate-400">Random ngay 1 member trong role + gửi template (cần lưu trước nếu vừa sửa)</span>
           </div>
         </div>
       </div>

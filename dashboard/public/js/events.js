@@ -427,6 +427,19 @@ function eventsTab() {
       }
     },
 
+    async sendTestResult() {
+      if (!this.editingEvent) return this.flash('Lưu event trước khi gửi thử', false)
+      this.sending = true
+      try {
+        const r = await api('POST', `/api/events/${this.editingEvent.id}/test-result`)
+        this.flash(`Đã random + gửi: ${r.picked?.name || ''}`)
+      } catch (err) {
+        this.flash('Lỗi gửi thử kết quả: ' + err.message, false)
+      } finally {
+        this.sending = false
+      }
+    },
+
     async deleteEvent(ev) {
       if (!confirm(`Xóa event "${ev.name}"?`)) return
       try {

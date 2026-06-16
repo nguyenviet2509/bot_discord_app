@@ -254,6 +254,43 @@ router.delete('/:id', (req, res) => {
   res.json({ success: true })
 })
 
+// Gui thu thong bao KET QUA (random pick member tu pool role + replace {member})
+// Khong cap nhat recurrence_last_run_at (de khong block lich auto sau nay).
+router.post('/:id/test-result', async (req, res) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'id khong hop le' })
+  const event = eventsDb.getEventById(id, GUILD_ID())
+  if (!event) return res.status(404).json({ error: 'Khong tim thay event' })
+  if (!event.recurrence_pool_role_id) return res.status(400).json({ error: 'Chua chon role pool' })
+  if (!event.recurrence_template) return res.status(400).json({ error: 'Chua nhap mau tin nhan {member}' })
+  if (!event.announce_channel_id) return res.status(400).json({ error: 'Chua chon channel gui' })
+
+  // Lay danh sach member trong role qua Discord REST API (dashboard process, khong co client cache)
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chua duoc cau hinh' })
+  try {
+    const guildId = GUILD_ID()
+    const r = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members?limit=1000`, {
+      headers: { Authorization: `Bot ${process.env.BOT_TOKEN}` },
+    })
+    if (!r.ok) {
+      const t = await r.text()
+      return res.status(502).json({ error: `Discord ${r.status}: ${t.slice(0, 200)}` })
+    }
+    const members = await r.json()
+    const candidates = members.filter(m => !m.user?.bot && Array.isArray(m.roles) && m.roles.includes(event.recurrence_pool_role_id))
+    if (candidates.length === 0) return res.status(400).json({ error: 'Khong co thanh vien nao trong role nay' })
+    const picked = candidates[Math.floor(Math.random() * candidates.length)]
+    const content = event.recurrence_template.replace(/\{member\}/g, `<@${picked.user.id}>`)
+    const shaped = { ...event, announce_content: content, announce_use_embed: 0, announce_image_url: null }
+    const result = await sendEventAnnouncement(shaped)
+    if (!result.ok) return res.status(result.status || 500).json({ error: result.error })
+    const name = picked.nick || picked.user.global_name || picked.user.username || picked.user.id
+    res.json({ success: true, picked: { id: picked.user.id, name } })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // Gui tin nhan thong bao ngay (test / manual)
 // Force: gui kech ca khi da gui truoc do. Khong update announce_sent_at neu force.
 router.post('/:id/send-now', async (req, res) => {
