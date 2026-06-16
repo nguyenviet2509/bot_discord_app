@@ -25,9 +25,24 @@ async function api(method, path, body) {
 }
 
 const ROUND_LABELS = {
-  group: 'Vòng bảng', r16: 'Vòng 1/8', qf: 'Tứ kết',
-  sf: 'Bán kết', '3rd': 'Tranh hạng 3', final: 'Chung kết',
+  group: 'Vòng bảng',
+  r32: 'Vòng 1/16',
+  r16: 'Vòng 1/8',
+  qf: 'Tứ kết',
+  sf: 'Bán kết',
+  '3rd': 'Tranh hạng 3',
+  final: 'Chung kết',
 }
+
+const ROUND_TABS = [
+  { key: 'group', label: 'Vòng bảng' },
+  { key: 'r32', label: 'Vòng 1/16' },
+  { key: 'r16', label: 'Vòng 1/8' },
+  { key: 'qf', label: 'Tứ kết' },
+  { key: 'sf', label: 'Bán kết' },
+  { key: '3rd', label: 'Tranh hạng 3' },
+  { key: 'final', label: 'Chung kết' },
+]
 
 function worldcupTab() {
   return {
@@ -40,21 +55,37 @@ function worldcupTab() {
     newMatch: { team1Id: '', team2Id: '', kickOffLocal: '', round: 'group', groupName: '' },
     editingTeam: null,
     editingMatch: null,
-    filterRound: '',
+    filterRound: 'group',
     filterDate: '',
+    roundTabs: ROUND_TABS,
+    allMatchesCount: {},
     page: 1,
     pageSize: 10,
     saveStatus: '',
     saveStatusClass: '',
 
-    // Loc theo ngay (YYYY-MM-DD) theo timezone trong config
+    // Filter: theo vong dau + theo ngay (timezone trong config)
     get filteredMatches() {
-      if (!this.filterDate) return this.matches
-      const tz = this.config.timezone || 'Asia/Saigon'
-      const fmt = new Intl.DateTimeFormat('en-CA', {
-        year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz,
-      })
-      return this.matches.filter(m => fmt.format(new Date(m.kick_off_at)) === this.filterDate)
+      let list = this.matches
+      if (this.filterRound) list = list.filter(m => m.round === this.filterRound)
+      if (this.filterDate) {
+        const tz = this.config.timezone || 'Asia/Saigon'
+        const fmt = new Intl.DateTimeFormat('en-CA', {
+          year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz,
+        })
+        list = list.filter(m => fmt.format(new Date(m.kick_off_at)) === this.filterDate)
+      }
+      return list
+    },
+    countByRound(round) {
+      return this.matches.filter(m => m.round === round).length
+    },
+    get activeRoundLabel() {
+      return ROUND_LABELS[this.filterRound] || this.filterRound
+    },
+    seedTooltip(round) {
+      if (round === 'group') return 'Import 72 trận vòng bảng WC 2026 (parse từ lịch phát sóng VTV)'
+      return 'Chưa có dữ liệu lịch ' + (ROUND_LABELS[round] || round) + ' — cần ảnh lịch để cập nhật'
     },
     get totalPages() {
       return Math.max(1, Math.ceil(this.filteredMatches.length / this.pageSize))
@@ -72,7 +103,7 @@ function worldcupTab() {
       try {
         const [teams, matches, channels, roles, config] = await Promise.all([
           api('GET', '/api/worldcup/teams'),
-          api('GET', `/api/worldcup/matches${this.filterRound ? '?round=' + this.filterRound : ''}`),
+          api('GET', '/api/worldcup/matches'),
           api('GET', '/api/discord/channels').catch(() => []),
           api('GET', '/api/discord/roles').catch(() => []),
           api('GET', '/api/worldcup/config'),
@@ -95,10 +126,16 @@ function worldcupTab() {
 
     async loadMatches() {
       try {
-        this.matches = await api('GET', `/api/worldcup/matches${this.filterRound ? '?round=' + this.filterRound : ''}`)
-        // Clamp page neu vuot qua so trang hien tai (vd sau khi xoa)
+        // Load tat ca matches, filter client-side (cho count per round + tab switching nhanh)
+        this.matches = await api('GET', '/api/worldcup/matches')
         if (this.page > this.totalPages) this.page = this.totalPages
       } catch (err) { this.flash(err.message, false) }
+    },
+
+    // Seed cho round hien tai. Voi 'group' chay seedWC2026; cac round khac stub voi thong bao.
+    async seedRound(round) {
+      if (round === 'group') return this.seedWC2026()
+      this.flash('Chưa có dữ liệu lịch ' + (ROUND_LABELS[round] || round) + ' — gửi ảnh để cập nhật', false)
     },
 
     // ===== Config =====

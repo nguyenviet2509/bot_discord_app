@@ -9,7 +9,8 @@ const wc = require('../../../shared/db-worldcup')
 // Mau theo vong dau (RGB int)
 const ROUND_COLORS = {
   group: 0x3b82f6,   // blue
-  r16: 0xef4444,     // red
+  r32: 0xf97316,     // orange (Vong 1/16)
+  r16: 0xef4444,     // red (Vong 1/8)
   qf: 0xef4444,
   sf: 0xef4444,
   '3rd': 0xef4444,
@@ -18,6 +19,7 @@ const ROUND_COLORS = {
 
 const ROUND_LABELS = {
   group: 'Vòng bảng',
+  r32: 'Vòng 1/16',
   r16: 'Vòng 1/8',
   qf: 'Tứ kết',
   sf: 'Bán kết',

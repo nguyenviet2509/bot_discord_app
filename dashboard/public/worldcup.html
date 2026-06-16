@@ -30,8 +30,12 @@
     .field-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
     .badge-group { background: #dbeafe; color: #1e40af; }
+    .badge-r32 { background: #ffedd5; color: #9a3412; }
     .badge-r16, .badge-qf, .badge-sf, .badge-3rd { background: #fee2e2; color: #b91c1c; }
     .badge-final { background: #fef9c3; color: #854d0e; }
+    .tab-btn { padding: 7px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #64748b; background: transparent; border: 1.5px solid transparent; cursor: pointer; white-space: nowrap; }
+    .tab-btn:hover { background: #f1f5f9; color: #475569; }
+    .tab-btn.active { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
     .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 999px; transition: .2s; }
@@ -152,13 +156,7 @@
   <!-- 3. THÊM TRẬN ĐẤU                               -->
   <!-- ============================================== -->
   <div class="card p-7">
-    <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
-      <h2 class="text-base font-bold text-slate-800">Thêm trận đấu</h2>
-      <button class="btn-refresh" @click="seedWC2026()"
-              :title="'Import lịch vòng bảng WC 2026 (parse từ lịch phát sóng VTV, best-effort)'">
-        ⚡ Tự động seed WC 2026
-      </button>
-    </div>
+    <h2 class="text-base font-bold text-slate-800">Thêm trận đấu</h2>
     <p class="text-sm text-slate-400 mb-5">Giờ kick-off nhập theo giờ local hiện tại của trình duyệt, sẽ convert sang UTC khi lưu.</p>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
       <div>
@@ -187,6 +185,7 @@
         <label class="field-label">Vòng đấu</label>
         <select class="input-field" x-model="newMatch.round">
           <option value="group">Vòng bảng</option>
+          <option value="r32">Vòng 1/16</option>
           <option value="r16">Vòng 1/8</option>
           <option value="qf">Tứ kết</option>
           <option value="sf">Bán kết</option>
@@ -208,26 +207,37 @@
   <!-- 4. DANH SÁCH TRẬN ĐẤU                          -->
   <!-- ============================================== -->
   <div class="card overflow-hidden">
-    <div class="p-7 pb-4 flex items-center justify-between flex-wrap gap-2">
-      <div>
-        <h2 class="text-base font-bold text-slate-800 mb-1">Danh sách trận đấu</h2>
-        <p class="text-sm text-slate-400">Sắp xếp theo giờ kick-off</p>
+    <div class="p-7 pb-2">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-800 mb-1">Lịch thi đấu</h2>
+          <p class="text-sm text-slate-400">Sắp xếp theo giờ kick-off</p>
+        </div>
       </div>
-      <div class="flex items-center gap-2 flex-wrap">
-        <input type="date" class="input-field" style="width:auto" x-model="filterDate" @change="page = 1"
-               :title="'Lọc theo ngày (theo timezone ' + (config.timezone || 'Asia/Saigon') + ')'" />
-        <button class="btn-refresh" style="padding: 8px 12px; font-size: 13px;"
-                x-show="filterDate" @click="filterDate = ''; page = 1"
-                title="Xoá filter ngày">✕</button>
-        <select class="input-field" style="width:auto" x-model="filterRound" @change="page = 1; loadMatches()">
-          <option value="">Tất cả vòng</option>
-          <option value="group">Vòng bảng</option>
-          <option value="r16">Vòng 1/8</option>
-          <option value="qf">Tứ kết</option>
-          <option value="sf">Bán kết</option>
-          <option value="3rd">Tranh hạng 3</option>
-          <option value="final">Chung kết</option>
-        </select>
+      <!-- Round tabs -->
+      <div class="flex flex-wrap gap-2 border-b border-slate-100 pb-3">
+        <template x-for="r in roundTabs" :key="r.key">
+          <button @click="filterRound = r.key; page = 1; loadMatches()"
+                  class="tab-btn"
+                  :class="filterRound === r.key ? 'active' : ''">
+            <span x-text="r.label"></span>
+            <span class="ml-1 text-xs opacity-60" x-text="'(' + countByRound(r.key) + ')'"></span>
+          </button>
+        </template>
+      </div>
+      <!-- Per-tab actions -->
+      <div class="flex items-center justify-between flex-wrap gap-2 mt-3">
+        <div class="flex items-center gap-2 flex-wrap">
+          <input type="date" class="input-field" style="width:auto" x-model="filterDate" @change="page = 1"
+                 :title="'Lọc theo ngày (theo timezone ' + (config.timezone || 'Asia/Saigon') + ')'" />
+          <button class="btn-refresh" style="padding: 8px 12px; font-size: 13px;"
+                  x-show="filterDate" @click="filterDate = ''; page = 1"
+                  title="Xoá filter ngày">✕</button>
+        </div>
+        <button class="btn-refresh" @click="seedRound(filterRound)"
+                :title="seedTooltip(filterRound)">
+          ⚡ Seed <span x-text="activeRoundLabel"></span>
+        </button>
       </div>
     </div>
     <div class="overflow-x-auto">
@@ -371,6 +381,7 @@
         <label class="field-label">Vòng đấu</label>
         <select class="input-field" x-model="editingMatch.round">
           <option value="group">Vòng bảng</option>
+          <option value="r32">Vòng 1/16</option>
           <option value="r16">Vòng 1/8</option>
           <option value="qf">Tứ kết</option>
           <option value="sf">Bán kết</option>

@@ -4,7 +4,7 @@ const wc = require('../../shared/db-worldcup')
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
 
-const VALID_ROUNDS = ['group', 'r16', 'qf', 'sf', '3rd', 'final']
+const VALID_ROUNDS = ['group', 'r32', 'r16', 'qf', 'sf', '3rd', 'final']
 const VALID_STATUSES = ['scheduled', 'finished', 'cancelled']
 
 // ============================================================
