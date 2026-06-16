@@ -4,8 +4,53 @@ const db = require('../../shared/db')
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
 
+// Cache guild members theo userId -> displayName (TTL 5 phut)
+const memberNameCache = { map: null, expiresAt: 0 }
+
+async function getMemberNameMap(guildId) {
+  const now = Date.now()
+  if (memberNameCache.map && memberNameCache.expiresAt > now) return memberNameCache.map
+  if (!process.env.BOT_TOKEN) return new Map()
+  try {
+    const map = new Map()
+    let after = '0'
+    for (let i = 0; i < 10; i++) {
+      const r = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`, {
+        headers: { Authorization: `Bot ${process.env.BOT_TOKEN}` },
+      })
+      if (!r.ok) break
+      const arr = await r.json()
+      if (!Array.isArray(arr) || arr.length === 0) break
+      for (const m of arr) {
+        if (!m.user?.id) continue
+        const name = m.nick || m.user.global_name || m.user.username
+        if (name) map.set(m.user.id, name)
+      }
+      if (arr.length < 1000) break
+      after = arr[arr.length - 1].user.id
+    }
+    memberNameCache.map = map
+    memberNameCache.expiresAt = now + 5 * 60 * 1000
+    return map
+  } catch (e) {
+    return memberNameCache.map || new Map()
+  }
+}
+
+function enrichWithNames(rows, nameMap) {
+  if (!rows || !nameMap || nameMap.size === 0) return rows
+  return rows.map(r => {
+    const out = { ...r }
+    const fresh = nameMap.get(r.user_id)
+    if (fresh) out.user_tag = fresh
+    const modFresh = r.moderator_id ? nameMap.get(r.moderator_id) : null
+    if (modFresh) out.moderator_tag = modFresh
+    return out
+  })
+}
+
 // List all moderation actions (filterable)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { action_type, search, page = '1', limit = '50' } = req.query
   const limitNum = Math.min(Number(limit) || 50, 200)
   const pageNum = Math.max(Number(page) || 1, 1)
@@ -15,7 +60,12 @@ router.get('/', (req, res) => {
   const actions = db.getModActions(guildId, { action_type, search, limit: limitNum, offset })
   const total = db.countModActions(guildId, { action_type, search })
   const activeBans = db.getActiveBans(guildId)
-  res.json({ actions, total, page: pageNum, limit: limitNum, active_bans: activeBans })
+  const nameMap = await getMemberNameMap(guildId)
+  res.json({
+    actions: enrichWithNames(actions, nameMap),
+    total, page: pageNum, limit: limitNum,
+    active_bans: enrichWithNames(activeBans, nameMap),
+  })
 })
 
 // Unban from dashboard
