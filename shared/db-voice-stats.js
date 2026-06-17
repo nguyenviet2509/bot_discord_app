@@ -128,61 +128,61 @@ function setVoiceStatsEnabled(guildId, enabled) {
 
 // Tra ve leaderboard top N user theo tong duration trong [fromTs, toTs).
 // Capping duration o MIN(duration, 86400) chong AFK 24h inflate.
+// Session dang active (left_at IS NULL) duoc tinh bang (now - joined_at) → real-time.
 function getLeaderboard(guildId, fromTs, toTs, limit = 10) {
+  const now = Math.floor(Date.now() / 1000)
   return db()
     .prepare(`
       SELECT
         user_id,
-        SUM(MIN(COALESCE(duration_sec, 0), ?)) AS total_sec,
+        SUM(MIN(COALESCE(duration_sec, ? - joined_at), ?)) AS total_sec,
         COUNT(*) AS join_count
       FROM voice_sessions
       WHERE guild_id = ?
-        AND left_at IS NOT NULL
         AND joined_at >= ?
         AND joined_at < ?
       GROUP BY user_id
       ORDER BY total_sec DESC
       LIMIT ?
     `)
-    .all(MAX_SESSION_SEC, guildId, fromTs, toTs, limit)
+    .all(now, MAX_SESSION_SEC, guildId, fromTs, toTs, limit)
 }
 
 // Stats ca nhan 1 user trong range. Tra ve null neu khong co data.
+// Active session tinh nhu (now - joined_at) de hien thi real-time.
 function getUserStats(guildId, userId, fromTs, toTs) {
+  const now = Math.floor(Date.now() / 1000)
   const row = db()
     .prepare(`
       SELECT
-        SUM(MIN(COALESCE(duration_sec, 0), ?)) AS total_sec,
+        SUM(MIN(COALESCE(duration_sec, ? - joined_at), ?)) AS total_sec,
         COUNT(*) AS join_count
       FROM voice_sessions
       WHERE guild_id = ?
         AND user_id = ?
-        AND left_at IS NOT NULL
         AND joined_at >= ?
         AND joined_at < ?
     `)
-    .get(MAX_SESSION_SEC, guildId, userId, fromTs, toTs)
+    .get(now, MAX_SESSION_SEC, guildId, userId, fromTs, toTs)
   if (!row || !row.join_count) return null
 
-  // Rank: dem co bao nhieu user co total_sec > user nay
   const rankRow = db()
     .prepare(`
       SELECT COUNT(*) AS higher FROM (
-        SELECT user_id, SUM(MIN(COALESCE(duration_sec, 0), ?)) AS total_sec
+        SELECT user_id, SUM(MIN(COALESCE(duration_sec, ? - joined_at), ?)) AS total_sec
         FROM voice_sessions
         WHERE guild_id = ?
-          AND left_at IS NOT NULL
           AND joined_at >= ?
           AND joined_at < ?
         GROUP BY user_id
         HAVING total_sec > ?
       )
     `)
-    .get(MAX_SESSION_SEC, guildId, fromTs, toTs, row.total_sec || 0)
+    .get(now, MAX_SESSION_SEC, guildId, fromTs, toTs, row.total_sec || 0)
   const totalRow = db()
     .prepare(`
       SELECT COUNT(DISTINCT user_id) AS total FROM voice_sessions
-      WHERE guild_id = ? AND left_at IS NOT NULL AND joined_at >= ? AND joined_at < ?
+      WHERE guild_id = ? AND joined_at >= ? AND joined_at < ?
     `)
     .get(guildId, fromTs, toTs)
 
@@ -196,22 +196,22 @@ function getUserStats(guildId, userId, fromTs, toTs) {
 
 // Channel ua thich (channel co tong duration cao nhat) cua 1 user trong range.
 function getTopChannelForUser(guildId, userId, fromTs, toTs) {
+  const now = Math.floor(Date.now() / 1000)
   return db()
     .prepare(`
       SELECT
         channel_id,
-        SUM(MIN(COALESCE(duration_sec, 0), ?)) AS total_sec
+        SUM(MIN(COALESCE(duration_sec, ? - joined_at), ?)) AS total_sec
       FROM voice_sessions
       WHERE guild_id = ?
         AND user_id = ?
-        AND left_at IS NOT NULL
         AND joined_at >= ?
         AND joined_at < ?
       GROUP BY channel_id
       ORDER BY total_sec DESC
       LIMIT 1
     `)
-    .get(MAX_SESSION_SEC, guildId, userId, fromTs, toTs)
+    .get(now, MAX_SESSION_SEC, guildId, userId, fromTs, toTs)
 }
 
 module.exports = {
