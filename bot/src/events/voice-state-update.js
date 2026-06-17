@@ -1,4 +1,5 @@
 const db = require('../../../shared/db')
+const voiceStatsDb = require('../../../shared/db-voice-stats')
 
 module.exports = {
   name: 'voiceStateUpdate',
@@ -13,6 +14,28 @@ module.exports = {
     if (!guild) return
 
     const cfg = db.getVoiceLogSettings(guild.id)
+    const watched = cfg.watched_channels || []
+
+    // === Voice Statistics tracking (chay doc lap voi notify) ===
+    if (voiceStatsDb.isVoiceStatsEnabled(guild.id) && watched.length > 0) {
+      const now = Math.floor(Date.now() / 1000)
+      const wasWatched = !!(oldCh && watched.includes(oldCh))
+      const isWatched = !!(newCh && watched.includes(newCh))
+      try {
+        if (wasWatched && !isWatched) {
+          voiceStatsDb.closeActiveSessions(guild.id, member.id, now)
+        } else if (!wasWatched && isWatched) {
+          voiceStatsDb.openSession(guild.id, member.id, newCh, now)
+        } else if (wasWatched && isWatched) {
+          voiceStatsDb.closeActiveSessions(guild.id, member.id, now)
+          voiceStatsDb.openSession(guild.id, member.id, newCh, now)
+        }
+      } catch (err) {
+        console.error('[VoiceStats] tracking error:', err.message)
+      }
+    }
+
+    // === Voice notify (logic cu) ===
     if (!cfg.enabled || !cfg.notify_channel_id) return
 
     const notifyChannel = guild.channels.cache.get(cfg.notify_channel_id)
@@ -21,8 +44,6 @@ module.exports = {
       console.warn(`[VoiceLog] notify channel ${cfg.notify_channel_id} not found`)
       return
     }
-
-    const watched = cfg.watched_channels || []
 
     if (oldCh && watched.includes(oldCh)) {
       const ch = oldState.channel || await guild.channels.fetch(oldCh).catch(() => null)

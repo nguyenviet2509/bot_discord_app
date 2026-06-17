@@ -383,6 +383,9 @@ function initDb() {
   // Schema cho feature Worldcup match notifications (tach file rieng)
   require('./db-worldcup').initWorldcupSchema(database)
 
+  // Schema cho feature Voice Statistics (tach file rieng)
+  require('./db-voice-stats').initVoiceStatsSchema(database)
+
   return database
 }
 

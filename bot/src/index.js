@@ -76,6 +76,33 @@ client.once('ready', async () => {
   console.log(`[Bot] ✅ Ready! Logged in as ${client.user.tag}`)
   await registerCommands()
 
+  // Voice Statistics: dong orphan session leftover tu lan chay truoc, scan current state
+  try {
+    const voiceStatsDb = require('../../shared/db-voice-stats')
+    const { getVoiceLogSettings } = require('../../shared/db')
+    const orphanResult = voiceStatsDb.closeAllOrphans()
+    if (orphanResult.changes > 0) {
+      console.log(`[VoiceStats] Closed ${orphanResult.changes} orphan session(s) from previous run`)
+    }
+    const now = Math.floor(Date.now() / 1000)
+    let opened = 0
+    for (const [guildId, guild] of client.guilds.cache) {
+      if (!voiceStatsDb.isVoiceStatsEnabled(guildId)) continue
+      const cfg = getVoiceLogSettings(guildId)
+      const watched = cfg.watched_channels || []
+      if (watched.length === 0) continue
+      for (const [, vs] of guild.voiceStates.cache) {
+        if (!vs.channelId || !watched.includes(vs.channelId)) continue
+        if (vs.member?.user?.bot) continue
+        voiceStatsDb.openSession(guildId, vs.id, vs.channelId, now)
+        opened++
+      }
+    }
+    if (opened > 0) console.log(`[VoiceStats] Opened ${opened} session(s) for users currently in watched voice`)
+  } catch (err) {
+    console.error('[VoiceStats] startup init error:', err.message)
+  }
+
   // Mini-game ROLL: sweep zombie session sau khi bot restart (await truoc khi listen interaction)
   try {
     const rollLifecycle = require('./modules/mini-game/services/roll-lifecycle')
