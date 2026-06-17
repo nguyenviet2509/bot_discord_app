@@ -2592,8 +2592,8 @@
               </div>
             </template>
             <div>
-              <label class="text-xs font-semibold text-slate-700 block mb-1.5">Số lượng top</label>
-              <select x-model.number="limit" @change="load()" class="input-field">
+              <label class="text-xs font-semibold text-slate-700 block mb-1.5">Số dòng / trang</label>
+              <select x-model.number="pageSize" @change="onPageSizeChange()" class="input-field">
                 <option :value="10">10</option>
                 <option :value="20">20</option>
                 <option :value="50">50</option>
@@ -2631,13 +2631,13 @@
                 <template x-if="!loading && leaderboard.length === 0">
                   <tr><td colspan="5" class="text-center text-slate-400 py-10 text-sm">Chưa có dữ liệu trong khoảng này</td></tr>
                 </template>
-                <template x-for="(row, i) in leaderboard" :key="row.user_id">
+                <template x-for="(row, i) in paged" :key="row.user_id">
                   <tr class="border-t border-slate-100 hover:bg-slate-50">
                     <td class="px-4 py-3 text-sm font-semibold">
-                      <span x-show="i === 0">🥇</span>
-                      <span x-show="i === 1">🥈</span>
-                      <span x-show="i === 2">🥉</span>
-                      <span x-show="i > 2" x-text="i + 1" class="text-slate-500"></span>
+                      <template x-if="displayIndex(i) === 1"><span>🥇</span></template>
+                      <template x-if="displayIndex(i) === 2"><span>🥈</span></template>
+                      <template x-if="displayIndex(i) === 3"><span>🥉</span></template>
+                      <template x-if="displayIndex(i) > 3"><span class="text-slate-500" x-text="displayIndex(i)"></span></template>
                     </td>
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-2.5">
@@ -2659,6 +2659,28 @@
                 </template>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination nav -->
+          <div x-show="leaderboard.length > pageSize" class="px-4 md:px-6 py-3 border-t border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="text-xs text-slate-500">
+              <span x-text="`Trang ${page} / ${totalPages}`"></span>
+              <span class="mx-1">•</span>
+              <span x-text="`Hiển thị ${(page-1)*pageSize + 1}-${Math.min(page*pageSize, leaderboard.length)} / ${leaderboard.length}`"></span>
+            </div>
+            <div class="flex items-center gap-1 flex-wrap">
+              <button @click="prevPage()" :disabled="page === 1"
+                class="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">‹ Trước</button>
+              <template x-for="n in pageNumbers" :key="n + '-' + page">
+                <button @click="typeof n === 'number' && goPage(n)"
+                  :disabled="n === '...'"
+                  :class="n === page ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
+                  class="px-3 py-1.5 text-xs rounded-lg border min-w-[36px]"
+                  x-text="n"></button>
+              </template>
+              <button @click="nextPage()" :disabled="page === totalPages"
+                class="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">Sau ›</button>
+            </div>
           </div>
         </div>
       </div>

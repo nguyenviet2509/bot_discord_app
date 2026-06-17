@@ -65,9 +65,9 @@ router.get('/', (req, res) => {
   if (!RANGE_PRESETS.has(range)) {
     return res.status(400).json({ error: `range phải là một trong: ${[...RANGE_PRESETS].join(', ')}` })
   }
-  let limit = parseInt(req.query.limit, 10) || 20
+  let limit = parseInt(req.query.limit, 10) || 500
   if (limit < 5) limit = 5
-  if (limit > 100) limit = 100
+  if (limit > 1000) limit = 1000
 
   const { from, to, label } = resolveRange(range, req.query.from, req.query.to)
   if (from >= to) return res.status(400).json({ error: 'Khoảng thời gian không hợp lệ (from >= to)' })
