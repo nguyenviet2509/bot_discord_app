@@ -63,13 +63,14 @@ router.get('/', async (req, res) => {
 
     // Reconcile: xoa user "ghost" (con trong DB nhung khong con trong Discord guild)
     // Bao ve khi bot offline luc member roi -> event guildMemberRemove bi miss.
+    // KHONG log 'leave' event vi reconcile khong biet user roi tu luc nao -> tranh
+    // tao spike gia trong chart member growth (vd: -15 trong ngay reconcile chay).
     const ghosts = users.filter((u) => !liveIds.has(u.id))
     if (ghosts.length > 0) {
       for (const ghost of ghosts) {
         try {
           db.deleteUser(ghost.id, guildId)
           voiceStatsDb.deleteVoiceStats(guildId, ghost.id)
-          db.logMemberEvent(guildId, ghost.id, 'leave')
         } catch (err) {
           console.error('[members reconcile] cleanup fail:', ghost.id, err.message)
         }

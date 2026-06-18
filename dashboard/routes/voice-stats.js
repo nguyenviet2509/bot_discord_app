@@ -52,7 +52,7 @@ async function reconcileGhosts(guildId) {
     try {
       voiceStatsDb.deleteVoiceStats(guildId, r.user_id)
       sharedDb.deleteUser(r.user_id, guildId)
-      sharedDb.logMemberEvent(guildId, r.user_id, 'leave')
+      // KHONG log 'leave' event - xem comment trong dashboard/routes/members.js
       removed++
     } catch (err) {
       console.error('[voice-stats reconcile] cleanup fail:', r.user_id, err.message)
