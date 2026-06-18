@@ -1,6 +1,7 @@
 const https = require('https')
 const express = require('express')
 const db = require('../../shared/db')
+const voiceStatsDb = require('../../shared/db-voice-stats')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
@@ -29,14 +30,16 @@ function fetchDiscordMembers(guildId) {
 
 router.get('/', async (req, res) => {
   const guildId = GUILD_ID()
-  const users = db.getAllUsers(guildId)
+  let users = db.getAllUsers(guildId)
 
   // Always refresh username + nickname from Discord API for latest display names
   const members = await fetchDiscordMembers(guildId)
-  if (Array.isArray(members)) {
+  if (Array.isArray(members) && members.length > 0) {
+    const liveIds = new Set()
     for (const member of members) {
       const discordUser = member.user
       if (!discordUser) continue
+      liveIds.add(discordUser.id)
       const dbUser = users.find((u) => u.id === discordUser.id)
       if (!dbUser) continue
       // Update in-memory for response
@@ -56,6 +59,23 @@ router.get('/', async (req, res) => {
         nickname: member.nick || null,
         global_name: discordUser.global_name || null,
       })
+    }
+
+    // Reconcile: xoa user "ghost" (con trong DB nhung khong con trong Discord guild)
+    // Bao ve khi bot offline luc member roi -> event guildMemberRemove bi miss.
+    const ghosts = users.filter((u) => !liveIds.has(u.id))
+    if (ghosts.length > 0) {
+      for (const ghost of ghosts) {
+        try {
+          db.deleteUser(ghost.id, guildId)
+          voiceStatsDb.deleteVoiceStats(guildId, ghost.id)
+          db.logMemberEvent(guildId, ghost.id, 'leave')
+        } catch (err) {
+          console.error('[members reconcile] cleanup fail:', ghost.id, err.message)
+        }
+      }
+      console.log(`[members reconcile] removed ${ghosts.length} ghost users`)
+      users = users.filter((u) => liveIds.has(u.id))
     }
   }
 

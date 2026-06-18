@@ -214,6 +214,13 @@ function getTopChannelForUser(guildId, userId, fromTs, toTs) {
     .get(now, MAX_SESSION_SEC, guildId, userId, fromTs, toTs)
 }
 
+// Xoa toan bo voice_sessions cua 1 user trong 1 guild (dung khi member roi server).
+function deleteVoiceStats(guildId, userId) {
+  return db()
+    .prepare('DELETE FROM voice_sessions WHERE guild_id = ? AND user_id = ?')
+    .run(guildId, userId)
+}
+
 module.exports = {
   initVoiceStatsSchema,
   openSession,
@@ -225,5 +232,6 @@ module.exports = {
   getLeaderboard,
   getUserStats,
   getTopChannelForUser,
+  deleteVoiceStats,
   MAX_SESSION_SEC,
 }

@@ -1,9 +1,66 @@
+const https = require('https')
 const express = require('express')
 const voiceStatsDb = require('../../shared/db-voice-stats')
 const sharedDb = require('../../shared/db')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
+
+// Fetch Discord members de cross-check user nao da roi server.
+// Duplicate logic voi routes/members.js (KISS - chi 2 cho, khong dang extract module).
+function fetchDiscordMembers(guildId) {
+  return new Promise((resolve) => {
+    const req = https.request(
+      {
+        hostname: 'discord.com',
+        path: `/api/v10/guilds/${guildId}/members?limit=1000`,
+        method: 'GET',
+        headers: { Authorization: `Bot ${process.env.BOT_TOKEN}` },
+      },
+      (res) => {
+        let data = ''
+        res.on('data', (chunk) => { data += chunk })
+        res.on('end', () => {
+          try { resolve(JSON.parse(data)) } catch (_) { resolve([]) }
+        })
+      }
+    )
+    req.on('error', () => resolve([]))
+    req.end()
+  })
+}
+
+// Reconcile: xoa user "ghost" (con voice_sessions / users record nhung khong con trong guild).
+// Goi truoc khi build leaderboard de loai bo ghost ngay tu query.
+async function reconcileGhosts(guildId) {
+  const members = await fetchDiscordMembers(guildId)
+  if (!Array.isArray(members) || members.length === 0) return 0
+
+  const liveIds = new Set()
+  for (const m of members) {
+    if (m.user && m.user.id) liveIds.add(m.user.id)
+  }
+
+  // Lay tat ca user_id co trong voice_sessions
+  const rows = sharedDb.getDb()
+    .prepare('SELECT DISTINCT user_id FROM voice_sessions WHERE guild_id = ?')
+    .all(guildId)
+
+  let removed = 0
+  for (const r of rows) {
+    if (liveIds.has(r.user_id)) continue
+    try {
+      voiceStatsDb.deleteVoiceStats(guildId, r.user_id)
+      sharedDb.deleteUser(r.user_id, guildId)
+      sharedDb.logMemberEvent(guildId, r.user_id, 'leave')
+      removed++
+    } catch (err) {
+      console.error('[voice-stats reconcile] cleanup fail:', r.user_id, err.message)
+    }
+  }
+  if (removed > 0) console.log(`[voice-stats reconcile] removed ${removed} ghost users`)
+  return removed
+}
 
 const RANGE_PRESETS = new Set(['today', '7d', '30d', 'all', 'custom'])
 const SAIGON_OFFSET_SEC = 7 * 3600
@@ -59,7 +116,7 @@ function lookupChannelName(channelId) {
 }
 
 // GET /api/voice-stats?range=7d&from=&to=&limit=20
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const guildId = GUILD_ID()
   const range = String(req.query.range || '7d').toLowerCase()
   if (!RANGE_PRESETS.has(range)) {
@@ -71,6 +128,9 @@ router.get('/', (req, res) => {
 
   const { from, to, label } = resolveRange(range, req.query.from, req.query.to)
   if (from >= to) return res.status(400).json({ error: 'Khoảng thời gian không hợp lệ (from >= to)' })
+
+  // Dọn ghost members truoc khi query leaderboard
+  await reconcileGhosts(guildId)
 
   const rows = voiceStatsDb.getLeaderboard(guildId, from, to, limit)
   const leaderboard = rows.map(r => {
