@@ -85,6 +85,7 @@ function worldcupTab() {
     },
     seedTooltip(round) {
       if (round === 'group') return 'Import 72 trận vòng bảng WC 2026 (parse từ lịch phát sóng VTV)'
+      if (round === 'r32') return 'Import 16 trận Vòng 1/16 WC 2026 (parse từ lịch phát sóng VTV)'
       return 'Chưa có dữ liệu lịch ' + (ROUND_LABELS[round] || round) + ' — cần ảnh lịch để cập nhật'
     },
     get totalPages() {
@@ -132,10 +133,22 @@ function worldcupTab() {
       } catch (err) { this.flash(err.message, false) }
     },
 
-    // Seed cho round hien tai. Voi 'group' chay seedWC2026; cac round khac stub voi thong bao.
+    // Seed cho round hien tai. Group + r32 da co data; cac round khac stub.
     async seedRound(round) {
       if (round === 'group') return this.seedWC2026()
+      if (round === 'r32') return this.seedRoundFromImage('r32', 'Vòng 1/16', 16)
       this.flash('Chưa có dữ liệu lịch ' + (ROUND_LABELS[round] || round) + ' — gửi ảnh để cập nhật', false)
+    },
+
+    async seedRoundFromImage(round, label, total) {
+      if (!confirm(`Nhập lịch ${label} WC 2026 (${total} trận, parse từ lịch phát sóng VTV).\n\nTrận đã tồn tại cùng giờ + cùng cặp đội sẽ tự skip.\n\nTiếp tục?`)) return
+      try {
+        const result = await api('POST', '/api/worldcup/seed-wc2026', { round })
+        let msg = `Đã import ${result.inserted}/${result.total} trận (skip ${result.skipped} trùng)`
+        if (result.missingCodes?.length) msg += `, thiếu code: ${result.missingCodes.join(',')}`
+        this.flash(msg, true)
+        await this.loadMatches()
+      } catch (err) { this.flash(err.message, false) }
     },
 
     // ===== Config =====

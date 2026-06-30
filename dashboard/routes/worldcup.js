@@ -208,7 +208,13 @@ router.post('/test-send', async (req, res) => {
 router.post('/seed-wc2026', (req, res) => {
   try {
     const { buildRows } = require('../../tools/seed-wc2026-group-stage')
-    const rows = buildRows()
+    const filterRound = req.body && req.body.round
+    let rows = buildRows()
+    if (filterRound) {
+      if (!VALID_ROUNDS.includes(filterRound)) return res.status(400).json({ error: `round invalid` })
+      rows = rows.filter(r => r.round === filterRound)
+      if (rows.length === 0) return res.status(404).json({ error: `Chua co du lieu seed cho round ${filterRound}` })
+    }
     const codeToId = new Map(wc.listTeams().map(t => [t.code, t.id]))
     const missing = new Set()
     const bulk = []
