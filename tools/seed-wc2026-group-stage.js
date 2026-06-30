@@ -103,6 +103,26 @@ const SCHEDULE = {
     ['06-28', '09:00', 'J', 'ALG', 'AUT'],
     ['06-28', '09:00', 'J', 'JOR', 'ARG'],
   ],
+  // Vong 1/16 (r32): 16 tran knockout, 32 doi -> 16 doi
+  // Parse tu anh lich phat song VTV (29/06 - 04/07)
+  round32: [
+    ['06-29', '02:00', null, 'RSA', 'CAN'], // Tran 73
+    ['06-30', '00:00', null, 'BRA', 'JPN'], // Tran 76
+    ['06-30', '03:30', null, 'GER', 'PAR'], // Tran 74
+    ['06-30', '08:00', null, 'NED', 'MAR'], // Tran 75
+    ['07-01', '00:00', null, 'CIV', 'NOR'], // Tran 78
+    ['07-01', '04:00', null, 'FRA', 'SWE'], // Tran 77
+    ['07-01', '08:00', null, 'MEX', 'ECU'], // Tran 79
+    ['07-01', '23:00', null, 'ENG', 'CGO'], // Tran 80
+    ['07-02', '03:00', null, 'BEL', 'SEN'], // Tran 82
+    ['07-02', '07:00', null, 'USA', 'BIH'], // Tran 81
+    ['07-03', '02:00', null, 'ESP', 'AUT'], // Tran 84
+    ['07-03', '06:00', null, 'POR', 'CRO'], // Tran 83
+    ['07-03', '10:00', null, 'SUI', 'ALG'], // Tran 85
+    ['07-04', '01:00', null, 'AUS', 'EGY'], // Tran 88
+    ['07-04', '05:00', null, 'ARG', 'CPV'], // Tran 86
+    ['07-04', '08:30', null, 'COL', 'GHA'], // Tran 87
+  ],
 }
 
 // Parse "MM-DD" + "HH:mm" trong timezone Asia/Saigon -> unix ms UTC
@@ -114,7 +134,12 @@ function toUtcMs(monthDay, hhmm) {
 }
 
 function buildRows() {
-  const rounds = [['group', SCHEDULE.round1], ['group', SCHEDULE.round2], ['group', SCHEDULE.round3]]
+  const rounds = [
+    ['group', SCHEDULE.round1],
+    ['group', SCHEDULE.round2],
+    ['group', SCHEDULE.round3],
+    ['r32', SCHEDULE.round32],
+  ]
   const rows = []
   for (const [round, list] of rounds) {
     for (const [day, time, group, code1, code2] of list) {
