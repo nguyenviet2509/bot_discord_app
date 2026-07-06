@@ -123,6 +123,18 @@ const SCHEDULE = {
     ['07-04', '05:00', null, 'ARG', 'CPV'], // Tran 86
     ['07-04', '08:30', null, 'COL', 'GHA'], // Tran 87
   ],
+  // Vong 1/8 (r16): 8 tran knockout, 16 doi -> 8 doi
+  // Parse tu anh lich phat song VTV (06/07 - 08/07)
+  // LUU Y: anh chi show 6/8 tran (91-96). Tran 89, 90 chua ro thoi gian
+  // -> user can bo sung sau qua dashboard hoac cap nhat file nay
+  round16: [
+    ['07-06', '03:00', null, 'BRA', 'NOR'], // Tran 91
+    ['07-06', '08:00', null, 'MEX', 'ENG'], // Tran 92
+    ['07-07', '02:00', null, 'POR', 'ESP'], // Tran 93
+    ['07-07', '07:00', null, 'USA', 'BEL'], // Tran 94
+    ['07-07', '23:00', null, 'ARG', 'EGY'], // Tran 95
+    ['07-08', '03:00', null, 'SUI', 'COL'], // Tran 96
+  ],
 }
 
 // Parse "MM-DD" + "HH:mm" trong timezone Asia/Saigon -> unix ms UTC
@@ -139,6 +151,7 @@ function buildRows() {
     ['group', SCHEDULE.round2],
     ['group', SCHEDULE.round3],
     ['r32', SCHEDULE.round32],
+    ['r16', SCHEDULE.round16],
   ]
   const rows = []
   for (const [round, list] of rounds) {
