@@ -87,6 +87,7 @@ function worldcupTab() {
       if (round === 'group') return 'Import 72 trận vòng bảng WC 2026 (parse từ lịch phát sóng VTV)'
       if (round === 'r32') return 'Import 16 trận Vòng 1/16 WC 2026 (parse từ lịch phát sóng VTV)'
       if (round === 'r16') return 'Import 6 trận Vòng 1/8 WC 2026 (parse từ lịch phát sóng VTV — thiếu 2 trận 89/90)'
+      if (round === 'qf') return 'Import 4 trận Vòng tứ kết WC 2026 (parse từ lịch phát sóng VTV)'
       return 'Chưa có dữ liệu lịch ' + (ROUND_LABELS[round] || round) + ' — cần ảnh lịch để cập nhật'
     },
     get totalPages() {
@@ -139,6 +140,7 @@ function worldcupTab() {
       if (round === 'group') return this.seedWC2026()
       if (round === 'r32') return this.seedRoundFromImage('r32', 'Vòng 1/16', 16)
       if (round === 'r16') return this.seedRoundFromImage('r16', 'Vòng 1/8', 6)
+      if (round === 'qf') return this.seedRoundFromImage('qf', 'Vòng tứ kết', 4)
       this.flash('Chưa có dữ liệu lịch ' + (ROUND_LABELS[round] || round) + ' — gửi ảnh để cập nhật', false)
     },
 
