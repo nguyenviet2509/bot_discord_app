@@ -36,10 +36,23 @@ router.get('/top-channels', (req, res) => {
   res.json(db.getTopChannels(GUILD_ID(), limit))
 })
 
-router.get('/inactive', (req, res) => {
+// GET /analytics/inactive
+// ?with_filter=1 → tra ve { total, days, members } va ap role filter tu config
+// Mac dinh → tra ve array (backward compat)
+router.get('/inactive', async (req, res) => {
   const days = Math.min(Math.max(Number(req.query.days) || 7, 1), 365)
   const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500)
-  res.json(db.getInactiveMembers(GUILD_ID(), days, limit))
+  const guildId = GUILD_ID()
+  const withFilter = req.query.with_filter === '1' || req.query.with_filter === 'true'
+  if (!withFilter) {
+    return res.json(db.getInactiveMembers(guildId, days, limit))
+  }
+  try {
+    const members = await getFilteredInactive(guildId, days, limit)
+    res.json({ days, total: members.length, members })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // GET: tra ve list silent member tu DB (instant)
@@ -580,6 +593,357 @@ router.put('/silent-filter-config', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
+})
+
+// ============================================================
+// Inactive members: role filter + notify + kick (mirror silent)
+// ============================================================
+
+// Cache map user_id -> roles[] tu Discord API (60s TTL)
+// Giu ngoai closure de share giua cac request; tranh spam Discord
+let inactiveMembersRolesCache = { at: 0, map: null }
+async function getGuildMemberRolesMap(guildId) {
+  if (Date.now() - inactiveMembersRolesCache.at < 60_000 && inactiveMembersRolesCache.map) {
+    return inactiveMembersRolesCache.map
+  }
+  if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN chưa được cấu hình')
+  const map = new Map()
+  let after = '0'
+  for (let i = 0; i < 10; i++) {
+    const r = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`, {
+      headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
+    })
+    if (!r.ok) throw new Error(`Discord API ${r.status}: ${(await r.text()).slice(0, 200)}`)
+    const batch = await r.json()
+    if (!batch.length) break
+    for (const m of batch) {
+      if (m.user && !m.user.bot) {
+        map.set(m.user.id, { roles: m.roles || [], nickname: m.nick || null, joined_at: m.joined_at || null })
+      }
+    }
+    after = batch[batch.length - 1].user.id
+    if (batch.length < 1000) break
+  }
+  inactiveMembersRolesCache = { at: Date.now(), map }
+  return map
+}
+
+// Lay list inactive tu DB roi ap role filter va loai user da roi server
+async function getFilteredInactive(guildId, days, limit) {
+  const rows = db.getInactiveMembers(guildId, days, Math.max(limit * 2, 500))
+  const { include_role_id, exclude_role_id } = db.getInactiveFilterConfig(guildId)
+
+  // Chi fetch roles khi thuc su co filter role - dat tien
+  let rolesMap = null
+  if (include_role_id || exclude_role_id) {
+    try {
+      rolesMap = await getGuildMemberRolesMap(guildId)
+    } catch (_) {
+      rolesMap = null
+    }
+  }
+
+  const filtered = []
+  for (const u of rows) {
+    if (rolesMap) {
+      if (!rolesMap.has(u.id)) continue // da roi server
+      const roles = rolesMap.get(u.id).roles || []
+      if (include_role_id && !roles.includes(include_role_id)) continue
+      if (exclude_role_id && roles.includes(exclude_role_id)) continue
+    }
+    filtered.push(u)
+    if (filtered.length >= limit) break
+  }
+  return filtered
+}
+
+// GET/PUT filter config
+router.get('/inactive-filter-config', (req, res) => {
+  res.json(db.getInactiveFilterConfig(GUILD_ID()))
+})
+
+router.put('/inactive-filter-config', async (req, res) => {
+  try {
+    const { include_role_id, exclude_role_id } = req.body || {}
+    db.setInactiveFilterConfig(GUILD_ID(), {
+      includeRoleId: include_role_id ? String(include_role_id) : null,
+      excludeRoleId: exclude_role_id ? String(exclude_role_id) : null,
+    })
+    // Invalidate cache de user thay ngay ket qua
+    inactiveMembersRolesCache = { at: 0, map: null }
+    res.json({ success: true, config: db.getInactiveFilterConfig(GUILD_ID()) })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET/PUT notify template
+router.get('/inactive-notify-config', (req, res) => {
+  res.json(db.getInactiveNotifyConfig(GUILD_ID()))
+})
+
+router.put('/inactive-notify-config', (req, res) => {
+  const { channel_id, message, link_url, link_label } = req.body || {}
+  let normalizedLink = null
+  if (link_url && String(link_url).trim()) {
+    const parsed = parseDiscordMessageLink(link_url)
+    if (!parsed) return res.status(400).json({ error: 'Link tin nhắn không hợp lệ' })
+    normalizedLink = parsed.url
+  }
+  db.setInactiveNotifyConfig(GUILD_ID(), {
+    channelId: channel_id ? String(channel_id).trim() : null,
+    message: message != null ? String(message) : null,
+    linkUrl: normalizedLink,
+    linkLabel: link_label != null ? String(link_label).slice(0, 200) : null,
+  })
+  res.json({ success: true, config: db.getInactiveNotifyConfig(GUILD_ID()) })
+})
+
+// Helper: build embed cho inactive notify (dung style rieng, mau amber-ish khac silent)
+function buildInactiveNotifyEmbed({ description, footerText, isTest = false }) {
+  return {
+    color: isTest ? 0xF59E0B : 0xF97316, // amber test / orange real
+    title: isTest ? '🧪 [TEST] Thông báo cho member inactive' : '📢 Đã lâu bạn chưa quay lại',
+    description: description.slice(0, 4096),
+    footer: footerText ? { text: footerText.slice(0, 2048) } : undefined,
+    timestamp: new Date().toISOString(),
+  }
+}
+
+// POST kick inactive members
+// Body: { user_ids: string[] | 'all', days }
+// Safety: chi kick nhung user hien co trong filtered list voi cung days
+router.post('/inactive/kick', async (req, res) => {
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
+  const guildId = GUILD_ID()
+  const { user_ids } = req.body || {}
+  const days = Math.min(Math.max(Number(req.body?.days) || 7, 1), 365)
+
+  let filtered
+  try {
+    filtered = await getFilteredInactive(guildId, days, 500)
+  } catch (err) {
+    return res.status(500).json({ error: err.message })
+  }
+  const allowedIds = new Set(filtered.map(m => m.id))
+
+  let targetIds
+  if (user_ids === 'all') {
+    targetIds = filtered.map(m => m.id)
+  } else if (Array.isArray(user_ids) && user_ids.length > 0) {
+    targetIds = user_ids.map(String).filter(id => allowedIds.has(id))
+  } else {
+    return res.status(400).json({ error: 'Thiếu user_ids hoặc rỗng' })
+  }
+  if (targetIds.length === 0) {
+    return res.status(400).json({ error: 'Không có member hợp lệ để kick (phải nằm trong list inactive đã filter)' })
+  }
+
+  const results = { kicked: 0, failed: 0, total: targetIds.length, errors: [] }
+  for (let i = 0; i < targetIds.length; i++) {
+    const uid = targetIds[i]
+    try {
+      const r = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${uid}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bot ${process.env.BOT_TOKEN}`,
+          'X-Audit-Log-Reason': 'Inactive member - dashboard kick',
+        },
+      })
+      if (r.ok || r.status === 204) {
+        results.kicked++
+      } else {
+        const txt = await r.text()
+        results.failed++
+        results.errors.push(`${uid}: ${r.status} ${txt.slice(0, 100)}`)
+      }
+    } catch (err) {
+      results.failed++
+      results.errors.push(`${uid}: ${err.message}`)
+    }
+    if (i < targetIds.length - 1) await new Promise(r => setTimeout(r, 350))
+  }
+  // Invalidate cache de member da bi kick khong con trong list
+  inactiveMembersRolesCache = { at: 0, map: null }
+  res.json({ success: results.kicked > 0, ...results })
+})
+
+// POST notify-test cho inactive: gui embed KHONG ping ai (allowed_mentions=[])
+router.post('/inactive/notify-test', async (req, res) => {
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
+  const { channel_id, message, sample_size, mention_style, link_url, link_label } = req.body || {}
+  const days = Math.min(Math.max(Number(req.body?.days) || 7, 1), 365)
+  if (!channel_id || !String(channel_id).trim()) return res.status(400).json({ error: 'Thiếu channel_id' })
+  const rawMsg = (message == null ? '' : String(message)).trim()
+  if (!rawMsg) return res.status(400).json({ error: 'Thiếu nội dung tin nhắn' })
+
+  const style = ['spoiler', 'subtext', 'plain'].includes(mention_style) ? mention_style : 'spoiler'
+  const parsedLink = link_url ? parseDiscordMessageLink(link_url) : null
+  const guildId = GUILD_ID()
+  const sampleN = Math.min(Math.max(Number(sample_size) || 3, 1), 10)
+
+  let filtered
+  try {
+    filtered = await getFilteredInactive(guildId, days, 500)
+  } catch (err) {
+    return res.status(500).json({ error: err.message })
+  }
+  const members = filtered.slice(0, sampleN)
+  const totalActual = filtered.length
+
+  const sampleTags = members.map(m => `<@${m.id}>`)
+  const extraNote = totalActual > members.length ? ` ... (+${totalActual - members.length} member khác)` : ''
+  let mentionsText
+  if (!sampleTags.length) {
+    mentionsText = '(không có member nào trong danh sách)'
+  } else if (style === 'spoiler') {
+    mentionsText = `||${sampleTags.join(' ')}||${extraNote}`
+  } else if (style === 'subtext') {
+    mentionsText = `-# ${sampleTags.join(' ')}${extraNote}`
+  } else {
+    mentionsText = sampleTags.join(' ') + extraNote
+  }
+
+  const hasPlaceholder = rawMsg.includes('{mentions}')
+  let description = hasPlaceholder
+    ? rawMsg.replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim() + `\n\n**Preview mentions (${style}):**\n${mentionsText}`
+    : `${rawMsg}\n\n**Preview mentions (${style}):**\n${mentionsText}`
+  if (parsedLink) {
+    const label = (link_label != null && String(link_label).trim())
+      ? String(link_label).trim().slice(0, 200)
+      : '🔗 Click để xem tin nhắn liên quan →'
+    description += `\n\n[${label}](${parsedLink.url})`
+  }
+
+  const embed = buildInactiveNotifyEmbed({
+    description,
+    footerText: `Test • Sample ${members.length}/${totalActual} member (inactive ${days}+ ngày) • Style: ${style} • Không ping`,
+    isTest: true,
+  })
+
+  try {
+    const r = await fetch(`https://discord.com/api/v10/channels/${String(channel_id).trim()}/messages`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed], allowed_mentions: { parse: [] } }),
+    })
+    if (!r.ok) {
+      const txt = await r.text()
+      return res.status(r.status).json({ error: `Discord API ${r.status}: ${txt.slice(0, 300)}` })
+    }
+    res.json({ success: true, sample_count: members.length, total_actual: totalActual })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST gui thong bao tag toan bo inactive members (chia batch < 2000 char)
+router.post('/inactive/notify', async (req, res) => {
+  if (!process.env.BOT_TOKEN) return res.status(500).json({ error: 'BOT_TOKEN chưa được cấu hình' })
+  const { channel_id, message, mention_style, link_url, link_label } = req.body || {}
+  const days = Math.min(Math.max(Number(req.body?.days) || 7, 1), 365)
+  if (!channel_id || !String(channel_id).trim()) return res.status(400).json({ error: 'Thiếu channel_id' })
+  const rawMsg = (message == null ? '' : String(message)).trim()
+  if (!rawMsg) return res.status(400).json({ error: 'Thiếu nội dung tin nhắn' })
+
+  const style = ['spoiler', 'subtext', 'plain'].includes(mention_style) ? mention_style : 'spoiler'
+
+  let parsedLink = null
+  if (link_url && String(link_url).trim()) {
+    parsedLink = parseDiscordMessageLink(link_url)
+    if (!parsedLink) return res.status(400).json({ error: 'Link tin nhắn không hợp lệ' })
+  }
+  const linkLabel = (link_label != null && String(link_label).trim())
+    ? String(link_label).trim().slice(0, 200)
+    : '🔗 Click để xem tin nhắn liên quan →'
+
+  const guildId = GUILD_ID()
+  // Persist config
+  db.setInactiveNotifyConfig(guildId, {
+    channelId: String(channel_id).trim(),
+    message: rawMsg,
+    linkUrl: parsedLink ? parsedLink.url : null,
+    linkLabel: link_label != null ? String(link_label).slice(0, 200) : null,
+  })
+
+  let members
+  try {
+    members = await getFilteredInactive(guildId, days, 500)
+  } catch (err) {
+    return res.status(500).json({ error: err.message })
+  }
+  if (!members.length) return res.status(400).json({ error: 'Không có member nào trong danh sách inactive (theo filter hiện tại)' })
+
+  const targetChannel = String(channel_id).trim()
+  const DISCORD_CONTENT_LIMIT = 1900
+  const OVERHEAD = style === 'spoiler' ? 4 : (style === 'subtext' ? 3 : 0)
+  const allMentions = members.map(m => `<@${m.id}>`)
+  const batches = []
+  let current = []
+  let currentLen = OVERHEAD
+  for (const tag of allMentions) {
+    const add = (current.length ? 1 : 0) + tag.length
+    if (currentLen + add > DISCORD_CONTENT_LIMIT && current.length > 0) {
+      batches.push(current)
+      current = [tag]
+      currentLen = OVERHEAD + tag.length
+    } else {
+      current.push(tag)
+      currentLen += add
+    }
+  }
+  if (current.length) batches.push(current)
+
+  const wrapMentions = (tags) => {
+    const joined = tags.join(' ')
+    if (style === 'spoiler') return `||${joined}||`
+    if (style === 'subtext') return `-# ${joined}`
+    return joined
+  }
+
+  const url = `https://discord.com/api/v10/channels/${targetChannel}/messages`
+  const results = { sent: 0, failed: 0, total_members: allMentions.length, batches: batches.length, errors: [] }
+
+  for (let i = 0; i < batches.length; i++) {
+    const mentionsText = wrapMentions(batches[i])
+    let description = rawMsg.replace('{mentions}', '').replace(/\n{3,}/g, '\n\n').trim()
+    if (parsedLink) description += `\n\n[${linkLabel}](${parsedLink.url})`
+    const footerParts = [`${batches[i].length} member (inactive ${days}+ ngày)`]
+    if (batches.length > 1) footerParts.push(`Batch ${i + 1}/${batches.length}`)
+    const embed = buildInactiveNotifyEmbed({
+      description: description || ' ',
+      footerText: footerParts.join(' • '),
+    })
+    const payload = {
+      content: mentionsText,
+      embeds: [embed],
+      allowed_mentions: { parse: ['users'] },
+    }
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!r.ok) {
+        results.failed++
+        const txt = await r.text()
+        results.errors.push(`Batch ${i + 1}: Discord API ${r.status}: ${txt.slice(0, 200)}`)
+        if (r.status === 401 || r.status === 403 || r.status === 404) break
+      } else {
+        results.sent++
+      }
+    } catch (err) {
+      results.failed++
+      results.errors.push(`Batch ${i + 1}: ${err.message}`)
+    }
+    if (i < batches.length - 1) await new Promise(r => setTimeout(r, 1200))
+  }
+
+  if (results.failed > 0 && results.sent === 0) {
+    return res.status(500).json({ error: 'Gửi thất bại', ...results })
+  }
+  res.json({ success: true, ...results })
 })
 
 module.exports = router

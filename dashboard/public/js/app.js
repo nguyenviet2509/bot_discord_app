@@ -775,6 +775,28 @@ document.addEventListener('alpine:init', () => {
     heatmap: [],
     topChannels: [],
     inactive: [],
+    inactiveTotal: 0,
+    inactiveFilter: { include: '', exclude: '' },
+    loadingInactive: false,
+    loadingInactiveFilterSave: false,
+    // Notify inactive members
+    showInactiveNotifyForm: false,
+    inactiveNotifyChannelId: '',
+    inactiveNotifyMessage: 'Chào bạn, đã lâu bạn chưa quay lại chat với anh em trên server. Ghé thăm mọi người nhé!',
+    inactiveNotifyMentionStyle: localStorage.getItem('inactive_notify_mention_style') || 'spoiler',
+    inactiveNotifyLinkUrl: '',
+    inactiveNotifyLinkLabel: '',
+    inactiveNotifyLoading: false,
+    inactiveNotifySaving: false,
+    inactiveNotifyResult: null,
+    // Kick modal for inactive
+    inactiveKickModal: {
+      open: false,
+      search: '',
+      selected: new Set(),
+      loading: false,
+      result: null,
+    },
     silentMembers: [],
     silentTotal: 0,
     silentScannedAt: null,
@@ -819,17 +841,19 @@ document.addEventListener('alpine:init', () => {
 
     async load() {
       this.loading = true
-      const [summary, growth, heatmap, topChannels, inactive, silent, filterCfg, roles, notifyCfg, reactionStats] = await Promise.all([
+      const [summary, growth, heatmap, topChannels, inactiveRes, silent, filterCfg, roles, notifyCfg, reactionStats, inactiveFilterCfg, inactiveNotifyCfg] = await Promise.all([
         api('GET', '/analytics/summary'),
         api('GET', `/analytics/growth?days=${this.growthDays}`),
         api('GET', '/analytics/heatmap'),
         api('GET', '/analytics/top-channels?limit=10'),
-        api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=100`),
+        api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=500&with_filter=1`),
         api('GET', '/analytics/silent-members?limit=500'),
         api('GET', '/analytics/silent-filter-config').catch(() => null),
         api('GET', '/analytics/guild-roles').catch(() => []),
         api('GET', '/analytics/silent-notify-config').catch(() => null),
         api('GET', '/analytics/reactions/status').catch(() => null),
+        api('GET', '/analytics/inactive-filter-config').catch(() => null),
+        api('GET', '/analytics/inactive-notify-config').catch(() => null),
       ])
       this.reactionStats = reactionStats || { tracked_users: 0 }
       if (notifyCfg) {
@@ -843,7 +867,22 @@ document.addEventListener('alpine:init', () => {
       this.growth = growth || []
       this.heatmap = heatmap || []
       this.topChannels = topChannels || []
-      this.inactive = inactive || []
+      // inactiveRes co the la array (backward) hoac object {members, total, days}
+      if (Array.isArray(inactiveRes)) {
+        this.inactive = inactiveRes
+        this.inactiveTotal = inactiveRes.length
+      } else {
+        this.inactive = inactiveRes?.members || []
+        this.inactiveTotal = inactiveRes?.total || 0
+      }
+      this.inactiveFilter.include = inactiveFilterCfg?.include_role_id || ''
+      this.inactiveFilter.exclude = inactiveFilterCfg?.exclude_role_id || ''
+      if (inactiveNotifyCfg) {
+        if (inactiveNotifyCfg.channel_id) this.inactiveNotifyChannelId = inactiveNotifyCfg.channel_id
+        if (inactiveNotifyCfg.message) this.inactiveNotifyMessage = inactiveNotifyCfg.message
+        if (inactiveNotifyCfg.link_url) this.inactiveNotifyLinkUrl = inactiveNotifyCfg.link_url
+        if (inactiveNotifyCfg.link_label) this.inactiveNotifyLinkLabel = inactiveNotifyCfg.link_label
+      }
       this.silentMembers = silent?.members || []
       this.silentTotal = silent?.total || 0
       this.silentScannedAt = silent?.scanned_at || null
@@ -895,7 +934,208 @@ document.addEventListener('alpine:init', () => {
     },
 
     async loadInactive() {
-      this.inactive = await api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=100`) || []
+      this.loadingInactive = true
+      try {
+        const res = await api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=500&with_filter=1`)
+        if (Array.isArray(res)) {
+          this.inactive = res
+          this.inactiveTotal = res.length
+        } else {
+          this.inactive = res?.members || []
+          this.inactiveTotal = res?.total || 0
+        }
+      } catch (err) {
+        this.showToastTmp(err.message, 'red')
+      }
+      this.loadingInactive = false
+    },
+
+    async saveInactiveFilter() {
+      this.loadingInactiveFilterSave = true
+      this.loadingInactive = true
+      try {
+        const res = await api('PUT', '/analytics/inactive-filter-config', {
+          include_role_id: this.inactiveFilter.include || null,
+          exclude_role_id: this.inactiveFilter.exclude || null,
+        })
+        if (res?.error) this.showToastTmp(res.error, 'red')
+        const data = await api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=500&with_filter=1`)
+        this.inactive = data?.members || []
+        this.inactiveTotal = data?.total || 0
+      } catch (err) {
+        this.showToastTmp(err.message, 'red')
+      }
+      this.loadingInactiveFilterSave = false
+      this.loadingInactive = false
+    },
+
+    clearInactiveFilter() {
+      this.inactiveFilter.include = ''
+      this.inactiveFilter.exclude = ''
+      return this.saveInactiveFilter()
+    },
+
+    async saveInactiveNotifyConfig() {
+      this.inactiveNotifySaving = true
+      this.inactiveNotifyResult = null
+      try {
+        const res = await api('PUT', '/analytics/inactive-notify-config', {
+          channel_id: this.inactiveNotifyChannelId.trim(),
+          message: this.inactiveNotifyMessage,
+          link_url: this.inactiveNotifyLinkUrl ? this.inactiveNotifyLinkUrl.trim() : null,
+          link_label: this.inactiveNotifyLinkLabel ? this.inactiveNotifyLinkLabel.trim() : null,
+        })
+        if (res?.error) {
+          this.inactiveNotifyResult = { ok: false, text: res.error }
+        } else {
+          this.inactiveNotifyResult = { ok: true, text: 'Đã lưu nội dung tin nhắn' }
+        }
+      } catch (err) {
+        this.inactiveNotifyResult = { ok: false, text: err.message }
+      }
+      this.inactiveNotifySaving = false
+    },
+
+    async sendInactiveTestNotification() {
+      if (!this.inactiveNotifyChannelId || !this.inactiveNotifyMessage) return
+      this.inactiveNotifyLoading = true
+      this.inactiveNotifyResult = null
+      try {
+        localStorage.setItem('inactive_notify_mention_style', this.inactiveNotifyMentionStyle)
+        const res = await api('POST', '/analytics/inactive/notify-test', {
+          channel_id: this.inactiveNotifyChannelId.trim(),
+          message: this.inactiveNotifyMessage,
+          sample_size: 3,
+          mention_style: this.inactiveNotifyMentionStyle,
+          link_url: this.inactiveNotifyLinkUrl ? this.inactiveNotifyLinkUrl.trim() : null,
+          link_label: this.inactiveNotifyLinkLabel ? this.inactiveNotifyLinkLabel.trim() : null,
+          days: Number(this.inactiveDays),
+        })
+        if (res?.error) {
+          this.inactiveNotifyResult = { ok: false, text: res.error }
+        } else {
+          this.inactiveNotifyResult = { ok: true, text: `Đã gửi test (sample ${res.sample_count}/${res.total_actual} member, không ping ai)` }
+        }
+      } catch (err) {
+        this.inactiveNotifyResult = { ok: false, text: err.message }
+      }
+      this.inactiveNotifyLoading = false
+    },
+
+    async sendInactiveNotification() {
+      if (!this.inactiveNotifyChannelId || !this.inactiveNotifyMessage) return
+      if (this.inactiveTotal === 0) {
+        this.inactiveNotifyResult = { ok: false, text: 'Không có member nào trong danh sách' }
+        return
+      }
+      const filterNote = this.inactiveFilter.include || this.inactiveFilter.exclude
+        ? '\n(Đã áp filter role, chỉ tag member đúng filter)'
+        : ''
+      const confirmMsg = `Sẽ tag ${this.inactiveTotal} member inactive (${this.inactiveDays}+ ngày) vào channel ${this.inactiveNotifyChannelId}.${filterNote}\nTiếp tục?`
+      if (!confirm(confirmMsg)) return
+      this.inactiveNotifyLoading = true
+      this.inactiveNotifyResult = null
+      try {
+        localStorage.setItem('inactive_notify_mention_style', this.inactiveNotifyMentionStyle)
+        const res = await api('POST', '/analytics/inactive/notify', {
+          channel_id: this.inactiveNotifyChannelId.trim(),
+          message: this.inactiveNotifyMessage,
+          mention_style: this.inactiveNotifyMentionStyle,
+          link_url: this.inactiveNotifyLinkUrl ? this.inactiveNotifyLinkUrl.trim() : null,
+          link_label: this.inactiveNotifyLinkLabel ? this.inactiveNotifyLinkLabel.trim() : null,
+          days: Number(this.inactiveDays),
+        })
+        if (res?.error) {
+          this.inactiveNotifyResult = { ok: false, text: res.error + (res.errors?.length ? ' | ' + res.errors.join('; ') : '') }
+        } else {
+          const parts = [
+            `Đã gửi ${res.sent}/${res.batches} batch`,
+            `tag ${res.total_members} member`,
+          ]
+          if (res.failed > 0) parts.push(`(${res.failed} lỗi: ${(res.errors || []).join('; ')})`)
+          this.inactiveNotifyResult = { ok: res.failed === 0, text: parts.join(' • ') }
+        }
+      } catch (err) {
+        this.inactiveNotifyResult = { ok: false, text: err.message }
+      }
+      this.inactiveNotifyLoading = false
+    },
+
+    // ==== Kick inactive modal ====
+    get filteredInactiveKickList() {
+      const q = (this.inactiveKickModal.search || '').trim().toLowerCase()
+      if (!q) return this.inactive
+      return this.inactive.filter(m => {
+        return (m.username || '').toLowerCase().includes(q)
+          || (m.global_name || '').toLowerCase().includes(q)
+          || (m.nickname || '').toLowerCase().includes(q)
+          || (m.id || '').includes(q)
+      })
+    },
+
+    openInactiveKickModal() {
+      this.inactiveKickModal.open = true
+      this.inactiveKickModal.search = ''
+      this.inactiveKickModal.selected = new Set()
+      this.inactiveKickModal.result = null
+    },
+
+    closeInactiveKickModal() {
+      if (this.inactiveKickModal.loading) return
+      this.inactiveKickModal.open = false
+    },
+
+    toggleInactiveKickMember(id) {
+      const s = new Set(this.inactiveKickModal.selected)
+      if (s.has(id)) s.delete(id); else s.add(id)
+      this.inactiveKickModal.selected = s
+    },
+
+    toggleSelectAllInactive(checked) {
+      this.inactiveKickModal.selected = checked
+        ? new Set(this.filteredInactiveKickList.map(m => m.id))
+        : new Set()
+    },
+
+    selectAllInactiveKick() {
+      this.inactiveKickModal.selected = new Set(this.inactive.map(m => m.id))
+    },
+
+    async confirmInactiveKick() {
+      const count = this.inactiveKickModal.selected.size
+      if (count === 0) return
+      const all = count === this.inactive.length
+      const msg1 = all
+        ? `Bạn sắp KICK TẤT CẢ ${count} member inactive (${this.inactiveDays}+ ngày) khỏi server. Tiếp tục?`
+        : `Bạn sắp KICK ${count} member inactive khỏi server. Tiếp tục?`
+      if (!confirm(msg1)) return
+      const msg2 = `⚠️ XÁC NHẬN LẦN CUỐI: KICK ${count} MEMBER\n\nHành động này KHÔNG THỂ HOÀN TÁC.\nBấm OK để thực hiện.`
+      if (!confirm(msg2)) return
+
+      this.inactiveKickModal.loading = true
+      this.inactiveKickModal.result = null
+      try {
+        const userIds = Array.from(this.inactiveKickModal.selected)
+        const res = await api('POST', '/analytics/inactive/kick', {
+          user_ids: all ? 'all' : userIds,
+          days: Number(this.inactiveDays),
+        })
+        if (res?.error) {
+          this.inactiveKickModal.result = { ok: false, text: res.error }
+        } else {
+          const parts = [`Đã kick ${res.kicked}/${res.total} member`]
+          if (res.failed > 0) parts.push(`(${res.failed} lỗi: ${(res.errors || []).slice(0, 3).join('; ')})`)
+          this.inactiveKickModal.result = { ok: res.failed === 0, text: parts.join(' • ') }
+          // Reload de UI dong bo
+          const data = await api('GET', `/analytics/inactive?days=${this.inactiveDays}&limit=500&with_filter=1`)
+          this.inactive = data?.members || []
+          this.inactiveTotal = data?.total || 0
+          this.inactiveKickModal.selected = new Set()
+        }
+      } catch (err) {
+        this.inactiveKickModal.result = { ok: false, text: err.message }
+      }
+      this.inactiveKickModal.loading = false
     },
 
     // Trigger scan: fetch Discord, luu DB, reload list

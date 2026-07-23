@@ -1187,51 +1187,215 @@
           </div>
         </div>
 
-        <!-- Top channels + Inactive members 2 col -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="card p-6">
-            <h2 class="font-bold text-slate-800 mb-4">Top channels</h2>
-            <div x-show="topChannels.length === 0" class="text-xs md:text-sm text-slate-400 italic">Chưa có dữ liệu</div>
-            <div class="space-y-2 overflow-y-auto" style="max-height: 600px;">
-              <template x-for="(c, idx) in topChannels" :key="c.channel_id">
-                <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
-                  <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center" x-text="idx + 1"></div>
-                  <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-slate-800 text-xs md:text-sm" x-text="'#' + (c.channel_name || c.channel_id)"></div>
-                    <div class="text-xs text-slate-400 font-mono truncate" x-text="c.channel_id"></div>
-                  </div>
-                  <div class="text-right">
-                    <div class="font-bold text-slate-800" x-text="c.message_count.toLocaleString()"></div>
-                    <div class="text-xs text-slate-400">message</div>
-                  </div>
+        <!-- Top channels (full-width) -->
+        <div class="card p-6">
+          <h2 class="font-bold text-slate-800 mb-4">Top channels</h2>
+          <div x-show="topChannels.length === 0" class="text-xs md:text-sm text-slate-400 italic">Chưa có dữ liệu</div>
+          <div class="space-y-2 overflow-y-auto" style="max-height: 600px;">
+            <template x-for="(c, idx) in topChannels" :key="c.channel_id">
+              <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center" x-text="idx + 1"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-semibold text-slate-800 text-xs md:text-sm" x-text="'#' + (c.channel_name || c.channel_id)"></div>
+                  <div class="text-xs text-slate-400 font-mono truncate" x-text="c.channel_id"></div>
                 </div>
-              </template>
-            </div>
+                <div class="text-right">
+                  <div class="font-bold text-slate-800" x-text="c.message_count.toLocaleString()"></div>
+                  <div class="text-xs text-slate-400">message</div>
+                </div>
+              </div>
+            </template>
           </div>
+        </div>
 
-          <div class="card p-6">
-            <div class="flex items-center justify-between mb-4">
+        <!-- Inactive members (full-width) — day du role filter + notify + kick giong Silent -->
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div>
               <h2 class="font-bold text-slate-800">Inactive members</h2>
-              <select x-model="inactiveDays" @change="loadInactive()" class="text-xs md:text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
+              <p class="text-xs text-slate-400 mt-0.5">Có chat trước đây nhưng đã lâu chưa gửi tin nhắn</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <select x-model="inactiveDays" @change="loadInactive()" :disabled="loadingInactive"
+                      class="text-xs md:text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white">
                 <option value="3">3+ ngày</option>
                 <option value="7">7+ ngày</option>
                 <option value="14">14+ ngày</option>
                 <option value="30">30+ ngày</option>
+                <option value="60">60+ ngày</option>
+                <option value="90">90+ ngày</option>
               </select>
+              <button @click="openInactiveKickModal()" :disabled="loadingInactive || inactiveTotal === 0"
+                      class="btn-refresh text-red-600 border-red-300 hover:bg-red-50"
+                      title="Kick member khỏi server (chỉ trong danh sách này)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                <span>Kick</span>
+              </button>
+              <button @click="loadInactive()" :disabled="loadingInactive" class="btn-refresh">
+                <svg :class="loadingInactive ? 'spin' : ''" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+                <span x-text="loadingInactive ? 'Đang tải...' : 'Làm mới'"></span>
+              </button>
             </div>
-            <div x-show="inactive.length === 0" class="text-xs md:text-sm text-slate-400 italic">Không có member nào inactive</div>
-            <div class="space-y-2 overflow-y-auto" style="max-height: 600px;">
-              <template x-for="m in inactive" :key="m.id">
-                <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
-                  <img x-show="m.avatar" :src="getAvatarUrl(m.id, m.avatar)" class="w-8 h-8 rounded-full" />
-                  <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-slate-800 text-xs md:text-sm truncate" x-text="m.nickname || m.global_name || m.username || m.id"></div>
-                    <div class="text-xs text-slate-400">Lv.<span x-text="m.level"></span> • <span x-text="m.xp"></span> XP</div>
-                  </div>
-                  <div class="text-xs text-slate-500" x-text="timeAgo(m.last_message_at)"></div>
+          </div>
+
+          <!-- Modal Kick inactive member -->
+          <div x-show="inactiveKickModal.open" x-cloak class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" @click.self="closeInactiveKickModal()">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800">Kick member inactive</h3>
+                <button @click="closeInactiveKickModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+              </div>
+              <div class="p-5 space-y-3 overflow-y-auto flex-1">
+                <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                  ⚠️ Chỉ kick member trong danh sách "<b>Inactive members</b>" đã lọc theo role filter và ngưỡng <b x-text="inactiveDays + '+ ngày'"></b>.
+                  Member bị kick có thể tự join lại nếu server có invite mở.
                 </div>
-              </template>
+                <input type="text" x-model="inactiveKickModal.search" placeholder="Tìm theo tên/nickname/username..."
+                       class="input-field text-xs md:text-sm" />
+                <div class="flex items-center justify-between text-xs">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" :checked="inactiveKickModal.selected.size === filteredInactiveKickList.length && filteredInactiveKickList.length > 0"
+                           @change="toggleSelectAllInactive($event.target.checked)" />
+                    <span x-text="`Chọn tất cả (${filteredInactiveKickList.length})`"></span>
+                  </label>
+                  <span class="text-indigo-700 font-semibold" x-text="`Đã chọn: ${inactiveKickModal.selected.size}`"></span>
+                </div>
+                <div class="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                  <template x-for="m in filteredInactiveKickList" :key="m.id">
+                    <label class="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer">
+                      <input type="checkbox" :checked="inactiveKickModal.selected.has(m.id)" @change="toggleInactiveKickMember(m.id)" />
+                      <img x-show="m.avatar" :src="getAvatarUrl(m.id, m.avatar)" class="w-7 h-7 rounded-full flex-shrink-0" />
+                      <div x-show="!m.avatar" class="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" :style="`background:${avatarBgColor(m.id)}`" x-text="getInitials(m.nickname || m.global_name || m.username)"></div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-xs md:text-sm font-semibold text-slate-800 truncate" x-text="m.nickname || m.global_name || m.username || m.id"></div>
+                        <div class="text-xs text-slate-400 truncate">
+                          <span>Lv.<span x-text="m.level"></span> • <span x-text="m.xp"></span> XP</span>
+                          <span class="ml-2">• Chat lần cuối: <span x-text="timeAgo(m.last_message_at)"></span></span>
+                        </div>
+                      </div>
+                    </label>
+                  </template>
+                  <div x-show="filteredInactiveKickList.length === 0" class="p-4 text-center text-xs text-slate-400 italic">
+                    Không có member nào khớp tìm kiếm
+                  </div>
+                </div>
+                <div x-show="inactiveKickModal.result" class="text-xs p-2 rounded" :class="inactiveKickModal.result?.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'">
+                  <span x-text="inactiveKickModal.result?.text"></span>
+                </div>
+              </div>
+              <div class="px-5 py-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button @click="closeInactiveKickModal()" class="btn-refresh text-xs md:text-sm">Hủy</button>
+                <button @click="selectAllInactiveKick()" :disabled="inactiveKickModal.loading" class="btn-refresh text-xs md:text-sm">
+                  Chọn tất cả <span x-text="inactive.length"></span>
+                </button>
+                <button @click="confirmInactiveKick()" :disabled="inactiveKickModal.loading || inactiveKickModal.selected.size === 0"
+                        class="text-xs md:text-sm whitespace-nowrap px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+                  <span x-text="inactiveKickModal.loading ? 'Đang kick...' : `Kick ${inactiveKickModal.selected.size} member`"></span>
+                </button>
+              </div>
             </div>
+          </div>
+
+          <!-- Role filter -->
+          <div class="mb-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
+            <div class="text-xs font-semibold text-slate-600 mb-2">Lọc theo role (tuỳ chọn)</div>
+            <div class="flex flex-col md:flex-row gap-2">
+              <select x-model="inactiveFilter.include" class="input-field flex-1 text-xs md:text-sm" :disabled="loadingInactiveFilterSave || loadingInactive">
+                <option value="">— Phải có role: bất kỳ —</option>
+                <template x-for="r in guildRoles" :key="'iac-inc-' + r.id">
+                  <option :value="r.id" x-text="'Phải có: ' + r.name"></option>
+                </template>
+              </select>
+              <select x-model="inactiveFilter.exclude" class="input-field flex-1 text-xs md:text-sm" :disabled="loadingInactiveFilterSave || loadingInactive">
+                <option value="">— Không loại trừ role nào —</option>
+                <template x-for="r in guildRoles" :key="'iac-exc-' + r.id">
+                  <option :value="r.id" x-text="'Không có: ' + r.name"></option>
+                </template>
+              </select>
+              <button @click="saveInactiveFilter()" :disabled="loadingInactiveFilterSave || loadingInactive" class="btn-primary text-xs md:text-sm whitespace-nowrap">
+                <span x-text="loadingInactiveFilterSave ? 'Đang lưu...' : 'Lưu & lọc lại'"></span>
+              </button>
+              <button @click="clearInactiveFilter()" :disabled="loadingInactiveFilterSave || loadingInactive"
+                      x-show="inactiveFilter.include || inactiveFilter.exclude"
+                      class="btn-refresh text-xs md:text-sm whitespace-nowrap">
+                Bỏ filter
+              </button>
+            </div>
+          </div>
+
+          <!-- Gui thong bao tag toan bo inactive members -->
+          <div class="mb-3 p-3 rounded-lg bg-indigo-50 border border-indigo-200">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-semibold text-indigo-700">Gửi thông báo tag toàn bộ member trong danh sách</div>
+              <button type="button" @click="showInactiveNotifyForm = !showInactiveNotifyForm" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">
+                <span x-text="showInactiveNotifyForm ? 'Thu gọn ▲' : 'Mở rộng ▼'"></span>
+              </button>
+            </div>
+            <div x-show="showInactiveNotifyForm" x-transition class="flex flex-col gap-2 mt-2">
+              <input type="text" x-model="inactiveNotifyChannelId" placeholder="ID channel (vd: 1234567890123456789)"
+                     class="input-field text-xs md:text-sm" :disabled="inactiveNotifyLoading" />
+              <textarea x-model="inactiveNotifyMessage" rows="4"
+                        placeholder="Nội dung tin nhắn (sẽ hiển thị trong embed). Mentions tự động đặt ngoài embed."
+                        class="input-field text-xs md:text-sm" :disabled="inactiveNotifyLoading"></textarea>
+              <div>
+                <input type="text" x-model="inactiveNotifyLinkUrl"
+                       placeholder="Link tin nhắn (tuỳ chọn): paste link Discord, HOẶC {channel_id} {message_id}"
+                       class="input-field text-xs md:text-sm" :disabled="inactiveNotifyLoading" />
+                <input type="text" x-model="inactiveNotifyLinkLabel"
+                       placeholder="Text hiển thị của link (tuỳ chọn, mặc định: 🔗 Click để xem tin nhắn liên quan →)"
+                       maxlength="200"
+                       class="input-field text-xs md:text-sm mt-2" :disabled="inactiveNotifyLoading" />
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-slate-600 whitespace-nowrap">Kiểu hiển thị mentions:</label>
+                <select x-model="inactiveNotifyMentionStyle" class="input-field text-xs md:text-sm flex-1" :disabled="inactiveNotifyLoading">
+                  <option value="spoiler">Spoiler — 1 thanh đen, click để xem (gọn nhất, vẫn ping)</option>
+                  <option value="subtext">Subtext — text xám nhỏ (vẫn ping)</option>
+                  <option value="plain">Plain — hiển thị đầy đủ tag (dài nhất)</option>
+                </select>
+              </div>
+              <div class="flex flex-col md:flex-row md:items-center gap-2">
+                <div class="text-xs text-slate-500 flex-1">
+                  Sẽ tag <span class="font-bold text-indigo-700" x-text="inactiveTotal"></span> member (inactive <b x-text="inactiveDays + '+'"></b> ngày, đã lọc theo role) — tự chia batch &lt; 2000 ký tự
+                </div>
+                <button @click="saveInactiveNotifyConfig()" :disabled="inactiveNotifySaving || inactiveNotifyLoading"
+                        class="btn-refresh text-xs md:text-sm whitespace-nowrap">
+                  <span x-text="inactiveNotifySaving ? 'Đang lưu...' : 'Lưu nội dung'"></span>
+                </button>
+                <button @click="sendInactiveTestNotification()" :disabled="inactiveNotifyLoading || inactiveNotifySaving || !inactiveNotifyChannelId || !inactiveNotifyMessage"
+                        class="btn-refresh text-xs md:text-sm whitespace-nowrap"
+                        title="Gửi vào channel để xem preview, KHÔNG ping bất kỳ member nào">
+                  <span x-text="inactiveNotifyLoading ? 'Đang gửi...' : 'Gửi test'"></span>
+                </button>
+                <button @click="sendInactiveNotification()" :disabled="inactiveNotifyLoading || inactiveNotifySaving || inactiveTotal === 0 || !inactiveNotifyChannelId || !inactiveNotifyMessage"
+                        class="btn-primary text-xs md:text-sm whitespace-nowrap">
+                  <span x-text="inactiveNotifyLoading ? 'Đang gửi...' : 'Gửi thông báo'"></span>
+                </button>
+              </div>
+              <div x-show="inactiveNotifyResult" x-transition class="text-xs p-2 rounded" :class="inactiveNotifyResult?.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'">
+                <span x-text="inactiveNotifyResult?.text"></span>
+              </div>
+            </div>
+          </div>
+
+          <div x-show="inactiveTotal > 0" class="mb-3 inline-flex px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-xs md:text-sm font-semibold">
+            <span x-text="inactiveTotal + ' member inactive'"></span>
+          </div>
+          <div x-show="!loadingInactive && inactive.length === 0" class="text-xs md:text-sm text-slate-400 italic py-8 text-center">
+            Không có member nào inactive
+          </div>
+          <div x-show="inactive.length > 0" class="space-y-2 overflow-y-auto" style="max-height: 600px;">
+            <template x-for="m in inactive" :key="m.id">
+              <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                <img x-show="m.avatar" :src="getAvatarUrl(m.id, m.avatar)" class="w-8 h-8 rounded-full" />
+                <div x-show="!m.avatar" class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" :style="`background:${avatarBgColor(m.id)}`" x-text="getInitials(m.nickname || m.global_name || m.username)"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-semibold text-slate-800 text-xs md:text-sm truncate" x-text="m.nickname || m.global_name || m.username || m.id"></div>
+                  <div class="text-xs text-slate-400">Lv.<span x-text="m.level"></span> • <span x-text="m.xp"></span> XP</div>
+                </div>
+                <div class="text-xs text-slate-500" x-text="timeAgo(m.last_message_at)"></div>
+              </div>
+            </template>
           </div>
         </div>
       </div>

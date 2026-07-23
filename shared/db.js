@@ -323,6 +323,13 @@ function initDb() {
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_notify_link_label TEXT`) } catch (_) {}
   // 1 = ap reaction filter (loai member da tha reaction khoi silent list), 0 = bo qua
   try { database.exec(`ALTER TABLE guild_settings ADD COLUMN silent_apply_reaction_filter INTEGER NOT NULL DEFAULT 1`) } catch (_) {}
+  // Inactive members: role filter + notify template (mirror silent_*)
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN inactive_include_role_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN inactive_exclude_role_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN inactive_notify_channel_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN inactive_notify_message TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN inactive_notify_link_url TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE guild_settings ADD COLUMN inactive_notify_link_label TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN use_embed INTEGER NOT NULL DEFAULT 0`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_title TEXT`) } catch (_) {}
   try { database.exec(`ALTER TABLE scheduled_messages ADD COLUMN embed_color TEXT DEFAULT '#6366f1'`) } catch (_) {}
@@ -875,6 +882,55 @@ function setSilentNotifyConfig(guildId, { channelId, message, linkUrl, linkLabel
       silent_notify_message = excluded.silent_notify_message,
       silent_notify_link_url = excluded.silent_notify_link_url,
       silent_notify_link_label = excluded.silent_notify_link_label,
+      updated_at = unixepoch()
+  `).run(guildId, channelId || null, message || null, linkUrl || null, linkLabel || null)
+}
+
+// ============================================================
+// Inactive members: role filter + notify config (mirror silent_*)
+// ============================================================
+function getInactiveFilterConfig(guildId) {
+  const row = getDb()
+    .prepare('SELECT inactive_include_role_id, inactive_exclude_role_id FROM guild_settings WHERE guild_id = ?')
+    .get(guildId)
+  return {
+    include_role_id: row?.inactive_include_role_id || null,
+    exclude_role_id: row?.inactive_exclude_role_id || null,
+  }
+}
+
+function setInactiveFilterConfig(guildId, { includeRoleId, excludeRoleId }) {
+  getDb().prepare(`
+    INSERT INTO guild_settings (guild_id, inactive_include_role_id, inactive_exclude_role_id, updated_at)
+    VALUES (?, ?, ?, unixepoch())
+    ON CONFLICT(guild_id) DO UPDATE SET
+      inactive_include_role_id = excluded.inactive_include_role_id,
+      inactive_exclude_role_id = excluded.inactive_exclude_role_id,
+      updated_at = unixepoch()
+  `).run(guildId, includeRoleId || null, excludeRoleId || null)
+}
+
+function getInactiveNotifyConfig(guildId) {
+  const row = getDb()
+    .prepare('SELECT inactive_notify_channel_id, inactive_notify_message, inactive_notify_link_url, inactive_notify_link_label FROM guild_settings WHERE guild_id = ?')
+    .get(guildId)
+  return {
+    channel_id: row?.inactive_notify_channel_id || '',
+    message: row?.inactive_notify_message || '',
+    link_url: row?.inactive_notify_link_url || '',
+    link_label: row?.inactive_notify_link_label || '',
+  }
+}
+
+function setInactiveNotifyConfig(guildId, { channelId, message, linkUrl, linkLabel }) {
+  getDb().prepare(`
+    INSERT INTO guild_settings (guild_id, inactive_notify_channel_id, inactive_notify_message, inactive_notify_link_url, inactive_notify_link_label, updated_at)
+    VALUES (?, ?, ?, ?, ?, unixepoch())
+    ON CONFLICT(guild_id) DO UPDATE SET
+      inactive_notify_channel_id = excluded.inactive_notify_channel_id,
+      inactive_notify_message = excluded.inactive_notify_message,
+      inactive_notify_link_url = excluded.inactive_notify_link_url,
+      inactive_notify_link_label = excluded.inactive_notify_link_label,
       updated_at = unixepoch()
   `).run(guildId, channelId || null, message || null, linkUrl || null, linkLabel || null)
 }
@@ -1536,6 +1592,10 @@ module.exports = {
   setSilentFilterConfig,
   getSilentNotifyConfig,
   setSilentNotifyConfig,
+  getInactiveFilterConfig,
+  setInactiveFilterConfig,
+  getInactiveNotifyConfig,
+  setInactiveNotifyConfig,
   getScheduledMessages,
   getScheduledMessageById,
   createScheduledMessage,
