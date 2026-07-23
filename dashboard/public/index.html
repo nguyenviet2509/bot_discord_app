@@ -1187,27 +1187,6 @@
           </div>
         </div>
 
-        <!-- Top channels (full-width) -->
-        <div class="card p-6">
-          <h2 class="font-bold text-slate-800 mb-4">Top channels</h2>
-          <div x-show="topChannels.length === 0" class="text-xs md:text-sm text-slate-400 italic">Chưa có dữ liệu</div>
-          <div class="space-y-2 overflow-y-auto" style="max-height: 600px;">
-            <template x-for="(c, idx) in topChannels" :key="c.channel_id">
-              <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
-                <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center" x-text="idx + 1"></div>
-                <div class="flex-1 min-w-0">
-                  <div class="font-semibold text-slate-800 text-xs md:text-sm" x-text="'#' + (c.channel_name || c.channel_id)"></div>
-                  <div class="text-xs text-slate-400 font-mono truncate" x-text="c.channel_id"></div>
-                </div>
-                <div class="text-right">
-                  <div class="font-bold text-slate-800" x-text="c.message_count.toLocaleString()"></div>
-                  <div class="text-xs text-slate-400">message</div>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-
         <!-- Inactive members (full-width) — day du role filter + notify + kick giong Silent -->
         <div class="card p-6">
           <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -1394,6 +1373,27 @@
                   <div class="text-xs text-slate-400">Lv.<span x-text="m.level"></span> • <span x-text="m.xp"></span> XP</div>
                 </div>
                 <div class="text-xs text-slate-500" x-text="timeAgo(m.last_message_at)"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Top channels (full-width) -->
+        <div class="card p-6">
+          <h2 class="font-bold text-slate-800 mb-4">Top channels</h2>
+          <div x-show="topChannels.length === 0" class="text-xs md:text-sm text-slate-400 italic">Chưa có dữ liệu</div>
+          <div class="space-y-2 overflow-y-auto" style="max-height: 600px;">
+            <template x-for="(c, idx) in topChannels" :key="c.channel_id">
+              <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center" x-text="idx + 1"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-semibold text-slate-800 text-xs md:text-sm" x-text="'#' + (c.channel_name || c.channel_id)"></div>
+                  <div class="text-xs text-slate-400 font-mono truncate" x-text="c.channel_id"></div>
+                </div>
+                <div class="text-right">
+                  <div class="font-bold text-slate-800" x-text="c.message_count.toLocaleString()"></div>
+                  <div class="text-xs text-slate-400">message</div>
+                </div>
               </div>
             </template>
           </div>
