@@ -629,18 +629,20 @@ async function getGuildMemberRolesMap(guildId) {
 }
 
 // Lay list inactive tu DB roi ap role filter va loai user da roi server
+// LUON fetch Discord member list de loai bo user da roi server (bot co the miss leave event).
+// Fetch DB voi hard cap cao (10k) de dam bao du data sau khi filter role.
 async function getFilteredInactive(guildId, days, limit) {
-  const rows = db.getInactiveMembers(guildId, days, Math.max(limit * 2, 500))
+  const rows = db.getInactiveMembers(guildId, days, 10000)
   const { include_role_id, exclude_role_id } = db.getInactiveFilterConfig(guildId)
 
-  // Chi fetch roles khi thuc su co filter role - dat tien
+  // Fetch Discord member roles map. Neu fail va co role filter → tra ve rong (an toan).
+  // Neu fail va khong co role filter → fallback dung DB thuan.
   let rolesMap = null
-  if (include_role_id || exclude_role_id) {
-    try {
-      rolesMap = await getGuildMemberRolesMap(guildId)
-    } catch (_) {
-      rolesMap = null
-    }
+  try {
+    rolesMap = await getGuildMemberRolesMap(guildId)
+  } catch (err) {
+    if (include_role_id || exclude_role_id) throw err
+    rolesMap = null
   }
 
   const filtered = []
