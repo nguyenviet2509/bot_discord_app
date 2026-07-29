@@ -24,13 +24,15 @@ function metaSet(key, value) {
     .prepare('INSERT OR REPLACE INTO bot_meta (key, value) VALUES (?, ?)').run(key, String(value))
 }
 
-// Fri 21:00 finalize: chi chay 1 lan per weekKey per guild
+// Sat 00:00 (= Fri 24:00) finalize: chi chay 1 lan per weekKey per guild.
+// Dung tuan ISO cua thoi diem "sap qua midnight" → tinh weekKey theo Fri (1h truoc).
 async function tryFinalize() {
   const s = saigonNow()
   const dow = s.getUTCDay() || 7
   const hour = s.getUTCHours()
-  if (dow !== 5 || hour < 21) return
+  if (dow !== 6 || hour !== 0) return
 
+  // ISO week: Fri va Sat cung 1 tuan (Mon-Sun) → weekKey khong doi khi qua midnight
   const weekKey = bcDb.currentWeekKey()
   const lastKey = metaGet('bc_last_finalize_week')
   if (lastKey === weekKey) return
