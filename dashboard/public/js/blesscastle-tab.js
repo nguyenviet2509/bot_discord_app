@@ -62,15 +62,15 @@ const state = {
   search: '',
   weeks: [],
   selectedWeek: '',
+  history: { page: 1, pageSize: 20, total: 0, rows: [] },
 }
 
 async function loadAll() {
   try {
-    const [cfg, chs, weeks, hist] = await Promise.all([
+    const [cfg, chs, weeks] = await Promise.all([
       api('GET', '/api/blesscastle/config'),
       api('GET', '/api/blesscastle/voice-channels'),
       api('GET', '/api/blesscastle/weeks?limit=20'),
-      api('GET', '/api/blesscastle/redemptions?limit=50'),
     ])
     state.config = cfg
     state.allVoiceChannels = chs
@@ -80,8 +80,10 @@ async function loadAll() {
     renderChannelSelect()
     renderChannelChips()
     renderWeekSelect()
-    renderHistory(hist)
-    await loadMembersForWeek(state.selectedWeek)
+    await Promise.all([
+      loadMembersForWeek(state.selectedWeek),
+      reloadHistory(),
+    ])
   } catch (e) {
     flashSave(`Lỗi tải dữ liệu: ${e.message}`, false)
   }
@@ -295,16 +297,40 @@ async function redeem(userId) {
 // ============ History ============
 
 async function reloadHistory() {
-  const hist = await api('GET', '/api/blesscastle/redemptions?limit=50')
-  renderHistory(hist)
+  try {
+    const h = state.history
+    const res = await api('GET', `/api/blesscastle/redemptions?page=${h.page}&pageSize=${h.pageSize}`)
+    state.history.rows = res.data
+    state.history.total = res.total
+    // Neu page hien tai vuot qua total (sau khi delete/reset) -> lui page
+    const maxPage = Math.max(1, Math.ceil(res.total / h.pageSize))
+    if (h.page > maxPage) {
+      state.history.page = maxPage
+      return reloadHistory()
+    }
+    renderHistory()
+  } catch (e) {
+    flashSave(`Lỗi tải lịch sử: ${e.message}`, false)
+  }
 }
 
-function renderHistory(rows) {
+function renderHistory() {
+  const { rows, total, page, pageSize } = state.history
   const tbody = document.getElementById('historyTbody')
+  const totalEl = document.getElementById('historyTotal')
+  const pager = document.getElementById('historyPager')
+  const pageInfo = document.getElementById('historyPageInfo')
+  const prevBtn = document.getElementById('historyPrev')
+  const nextBtn = document.getElementById('historyNext')
+
+  totalEl.textContent = total > 0 ? `Tổng ${total} lần đổi quà` : ''
+
   if (!rows || rows.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" class="text-center text-slate-400 py-6">Chưa có lịch sử đổi quà</td></tr>'
+    pager.style.display = 'none'
     return
   }
+
   tbody.innerHTML = rows.map(r => `
     <tr>
       <td>
@@ -318,9 +344,15 @@ function renderHistory(rows) {
       </td>
       <td>${fmtDate(r.redeemedAt)}</td>
       <td><span class="badge-star">⭐ ${r.starsAtRedemption}</span></td>
-      <td class="text-xs text-slate-500">${escapeHtml(r.adminId)}</td>
+      <td class="text-xs text-slate-500">${escapeHtml(r.adminName || r.adminId)}</td>
     </tr>
   `).join('')
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  pager.style.display = total > pageSize ? 'flex' : 'none'
+  pageInfo.textContent = `Trang ${page}/${totalPages}`
+  prevBtn.disabled = page <= 1
+  nextBtn.disabled = page >= totalPages
 }
 
 // ============ Helpers ============
@@ -335,6 +367,19 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 })
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadAll())
+
+document.getElementById('historyPrev').addEventListener('click', () => {
+  if (state.history.page > 1) { state.history.page--; reloadHistory() }
+})
+document.getElementById('historyNext').addEventListener('click', () => {
+  const maxPage = Math.max(1, Math.ceil(state.history.total / state.history.pageSize))
+  if (state.history.page < maxPage) { state.history.page++; reloadHistory() }
+})
+document.getElementById('historyPageSize').addEventListener('change', (e) => {
+  state.history.pageSize = parseInt(e.target.value) || 20
+  state.history.page = 1
+  reloadHistory()
+})
 
 document.getElementById('finalizeBtn').addEventListener('click', async () => {
   if (!confirm('Chốt tuần hiện tại?\n\nMember đủ điều kiện (voice ≥ min phút HOẶC đã tick thủ công) sẽ được +1 sao.\n\nTiếp tục?')) return

@@ -373,16 +373,23 @@ function createRedemption(guildId, userId, adminId, starsAt) {
   tx()
 }
 
-function listRedemptions(guildId, limit = 50) {
+function listRedemptions(guildId, limit = 50, offset = 0) {
   return db()
     .prepare(`
       SELECT id, user_id, admin_id, redeemed_at, stars_at_redemption
       FROM blesscastle_redemptions
       WHERE guild_id = ?
       ORDER BY redeemed_at DESC
-      LIMIT ?
+      LIMIT ? OFFSET ?
     `)
-    .all(guildId, limit)
+    .all(guildId, limit, offset)
+}
+
+function countRedemptions(guildId) {
+  const row = db()
+    .prepare('SELECT COUNT(*) AS n FROM blesscastle_redemptions WHERE guild_id = ?')
+    .get(guildId)
+  return row?.n || 0
 }
 
 module.exports = {
@@ -416,4 +423,5 @@ module.exports = {
   // redemptions
   createRedemption,
   listRedemptions,
+  countRedemptions,
 }

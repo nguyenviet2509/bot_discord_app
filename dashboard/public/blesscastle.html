@@ -132,8 +132,10 @@
 
   <!-- Redemption history -->
   <div class="card p-5 md:p-7">
-    <h2 class="text-base font-bold text-slate-800 mb-2">Lịch sử đổi quà</h2>
-    <p class="text-sm text-slate-400 mb-4">50 lần đổi quà gần nhất</p>
+    <div class="flex items-center justify-between mb-2 gap-3 flex-wrap">
+      <h2 class="text-base font-bold text-slate-800">Lịch sử đổi quà</h2>
+      <span id="historyTotal" class="text-xs text-slate-400"></span>
+    </div>
     <div class="overflow-x-auto">
       <table class="mtable">
         <thead>
@@ -148,6 +150,22 @@
           <tr><td colspan="4" class="text-center text-slate-400 py-6">Đang tải...</td></tr>
         </tbody>
       </table>
+    </div>
+    <div id="historyPager" class="flex items-center justify-between mt-4 gap-3 flex-wrap text-sm" style="display:none">
+      <div class="flex items-center gap-2">
+        <label class="text-slate-500 text-xs">Số dòng/trang:</label>
+        <select id="historyPageSize" class="input-field" style="width:auto;padding:4px 10px">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="historyPrev" class="btn-refresh" style="padding:6px 12px">← Trước</button>
+        <span id="historyPageInfo" class="text-slate-600 font-medium"></span>
+        <button id="historyNext" class="btn-refresh" style="padding:6px 12px">Sau →</button>
+      </div>
     </div>
   </div>
 </div>

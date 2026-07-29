@@ -258,23 +258,28 @@ router.post('/redeem', (req, res) => {
 })
 
 router.get('/redemptions', async (req, res) => {
-  const limit = Math.min(200, parseInt(req.query.limit) || 50)
+  const page = Math.max(1, parseInt(req.query.page) || 1)
+  const pageSize = Math.min(100, Math.max(5, parseInt(req.query.pageSize) || 20))
   const guildId = GUILD_ID()
-  const rows = bcDb.listRedemptions(guildId, limit)
-  const members = await fetchGuildMembersMap(guildId)
+  const total = bcDb.countRedemptions(guildId)
+  const rows = bcDb.listRedemptions(guildId, pageSize, (page - 1) * pageSize)
+  // Fetch bot members co the bao gom bot admin - can them 'includeBots' de resolve dung ten
+  const members = await fetchGuildMembersMap(guildId, { includeBots: true })
   const enriched = rows.map(r => {
     const info = members.get(r.user_id) || { username: `User ${r.user_id.slice(-4)}`, avatar: null }
+    const adminInfo = members.get(r.admin_id) || { username: r.admin_id === 'system' ? 'System' : `Admin ${r.admin_id.slice(-4)}` }
     return {
       id: r.id,
       userId: r.user_id,
       username: info.username,
       avatar: avatarUrl(r.user_id, info.avatar),
       adminId: r.admin_id,
+      adminName: adminInfo.username,
       redeemedAt: r.redeemed_at,
       starsAtRedemption: r.stars_at_redemption,
     }
   })
-  res.json(enriched)
+  res.json({ data: enriched, total, page, pageSize })
 })
 
 module.exports = router
