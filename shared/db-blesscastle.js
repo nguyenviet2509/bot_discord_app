@@ -331,6 +331,33 @@ function finalizeWeek(guildId, weekKey, minSeconds) {
   return awarded
 }
 
+// Danh sach cac tuan da co du lieu (voice hoac manual), DESC theo week_key.
+function listWeeks(guildId, limit = 20) {
+  return db()
+    .prepare(`
+      SELECT week_key,
+             COUNT(*) AS total,
+             SUM(CASE WHEN attended_manual = 1 THEN 1 ELSE 0 END) AS manual_count,
+             SUM(CASE WHEN finalized = 1 THEN 1 ELSE 0 END) AS finalized_count
+      FROM blesscastle_attendance
+      WHERE guild_id = ?
+      GROUP BY week_key
+      ORDER BY week_key DESC
+      LIMIT ?
+    `)
+    .all(guildId, limit)
+}
+
+// Reset toan bo du lieu BlessCastle cua 1 guild (GIU LAI config).
+function resetAllData(guildId) {
+  const tx = db().transaction(() => {
+    db().prepare('DELETE FROM blesscastle_stars WHERE guild_id = ?').run(guildId)
+    db().prepare('DELETE FROM blesscastle_attendance WHERE guild_id = ?').run(guildId)
+    db().prepare('DELETE FROM blesscastle_redemptions WHERE guild_id = ?').run(guildId)
+  })
+  tx()
+}
+
 // ============================================================
 // Redemptions
 
@@ -383,6 +410,8 @@ module.exports = {
   getWeekAttendance,
   getUserWeekAttendance,
   finalizeWeek,
+  listWeeks,
+  resetAllData,
   // redemptions
   createRedemption,
   listRedemptions,

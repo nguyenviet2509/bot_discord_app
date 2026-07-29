@@ -56,31 +56,66 @@ const state = {
   members: [],
   filtered: [],
   weekKey: '',
+  currentWeek: '',
+  isCurrentWeek: true,
   minMinutes: 30,
   search: '',
+  weeks: [],
+  selectedWeek: '',
 }
 
 async function loadAll() {
   try {
-    const [cfg, chs, mem, hist] = await Promise.all([
+    const [cfg, chs, weeks, hist] = await Promise.all([
       api('GET', '/api/blesscastle/config'),
       api('GET', '/api/blesscastle/voice-channels'),
-      api('GET', '/api/blesscastle/members'),
+      api('GET', '/api/blesscastle/weeks?limit=20'),
       api('GET', '/api/blesscastle/redemptions?limit=50'),
     ])
     state.config = cfg
     state.allVoiceChannels = chs
-    state.members = mem.members
-    state.weekKey = mem.weekKey
-    state.minMinutes = mem.minMinutes
+    state.weeks = weeks
+    if (!state.selectedWeek) state.selectedWeek = weeks[0]?.weekKey || ''
     renderConfig()
     renderChannelSelect()
     renderChannelChips()
-    renderMembers()
+    renderWeekSelect()
     renderHistory(hist)
-    document.getElementById('weekLabel').textContent = `Tuần ${state.weekKey}`
+    await loadMembersForWeek(state.selectedWeek)
   } catch (e) {
     flashSave(`Lỗi tải dữ liệu: ${e.message}`, false)
+  }
+}
+
+async function loadMembersForWeek(weekKey) {
+  try {
+    const q = weekKey ? `?weekKey=${encodeURIComponent(weekKey)}` : ''
+    const mem = await api('GET', `/api/blesscastle/members${q}`)
+    state.members = mem.members
+    state.weekKey = mem.weekKey
+    state.currentWeek = mem.currentWeek
+    state.isCurrentWeek = mem.isCurrentWeek
+    state.minMinutes = mem.minMinutes
+    renderMembers()
+    document.getElementById('weekBadge').textContent = state.isCurrentWeek ? 'Tuần hiện tại' : 'Tuần đã qua (chỉ xem)'
+    document.getElementById('weekBadge').className = state.isCurrentWeek
+      ? 'text-xs text-emerald-600 font-medium'
+      : 'text-xs text-slate-500 italic'
+  } catch (e) {
+    flashSave(`Lỗi tải thành viên: ${e.message}`, false)
+  }
+}
+
+function renderWeekSelect() {
+  const sel = document.getElementById('weekSelect')
+  sel.innerHTML = state.weeks.map(w => {
+    const isCurrent = w.weekKey === state.currentWeek || (!state.currentWeek && state.weeks[0]?.weekKey === w.weekKey)
+    const suffix = w.total > 0 ? ` (${w.total} người, ${w.manualCount} tick)` : ''
+    return `<option value="${w.weekKey}"${w.weekKey === state.selectedWeek ? ' selected' : ''}>Tuần ${w.weekKey}${isCurrent ? ' — hiện tại' : ''}${suffix}</option>`
+  }).join('')
+  sel.onchange = () => {
+    state.selectedWeek = sel.value
+    loadMembersForWeek(state.selectedWeek)
   }
 }
 
@@ -175,7 +210,9 @@ function renderMembers() {
     return
   }
 
-  const inWindow = isInManualWindow()
+  const inWindow = isInManualWindow() && state.isCurrentWeek
+  const canTick = state.isCurrentWeek
+  const canRedeemGlobal = state.isCurrentWeek
   const minSec = state.minMinutes * 60
 
   tbody.innerHTML = filtered.map(m => {
@@ -187,7 +224,8 @@ function renderMembers() {
         ? `<span class="badge-ok">✓ ${w.voiceMinutes}/${state.minMinutes}p</span>`
         : `<div class="text-xs text-slate-500 mb-1">${w.voiceMinutes}/${state.minMinutes} phút</div><div class="progress"><div class="bar" style="width:${pct}%"></div></div>`
     const toggleClass = w.attendedManual ? 'toggle on' : 'toggle'
-    const canRedeem = m.stars >= 3
+    const tickDisabled = !canTick || !inWindow
+    const canRedeem = canRedeemGlobal && m.stars >= 3
     return `
       <tr>
         <td>
@@ -202,10 +240,10 @@ function renderMembers() {
         <td><span class="badge-star">⭐ ${m.stars}</span></td>
         <td style="min-width: 180px">${progressText}</td>
         <td>
-          <div class="${toggleClass}" data-tick-user="${m.userId}" ${inWindow ? '' : 'style="opacity:.4;cursor:not-allowed"'}></div>
+          <div class="${toggleClass}" ${canTick ? `data-tick-user="${m.userId}"` : ''} ${tickDisabled ? 'style="opacity:.4;cursor:not-allowed"' : ''}></div>
         </td>
         <td class="text-right">
-          <button class="btn-soft-primary" data-redeem-user="${m.userId}" ${canRedeem ? '' : 'disabled'}>Đã đổi quà</button>
+          <button class="btn-soft-primary" ${canRedeemGlobal ? `data-redeem-user="${m.userId}"` : ''} ${canRedeem ? '' : 'disabled'}>Đã đổi quà</button>
         </td>
       </tr>
     `
@@ -238,11 +276,7 @@ async function toggleManual(userId, next) {
 }
 
 async function refreshMembers() {
-  const mem = await api('GET', '/api/blesscastle/members')
-  state.members = mem.members
-  state.weekKey = mem.weekKey
-  state.minMinutes = mem.minMinutes
-  renderMembers()
+  await loadMembersForWeek(state.selectedWeek || state.currentWeek)
 }
 
 async function redeem(userId) {
@@ -301,6 +335,21 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 })
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadAll())
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  const c1 = confirm('⚠️ Reset sẽ XÓA toàn bộ dữ liệu BlessCastle:\n- Sao tích lũy của tất cả member\n- Toàn bộ dữ liệu điểm danh các tuần\n- Lịch sử đổi quà\n\n(Cấu hình voice channel / khung giờ được GIỮ LẠI)\n\nTiếp tục?')
+  if (!c1) return
+  const c2 = prompt('Gõ RESET (in hoa) để xác nhận:')
+  if (c2 !== 'RESET') { flashSave('Đã hủy', false); return }
+  try {
+    await api('POST', '/api/blesscastle/reset', { confirm: 'RESET' })
+    flashSave('Đã reset ✓')
+    state.selectedWeek = ''
+    await loadAll()
+  } catch (e) {
+    flashSave(`Lỗi: ${e.message}`, false)
+  }
+})
 
 // Boot
 loadAll()

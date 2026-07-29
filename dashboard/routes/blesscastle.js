@@ -40,14 +40,17 @@ function discordApi(path) {
   })
 }
 
-async function fetchGuildMembersMap(guildId) {
+async function fetchGuildMembersMap(guildId, { includeBots = false } = {}) {
   const arr = await discordApi(`/api/v10/guilds/${guildId}/members?limit=1000`)
   const map = new Map()
   if (Array.isArray(arr)) {
     for (const m of arr) {
-      if (m.user) map.set(m.user.id, {
+      if (!m.user) continue
+      if (!includeBots && m.user.bot) continue
+      map.set(m.user.id, {
         username: m.nick || m.user.global_name || m.user.username,
         avatar: m.user.avatar,
+        isBot: !!m.user.bot,
       })
     }
   }
@@ -96,71 +99,103 @@ router.get('/voice-channels', async (req, res) => {
 router.get('/members', async (req, res) => {
   const guildId = GUILD_ID()
   const cfg = bcDb.getConfig(guildId)
-  const weekKey = bcDb.currentWeekKey()
+  const currentWeek = bcDb.currentWeekKey()
+  const weekKey = (req.query.weekKey && /^\d{4}-\d{2}$/.test(req.query.weekKey)) ? req.query.weekKey : currentWeek
+  const isCurrentWeek = weekKey === currentWeek
   const stars = bcDb.listActiveStars(guildId)
   const attRows = bcDb.getWeekAttendance(guildId, weekKey)
   const attMap = new Map(attRows.map(r => [r.user_id, r]))
-  const members = await fetchGuildMembersMap(guildId)
+  const members = await fetchGuildMembersMap(guildId)  // KHONG include bots
   const minSec = cfg.minMinutes * 60
 
-  const result = stars.map(s => {
-    const info = members.get(s.user_id) || { username: `User ${s.user_id.slice(-4)}`, avatar: null }
-    const att = attMap.get(s.user_id) || { voice_seconds: 0, attended_manual: 0 }
+  function weekView(att) {
     return {
+      voiceSeconds: att.voice_seconds,
+      voiceMinutes: Math.floor(att.voice_seconds / 60),
+      attendedManual: !!att.attended_manual,
+      achieved: !!att.attended_manual || att.voice_seconds >= minSec,
+    }
+  }
+
+  const result = []
+
+  // 1. Stars rows (chi user thuc, khong bot)
+  for (const s of stars) {
+    if (!members.has(s.user_id)) continue // skip bot hoac user da roi guild
+    const info = members.get(s.user_id)
+    const att = attMap.get(s.user_id) || { voice_seconds: 0, attended_manual: 0 }
+    result.push({
       userId: s.user_id,
       username: info.username,
       avatar: avatarUrl(s.user_id, info.avatar),
       stars: s.stars,
       lastUpdated: s.last_updated,
-      thisWeek: {
-        voiceSeconds: att.voice_seconds,
-        voiceMinutes: Math.floor(att.voice_seconds / 60),
-        attendedManual: !!att.attended_manual,
-        achieved: !!att.attended_manual || att.voice_seconds >= minSec,
-      },
-    }
-  })
+      thisWeek: weekView(att),
+    })
+  }
 
-  // Them member co attendance tuan nay nhung chua co stars row
+  // 2. Attendance-only rows (chua co stars, nhung co attendance tuan dang xem)
   for (const att of attRows) {
     if (result.find(r => r.userId === att.user_id)) continue
-    const info = members.get(att.user_id) || { username: `User ${att.user_id.slice(-4)}`, avatar: null }
+    if (!members.has(att.user_id)) continue // skip bot / da roi
+    const info = members.get(att.user_id)
     result.push({
       userId: att.user_id,
       username: info.username,
       avatar: avatarUrl(att.user_id, info.avatar),
       stars: 0,
       lastUpdated: null,
-      thisWeek: {
-        voiceSeconds: att.voice_seconds,
-        voiceMinutes: Math.floor(att.voice_seconds / 60),
-        attendedManual: !!att.attended_manual,
-        achieved: !!att.attended_manual || att.voice_seconds >= minSec,
-      },
+      thisWeek: weekView(att),
     })
   }
 
-  // Them TAT CA member trong guild (de admin co the tick manual cho ai chua co stars/attendance)
-  for (const [uid, info] of members) {
-    if (result.find(r => r.userId === uid)) continue
-    result.push({
-      userId: uid,
-      username: info.username,
-      avatar: avatarUrl(uid, info.avatar),
-      stars: 0,
-      lastUpdated: null,
-      thisWeek: { voiceSeconds: 0, voiceMinutes: 0, attendedManual: false, achieved: false },
-    })
+  // 3. Only current week: them TAT CA member thuc trong guild de admin co the tick manual
+  if (isCurrentWeek) {
+    for (const [uid, info] of members) {
+      if (result.find(r => r.userId === uid)) continue
+      result.push({
+        userId: uid,
+        username: info.username,
+        avatar: avatarUrl(uid, info.avatar),
+        stars: 0,
+        lastUpdated: null,
+        thisWeek: { voiceSeconds: 0, voiceMinutes: 0, attendedManual: false, achieved: false },
+      })
+    }
   }
 
-  // Sort: stars DESC, then achieved DESC, then username
+  // Sort: achieved DESC, stars DESC, username
   result.sort((a, b) => {
-    if (b.stars !== a.stars) return b.stars - a.stars
     if (b.thisWeek.achieved !== a.thisWeek.achieved) return b.thisWeek.achieved ? 1 : -1
+    if (b.stars !== a.stars) return b.stars - a.stars
     return a.username.localeCompare(b.username)
   })
 
-  res.json({ weekKey, minMinutes: cfg.minMinutes, members: result })
+  res.json({ weekKey, currentWeek, isCurrentWeek, minMinutes: cfg.minMinutes, members: result })
+})
+
+router.get('/weeks', (req, res) => {
+  const limit = Math.min(52, parseInt(req.query.limit) || 20)
+  const rows = bcDb.listWeeks(GUILD_ID(), limit).map(r => ({
+    weekKey: r.week_key,
+    total: r.total,
+    manualCount: r.manual_count,
+    finalizedCount: r.finalized_count,
+  }))
+  const current = bcDb.currentWeekKey()
+  if (!rows.find(r => r.weekKey === current)) {
+    rows.unshift({ weekKey: current, total: 0, manualCount: 0, finalizedCount: 0 })
+  }
+  res.json(rows)
+})
+
+router.post('/reset', (req, res) => {
+  const { confirm } = req.body || {}
+  if (confirm !== 'RESET') {
+    return res.status(400).json({ error: 'Missing confirmation. Send { "confirm": "RESET" }' })
+  }
+  bcDb.resetAllData(GUILD_ID())
+  res.json({ ok: true, message: 'Da xoa toan bo du lieu BlessCastle (giu lai cau hinh)' })
 })
 
 router.post('/attendance', (req, res) => {

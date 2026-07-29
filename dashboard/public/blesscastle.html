@@ -53,6 +53,7 @@
   <div class="flex items-center gap-3 flex-wrap">
     <span id="saveStatus" class="text-sm"></span>
     <button id="refreshBtn" class="btn-refresh">🔄 Làm mới</button>
+    <button id="resetBtn" class="btn-refresh" style="border-color:#fecaca;color:#b91c1c" title="Xóa toàn bộ dữ liệu BlessCastle (giữ lại cấu hình)">🗑️ Reset</button>
   </div>
 </div>
 
@@ -103,9 +104,10 @@
   <!-- Members card -->
   <div class="card p-5 md:p-7">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-      <div>
+      <div class="flex items-center gap-3 flex-wrap">
         <h2 class="text-base font-bold text-slate-800">Thành viên</h2>
-        <p class="text-sm text-slate-400 mt-0.5" id="weekLabel">Tuần —</p>
+        <select id="weekSelect" class="input-field" style="width:auto;min-width:180px;padding:6px 12px"></select>
+        <span id="weekBadge" class="text-xs text-slate-400"></span>
       </div>
       <input id="searchInput" type="text" placeholder="Tìm theo tên..." class="input-field md:w-64" />
     </div>
