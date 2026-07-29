@@ -189,6 +189,16 @@ router.get('/weeks', (req, res) => {
   res.json(rows)
 })
 
+// Chốt tuần thủ công (admin): cong +1 sao cho ai du dieu kien.
+// Idempotent trong tuan: row da finalized=1 se bi bo qua.
+router.post('/finalize', (req, res) => {
+  const guildId = GUILD_ID()
+  const cfg = bcDb.getConfig(guildId)
+  const weekKey = bcDb.currentWeekKey()
+  const awarded = bcDb.finalizeWeek(guildId, weekKey, cfg.minMinutes * 60)
+  res.json({ ok: true, weekKey, awarded, count: awarded.length })
+})
+
 // DEBUG endpoints (chi bat khi BLESSCASTLE_TEST_MODE=1)
 router.post('/debug/finalize', (req, res) => {
   if (process.env.BLESSCASTLE_TEST_MODE !== '1') return res.status(403).json({ error: 'Test mode disabled' })

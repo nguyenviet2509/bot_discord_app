@@ -336,6 +336,17 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadAll())
 
+document.getElementById('finalizeBtn').addEventListener('click', async () => {
+  if (!confirm('Chốt tuần hiện tại?\n\nMember đủ điều kiện (voice ≥ min phút HOẶC đã tick thủ công) sẽ được +1 sao.\n\nTiếp tục?')) return
+  try {
+    const r = await api('POST', '/api/blesscastle/finalize')
+    flashSave(`Đã chốt tuần ${r.weekKey}: +1⭐ cho ${r.count} member ✓`)
+    await Promise.all([refreshMembers(), reloadHistory()])
+  } catch (e) {
+    flashSave(`Lỗi: ${e.message}`, false)
+  }
+})
+
 document.getElementById('resetBtn').addEventListener('click', async () => {
   const c1 = confirm('⚠️ Reset sẽ XÓA toàn bộ dữ liệu BlessCastle:\n- Sao tích lũy của tất cả member\n- Toàn bộ dữ liệu điểm danh các tuần\n- Lịch sử đổi quà\n\n(Cấu hình voice channel / khung giờ được GIỮ LẠI)\n\nTiếp tục?')
   if (!c1) return
