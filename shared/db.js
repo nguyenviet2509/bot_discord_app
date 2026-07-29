@@ -393,6 +393,9 @@ function initDb() {
   // Schema cho feature Voice Statistics (tach file rieng)
   require('./db-voice-stats').initVoiceStatsSchema(database)
 
+  // Schema cho feature BlessCastle Management (tach file rieng)
+  require('./db-blesscastle').initBlessCastleSchema(database)
+
   return database
 }
 

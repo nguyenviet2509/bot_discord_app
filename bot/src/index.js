@@ -13,6 +13,7 @@ const { isDueByClock, isDueByInterval } = require('../../shared/schedule-time-he
 const { scheduleDaily } = require('./utils/daily-cron')
 const worldcupNotifier = require('./utils/worldcup-notifier')
 const eventRecurrenceWorker = require('./utils/event-recurrence-worker')
+const blessCastleScheduler = require('./utils/blesscastle-scheduler')
 
 initDb()
 console.log('[DB] Database initialized')
@@ -170,6 +171,9 @@ client.once('ready', async () => {
 
   // Event recurrence worker: tick 60s, gui thong bao random member weekly
   eventRecurrenceWorker.start(client)
+
+  // BlessCastle scheduler: Fri 21h finalize + daily 3h cleanup
+  blessCastleScheduler.start()
 
   // Cron: 00:00 moi ngay → quet silent members cho tat ca guild bot dang join
   scheduleDaily('scan-silent-members', async () => {

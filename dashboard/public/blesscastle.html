@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlessCastle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { font-family: 'Inter', -apple-system, sans-serif; }
+    body { background: #f1f5f9; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
+    .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; color: #1e293b; background: #f8fafc; transition: border-color .15s; outline: none; }
+    .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.08); }
+    .btn-primary { background: #6366f1; color: white; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; white-space: nowrap; }
+    .btn-primary:hover:not(:disabled) { background: #4f46e5; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; background: white; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .btn-refresh:hover:not(:disabled) { border-color: #a5b4fc; color: #4f46e5; background: #f8fafc; }
+    .btn-soft-primary { background: #eef2ff; color: #4338ca; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+    .btn-soft-primary:hover:not(:disabled) { background: #e0e7ff; }
+    .btn-soft-danger { background: #fef2f2; color: #b91c1c; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+    .btn-soft-danger:hover:not(:disabled) { background: #fee2e2; }
+    .btn-primary:disabled, .btn-soft-primary:disabled, .btn-soft-danger:disabled { opacity: .5; cursor: not-allowed; }
+    .field-label { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; display: block; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #eef2ff; color: #4338ca; border-radius: 999px; font-size: 12px; font-weight: 500; }
+    .chip .x { cursor: pointer; opacity: .6; } .chip .x:hover { opacity: 1; }
+    .badge-star { background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+    .badge-ok { background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+    .badge-pending { background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+    .toggle { width: 40px; height: 22px; background: #e2e8f0; border-radius: 999px; position: relative; cursor: pointer; transition: background .15s; }
+    .toggle.on { background: #6366f1; }
+    .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform .15s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    .toggle.on::after { transform: translateX(18px); }
+    .progress { width: 100%; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .progress .bar { height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 999px; transition: width .3s; }
+    table.mtable { width: 100%; border-collapse: collapse; }
+    table.mtable th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+    table.mtable td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: #334155; }
+    table.mtable tr:hover td { background: #f8fafc; }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<div class="bg-white border-b border-slate-100 sticky top-0 z-10 px-4 md:px-8 py-4 md:py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="pl-12 md:pl-0">
+    <h1 class="text-sm md:text-xl font-bold text-slate-800">BlessCastle</h1>
+    <p class="text-xs md:text-sm text-slate-400 mt-0.5">Điểm danh event thứ 6 + tích lũy sao đổi quà</p>
+  </div>
+  <div class="flex items-center gap-3 flex-wrap">
+    <span id="saveStatus" class="text-sm"></span>
+    <button id="refreshBtn" class="btn-refresh">🔄 Làm mới</button>
+  </div>
+</div>
+
+<div class="p-4 md:p-8 max-w-6xl mx-auto space-y-5" id="app">
+  <!-- Info banner -->
+  <div class="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700">
+    ℹ️ Quy tắc: Voice trong khung <b>20:00-21:00 thứ 6</b> đủ <b>30 phút</b> (hoặc admin tick thủ công từ T2 đến 19:00 thứ 6) → +1 sao. Đủ <b>3 sao</b> → đổi 1 phần quà.
+  </div>
+
+  <!-- Config card -->
+  <div class="card p-5 md:p-7">
+    <h2 class="text-base font-bold text-slate-800 mb-2">Cấu hình</h2>
+    <p class="text-sm text-slate-400 mb-5">Chọn voice channel, khung giờ, số phút tối thiểu để cộng sao</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="configGrid">
+      <div>
+        <label class="field-label">Voice channels áp dụng</label>
+        <div id="channelChips" class="flex flex-wrap gap-2 mb-2 min-h-[28px]"></div>
+        <select id="channelSelect" class="input-field">
+          <option value="">-- Thêm voice channel --</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Số phút tối thiểu</label>
+        <input id="minMinutes" type="number" min="1" max="180" class="input-field" />
+        <p class="text-xs text-slate-400 mt-1">Voice ≥ số phút này trong khung giờ = đạt</p>
+      </div>
+      <div>
+        <label class="field-label">Giờ bắt đầu (0-23)</label>
+        <input id="startHour" type="number" min="0" max="23" class="input-field" />
+      </div>
+      <div>
+        <label class="field-label">Giờ kết thúc (0-23)</label>
+        <input id="endHour" type="number" min="0" max="23" class="input-field" />
+      </div>
+      <div class="md:col-span-2 flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+        <div>
+          <div class="text-sm font-semibold text-slate-700">Kích hoạt BlessCastle</div>
+          <div class="text-xs text-slate-400">Tắt để dừng tracking + finalize hàng tuần</div>
+        </div>
+        <div id="enabledToggle" class="toggle"></div>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end">
+      <button id="saveConfigBtn" class="btn-primary">Lưu cấu hình</button>
+    </div>
+  </div>
+
+  <!-- Members card -->
+  <div class="card p-5 md:p-7">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+      <div>
+        <h2 class="text-base font-bold text-slate-800">Thành viên</h2>
+        <p class="text-sm text-slate-400 mt-0.5" id="weekLabel">Tuần —</p>
+      </div>
+      <input id="searchInput" type="text" placeholder="Tìm theo tên..." class="input-field md:w-64" />
+    </div>
+    <div class="overflow-x-auto">
+      <table class="mtable" id="membersTable">
+        <thead>
+          <tr>
+            <th>Thành viên</th>
+            <th>Sao</th>
+            <th>Tuần này</th>
+            <th>Điểm danh thủ công</th>
+            <th class="text-right">Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="membersTbody">
+          <tr><td colspan="5" class="text-center text-slate-400 py-8">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Redemption history -->
+  <div class="card p-5 md:p-7">
+    <h2 class="text-base font-bold text-slate-800 mb-2">Lịch sử đổi quà</h2>
+    <p class="text-sm text-slate-400 mb-4">50 lần đổi quà gần nhất</p>
+    <div class="overflow-x-auto">
+      <table class="mtable">
+        <thead>
+          <tr>
+            <th>Thành viên</th>
+            <th>Ngày đổi</th>
+            <th>Sao tại thời điểm</th>
+            <th>Admin</th>
+          </tr>
+        </thead>
+        <tbody id="historyTbody">
+          <tr><td colspan="4" class="text-center text-slate-400 py-6">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="/js/blesscastle-tab.js"></script>
+</body>
+</html>

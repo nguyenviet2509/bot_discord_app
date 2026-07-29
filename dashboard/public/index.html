@@ -130,6 +130,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         <span>Thống kê voice</span>
       </div>
+      <div @click="tab='blesscastle'; sidebarOpen=false" :class="tab==='blesscastle' ? 'active' : ''" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l3-4h12l3 4v12H3Z"/><path d="M9 21v-7h6v7"/><path d="M12 3v2"/><path d="M8 9h.01"/><path d="M16 9h.01"/></svg>
+        <span>BlessCastle</span>
+      </div>
       <div @click="tab='honor'; sidebarOpen=false" :class="tab==='honor' ? 'active' : ''" class="nav-item">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         <span>Vinh danh</span>
@@ -2851,6 +2855,17 @@
       </div>
     </div>
     <!-- END VOICE STATS TAB -->
+
+    <!-- BLESSCASTLE TAB: iframe embed blesscastle.html -->
+    <div x-show="tab === 'blesscastle'" class="h-screen">
+      <iframe
+        src="/blesscastle.html"
+        class="w-full h-full border-0"
+        style="height: 100vh; height: 100dvh; width: 100%; border: 0;"
+        loading="lazy"
+        title="BlessCastle">
+      </iframe>
+    </div>
 
     <!-- HONOR TAB: iframe embed honor-config.html (giu SPA, khong dieu huong) -->
     <div x-show="tab === 'honor'" class="h-screen">
