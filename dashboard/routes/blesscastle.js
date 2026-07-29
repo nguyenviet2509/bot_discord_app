@@ -189,6 +189,24 @@ router.get('/weeks', (req, res) => {
   res.json(rows)
 })
 
+// DEBUG endpoints (chi bat khi BLESSCASTLE_TEST_MODE=1)
+router.post('/debug/finalize', (req, res) => {
+  if (process.env.BLESSCASTLE_TEST_MODE !== '1') return res.status(403).json({ error: 'Test mode disabled' })
+  const guildId = GUILD_ID()
+  const cfg = bcDb.getConfig(guildId)
+  const weekKey = bcDb.currentWeekKey()
+  const awarded = bcDb.finalizeWeek(guildId, weekKey, cfg.minMinutes * 60)
+  res.json({ ok: true, weekKey, awarded, count: awarded.length })
+})
+
+router.post('/debug/inject-voice', (req, res) => {
+  if (process.env.BLESSCASTLE_TEST_MODE !== '1') return res.status(403).json({ error: 'Test mode disabled' })
+  const { userId, minutes } = req.body || {}
+  if (!userId || !Number.isFinite(minutes)) return res.status(400).json({ error: 'userId + minutes bat buoc' })
+  bcDb.addVoiceSeconds(GUILD_ID(), userId, bcDb.currentWeekKey(), Math.round(minutes * 60))
+  res.json({ ok: true })
+})
+
 router.post('/reset', (req, res) => {
   const { confirm } = req.body || {}
   if (confirm !== 'RESET') {

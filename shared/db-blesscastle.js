@@ -101,6 +101,7 @@ function isoWeekKey(d) {
 // Kiem tra thoi diem hien tai co trong khoang "T2 00:00 -> T6 19:00" Saigon khong.
 // Dung cho manual tick validation.
 function isInManualWindow(ms = Date.now()) {
+  if (process.env.BLESSCASTLE_TEST_MODE === '1') return true
   const d = saigonDate(ms)
   const dow = d.getUTCDay() || 7 // Mon=1..Sun=7
   const hour = d.getUTCHours()

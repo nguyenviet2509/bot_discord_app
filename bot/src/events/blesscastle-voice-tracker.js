@@ -12,14 +12,13 @@ const joinTimes = new Map()
 function key(guildId, userId) { return `${guildId}::${userId}` }
 
 // Tra ve so giay trong khoang [fromMs, toMs] nam trong "Fri sessionStartHour..sessionEndHour" Saigon.
-// Ho tro khoang tha spanning qua ngay (hiem, nhung an toan).
+// Neu env BLESSCASTLE_TEST_MODE=1 -> bypass check day-of-week (accept moi ngay) de test.
 function clipToFridayWindow(fromMs, toMs, cfg) {
   if (toMs <= fromMs) return 0
   const startHour = cfg.sessionStartHour
   const endHour = cfg.sessionEndHour
+  const bypassDayCheck = process.env.BLESSCASTLE_TEST_MODE === '1'
   let total = 0
-  // Iterate qua tung mep gio (moi lat cat 1h) - kha nang toi da 2 lat vi khoang thuong < 1h
-  // Buoc 60s de don gian, khong loi hoi vi voice interval it khi > 60p
   const stepMs = 60_000
   let cur = fromMs
   while (cur < toMs) {
@@ -28,7 +27,8 @@ function clipToFridayWindow(fromMs, toMs, cfg) {
     const sd = new Date(mid + TZ_OFFSET_MS)
     const dow = sd.getUTCDay() || 7 // Mon=1..Sun=7 (Fri=5)
     const hour = sd.getUTCHours()
-    if (dow === 5 && hour >= startHour && hour < endHour) {
+    const dayOk = bypassDayCheck || dow === 5
+    if (dayOk && hour >= startHour && hour < endHour) {
       total += Math.floor((next - cur) / 1000)
     }
     cur = next
