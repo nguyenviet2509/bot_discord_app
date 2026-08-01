@@ -263,11 +263,12 @@ function renderMembers() {
 
 async function toggleManual(userId, next) {
   try {
+    const body = { userId, weekKey: state.weekKey }
     let r
     if (next) {
-      r = await api('POST', '/api/blesscastle/attendance', { userId })
+      r = await api('POST', '/api/blesscastle/attendance', body)
     } else {
-      r = await api('DELETE', '/api/blesscastle/attendance', { userId })
+      r = await api('DELETE', '/api/blesscastle/attendance', body)
     }
     flashSave(r?.awarded ? 'Đã tick + cộng 1⭐ ✓' : 'Đã cập nhật ✓')
     await refreshMembers()
@@ -381,11 +382,13 @@ document.getElementById('historyPageSize').addEventListener('change', (e) => {
 })
 
 document.getElementById('finalizeBtn').addEventListener('click', async () => {
-  if (!confirm('Chốt tuần hiện tại?\n\nMember đủ điều kiện (voice ≥ min phút HOẶC đã tick thủ công) sẽ được +1 sao.\n\nTiếp tục?')) return
+  if (!confirm('Chốt tuần hiện tại?\n\nMember đủ điều kiện (voice ≥ min phút HOẶC đã tick thủ công) sẽ được +1 sao.\n\n⚠️ Sau khi chốt, tuần này sẽ bị đóng (chỉ xem read-only), UI chuyển sang tuần mới.\n\nTiếp tục?')) return
   try {
     const r = await api('POST', '/api/blesscastle/finalize')
     flashSave(`Đã chốt tuần ${r.weekKey}: +1⭐ cho ${r.count} member ✓`)
-    await Promise.all([refreshMembers(), reloadHistory()])
+    // Reset selectedWeek de load active week moi (nextWeek)
+    state.selectedWeek = r.nextWeek || ''
+    await loadAll()
   } catch (e) {
     flashSave(`Lỗi: ${e.message}`, false)
   }

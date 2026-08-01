@@ -85,6 +85,30 @@ function currentWeekKey(ms = Date.now()) {
   return isoWeekKey(saigonDate(ms))
 }
 
+// Tra ve weekKey "active" cho guild: neu admin da chot tuan ISO hien tai
+// thi advance sang tuan ke tiep (tuan chot roi bi coi la 'da qua', read-only).
+function activeWeekKey(guildId, ms = Date.now()) {
+  const iso = currentWeekKey(ms)
+  const closed = getClosedWeek(guildId)
+  if (closed && closed >= iso) {
+    // Advance sang tuan ke tiep sau tuan da chot
+    return currentWeekKey(ms + 7 * 86400 * 1000)
+  }
+  return iso
+}
+
+function getClosedWeek(guildId) {
+  try {
+    const row = db().prepare('SELECT value FROM bot_meta WHERE key = ?').get(`bc_closed_week:${guildId}`)
+    return row ? row.value : null
+  } catch (_) { return null }
+}
+
+function setClosedWeek(guildId, weekKey) {
+  db().exec(`CREATE TABLE IF NOT EXISTS bot_meta (key TEXT PRIMARY KEY, value TEXT)`)
+  db().prepare('INSERT OR REPLACE INTO bot_meta (key, value) VALUES (?, ?)').run(`bc_closed_week:${guildId}`, weekKey)
+}
+
 function isoWeekKey(d) {
   // d duoc coi la Date "local Saigon" (getUTC* tra gia tri Saigon)
   const year = d.getUTCFullYear()
@@ -424,6 +448,9 @@ module.exports = {
   initBlessCastleSchema,
   // time
   currentWeekKey,
+  activeWeekKey,
+  getClosedWeek,
+  setClosedWeek,
   isoWeekKey,
   saigonDate,
   isInManualWindow,

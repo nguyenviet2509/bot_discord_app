@@ -106,7 +106,7 @@ router.get('/voice-channels', async (req, res) => {
 router.get('/members', async (req, res) => {
   const guildId = GUILD_ID()
   const cfg = bcDb.getConfig(guildId)
-  const currentWeek = bcDb.currentWeekKey()
+  const currentWeek = bcDb.activeWeekKey(GUILD_ID())
   const weekKey = (req.query.weekKey && /^\d{4}-\d{2}$/.test(req.query.weekKey)) ? req.query.weekKey : currentWeek
   const isCurrentWeek = weekKey === currentWeek
   const stars = bcDb.listActiveStars(guildId)
@@ -189,21 +189,24 @@ router.get('/weeks', (req, res) => {
     manualCount: r.manual_count,
     finalizedCount: r.finalized_count,
   }))
-  const current = bcDb.currentWeekKey()
+  const current = bcDb.activeWeekKey(GUILD_ID())
   if (!rows.find(r => r.weekKey === current)) {
     rows.unshift({ weekKey: current, total: 0, manualCount: 0, finalizedCount: 0 })
   }
   res.json(rows)
 })
 
-// Chốt tuần thủ công (admin): cong +1 sao cho ai du dieu kien.
-// Idempotent trong tuan: row da finalized=1 se bi bo qua.
+// Chốt tuần thủ công (admin): cong +1 sao cho ai du dieu kien VA dong tuan.
+// Sau khi chot: activeWeekKey se advance sang tuan ke tiep, UI khong tick/redeem duoc
+// vao tuan da chot nua (chi xem read-only).
 router.post('/finalize', (req, res) => {
   const guildId = GUILD_ID()
   const cfg = bcDb.getConfig(guildId)
-  const weekKey = bcDb.currentWeekKey()
+  const weekKey = bcDb.activeWeekKey(guildId)
   const awarded = bcDb.finalizeWeek(guildId, weekKey, cfg.minMinutes * 60)
-  res.json({ ok: true, weekKey, awarded, count: awarded.length })
+  bcDb.setClosedWeek(guildId, weekKey)  // Dong tuan -> activeWeekKey advance
+  const nextWeek = bcDb.activeWeekKey(guildId)
+  res.json({ ok: true, weekKey, awarded, count: awarded.length, nextWeek })
 })
 
 // DEBUG endpoints (chi bat khi BLESSCASTLE_TEST_MODE=1)
@@ -211,7 +214,7 @@ router.post('/debug/finalize', (req, res) => {
   if (process.env.BLESSCASTLE_TEST_MODE !== '1') return res.status(403).json({ error: 'Test mode disabled' })
   const guildId = GUILD_ID()
   const cfg = bcDb.getConfig(guildId)
-  const weekKey = bcDb.currentWeekKey()
+  const weekKey = bcDb.activeWeekKey(GUILD_ID())
   const awarded = bcDb.finalizeWeek(guildId, weekKey, cfg.minMinutes * 60)
   res.json({ ok: true, weekKey, awarded, count: awarded.length })
 })
@@ -220,7 +223,7 @@ router.post('/debug/inject-voice', (req, res) => {
   if (process.env.BLESSCASTLE_TEST_MODE !== '1') return res.status(403).json({ error: 'Test mode disabled' })
   const { userId, minutes } = req.body || {}
   if (!userId || !Number.isFinite(minutes)) return res.status(400).json({ error: 'userId + minutes bat buoc' })
-  bcDb.addVoiceSeconds(GUILD_ID(), userId, bcDb.currentWeekKey(), Math.round(minutes * 60))
+  bcDb.addVoiceSeconds(GUILD_ID(), userId, bcDb.activeWeekKey(GUILD_ID()), Math.round(minutes * 60))
   res.json({ ok: true })
 })
 
@@ -234,18 +237,27 @@ router.post('/reset', (req, res) => {
 })
 
 router.post('/attendance', (req, res) => {
-  const { userId } = req.body || {}
+  const { userId, weekKey: reqWeek } = req.body || {}
   if (!userId) return res.status(400).json({ error: 'userId bat buoc' })
   const guildId = GUILD_ID()
+  const active = bcDb.activeWeekKey(guildId)
+  if (reqWeek && reqWeek !== active) {
+    return res.status(400).json({ error: 'Tuan da chot, khong the tick manual nua' })
+  }
   const cfg = bcDb.getConfig(guildId)
-  const result = bcDb.setManualAttendanceWithAutoAward(guildId, userId, bcDb.currentWeekKey(), cfg.minMinutes * 60)
+  const result = bcDb.setManualAttendanceWithAutoAward(guildId, userId, active, cfg.minMinutes * 60)
   res.json({ ok: true, ...result })
 })
 
 router.delete('/attendance', (req, res) => {
-  const { userId } = req.body || {}
+  const { userId, weekKey: reqWeek } = req.body || {}
   if (!userId) return res.status(400).json({ error: 'userId bat buoc' })
-  bcDb.setManualAttendance(GUILD_ID(), userId, bcDb.currentWeekKey(), 0)
+  const guildId = GUILD_ID()
+  const active = bcDb.activeWeekKey(guildId)
+  if (reqWeek && reqWeek !== active) {
+    return res.status(400).json({ error: 'Tuan da chot, khong the sua nua' })
+  }
+  bcDb.setManualAttendance(guildId, userId, active, 0)
   res.json({ ok: true })
 })
 
