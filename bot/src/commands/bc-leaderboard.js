@@ -4,7 +4,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js')
 const bcDb = require('../../../shared/db-blesscastle')
 
-const MEDALS = ['🥇', '🥈', '🥉']
 const MAX_DESC_CHARS = 3800 // buffer duoi 4096 de an toan
 const MAX_EMBEDS_PER_MSG = 10
 
@@ -35,8 +34,7 @@ module.exports = {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i]
       const mention = await resolveMention(interaction.guild, r.user_id)
-      const rank = i < 3 ? MEDALS[i] : `**${i + 1}.**`
-      lines.push(`${rank} ${mention} — **${r.stars}** ⭐`)
+      lines.push(`**${i + 1}.** ${mention} — **${r.stars}** ⭐`)
     }
 
     // Chia thanh cac chunk khong vuot MAX_DESC_CHARS
