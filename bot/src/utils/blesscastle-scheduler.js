@@ -1,5 +1,5 @@
 // BlessCastle scheduler:
-// - Fri 21:00 Saigon: finalize tuan cho tat ca guild enabled (+1 sao neu dat)
+// - Sun 21:00 Saigon: auto-finalize tuan + dong tuan (setClosedWeek)
 // - Daily 03:00 Saigon: purge soft-deleted > 7 ngay
 //
 // Dung setInterval tick 60s + idempotency qua bang bot_meta.
@@ -24,15 +24,14 @@ function metaSet(key, value) {
     .prepare('INSERT OR REPLACE INTO bot_meta (key, value) VALUES (?, ?)').run(key, String(value))
 }
 
-// Sat 00:00 (= Fri 24:00) finalize: chi chay 1 lan per weekKey per guild.
-// Dung tuan ISO cua thoi diem "sap qua midnight" → tinh weekKey theo Fri (1h truoc).
+// Sun 21:00 Saigon finalize: chi chay 1 lan per weekKey per guild.
+// Sau finalize -> setClosedWeek de tuan bi khoa, activeWeekKey advance sang tuan sau.
 async function tryFinalize() {
   const s = saigonNow()
-  const dow = s.getUTCDay() || 7
+  const dow = s.getUTCDay() || 7 // Mon=1..Sun=7
   const hour = s.getUTCHours()
-  if (dow !== 6 || hour !== 0) return
+  if (dow !== 7 || hour !== 21) return
 
-  // ISO week: Fri va Sat cung 1 tuan (Mon-Sun) → weekKey khong doi khi qua midnight
   const weekKey = bcDb.currentWeekKey()
   const lastKey = metaGet('bc_last_finalize_week')
   if (lastKey === weekKey) return
@@ -44,7 +43,8 @@ async function tryFinalize() {
       // Flush voice tracker in-memory intervals dang mo (best-effort)
       flushOpenSessions(gid, cfg)
       const awarded = bcDb.finalizeWeek(gid, weekKey, cfg.minMinutes * 60)
-      console.log(`[BlessCastle] Finalize guild=${gid} week=${weekKey} awarded=${awarded.length}`)
+      bcDb.setClosedWeek(gid, weekKey) // Dong tuan -> UI advance sang tuan sau
+      console.log(`[BlessCastle] Auto-finalize guild=${gid} week=${weekKey} awarded=${awarded.length}`)
     } catch (err) {
       console.error(`[BlessCastle] Finalize guild=${gid} error:`, err.message)
     }
