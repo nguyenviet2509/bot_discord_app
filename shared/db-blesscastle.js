@@ -283,20 +283,32 @@ function setManualAttendance(guildId, userId, weekKey, value) {
   `).run(guildId, userId, weekKey, v, v)
 }
 
-// Tick manual + auto-award sao ngay neu tuan da finalize va user chua duoc award.
-// Dung khi admin tick sau finalize (miss member) va muon cong sao ngay.
-// Return: { awarded: true/false } - true neu vua auto-award +1 sao.
+// Tick manual + auto-award +1 sao NGAY LAP TUC neu user chua duoc award tuan do.
+// Set finalized=1 sau khi award de finalizeWeek() sau khong double-award.
+// Chong double khi: voice >= min (da qualify), attended_manual da 1, hoac finalized=1.
+// Return: { awarded: true/false } - true neu vua cong +1 sao.
 function setManualAttendanceWithAutoAward(guildId, userId, weekKey, minSeconds) {
   const cur = getUserWeekAttendance(guildId, userId, weekKey)
+  // alreadyEligible = da hoac se duoc award (voice>=min tai finalize, hoac attended da 1)
+  // Nguyen tac: tick chi grant khi !alreadyEligible.
+  //  - Voice>=min truoc tick: finalize se cong -> khong grant o day (tranh double)
+  //  - Attended da 1: da xu ly truoc do (co the da awarded hoac cho finalize) -> khong grant
+  //  - Con lai: chua co gi -> grant ngay + set finalized=1 chan double khi finalize
   const alreadyEligible = cur.attended_manual === 1 || cur.voice_seconds >= minSeconds
-  setManualAttendance(guildId, userId, weekKey, 1)
-  // Auto-award chi khi: tuan da finalized VA user chua eligible truoc tick
-  // -> khong bi double-award neu voice >= min (da awarded o finalize truoc)
-  if (cur.finalized === 1 && !alreadyEligible) {
-    incrementStars(guildId, userId, 1)
-    return { awarded: true }
-  }
-  return { awarded: false }
+
+  const tx = db().transaction(() => {
+    setManualAttendance(guildId, userId, weekKey, 1)
+    if (!alreadyEligible) {
+      incrementStars(guildId, userId, 1)
+      db().prepare(`
+        UPDATE blesscastle_attendance SET finalized = 1
+        WHERE guild_id = ? AND user_id = ? AND week_key = ?
+      `).run(guildId, userId, weekKey)
+    }
+  })
+  tx()
+
+  return { awarded: !alreadyEligible }
 }
 
 function getWeekAttendance(guildId, weekKey) {
