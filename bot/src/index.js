@@ -168,8 +168,8 @@ client.once('ready', async () => {
   // Event recurrence worker: tick 60s, gui thong bao random member weekly
   eventRecurrenceWorker.start(client)
 
-  // BlessCastle scheduler: Fri 21h finalize + daily 3h cleanup
-  blessCastleScheduler.start()
+  // BlessCastle scheduler: Sat 00:00 finalize + daily 3h cleanup + voice checkpoint
+  blessCastleScheduler.start(client)
 
   // Cron: 00:00 moi ngay → quet silent members cho tat ca guild bot dang join
   scheduleDaily('scan-silent-members', async () => {

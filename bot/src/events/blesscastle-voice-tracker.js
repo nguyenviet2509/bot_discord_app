@@ -44,6 +44,56 @@ function commitInterval(guildId, userId, fromMs, toMs, cfg) {
   bcDb.addVoiceSeconds(guildId, userId, weekKey, seconds)
 }
 
+// Startup sweep: scan tat ca voice states hien tai, populate joinTimes cho user
+// dang trong watched channel. Bao ve chong mat data khi bot restart giua session.
+function sweepCurrentVoiceStates(client) {
+  const now = Date.now()
+  let swept = 0
+  for (const [guildId, guild] of client.guilds.cache) {
+    const cfg = bcDb.getConfig(guildId)
+    if (!cfg.enabled || cfg.voiceChannelIds.length === 0) continue
+    const watched = cfg.voiceChannelIds
+    for (const [, vs] of guild.voiceStates.cache) {
+      if (!vs.channelId || !watched.includes(vs.channelId)) continue
+      if (vs.member?.user?.bot) continue
+      joinTimes.set(key(guildId, vs.id), { channelId: vs.channelId, joinMs: now })
+      swept++
+    }
+  }
+  return swept
+}
+
+// Periodic checkpoint: moi tick, voi moi user dang trong watched channel
+// -> commit interval [joinMs, now] va set joinMs = now.
+// Idempotent, chong mat data neu bot restart (max mat 1 tick period).
+function checkpointOpenSessions(client) {
+  const now = Date.now()
+  let committed = 0
+  for (const [k, rec] of joinTimes.entries()) {
+    const sep = k.indexOf('::')
+    const guildId = k.slice(0, sep)
+    const userId = k.slice(sep + 2)
+    const guild = client.guilds.cache.get(guildId)
+    const cfg = bcDb.getConfig(guildId)
+    if (!cfg.enabled || cfg.voiceChannelIds.length === 0) {
+      joinTimes.delete(k); continue
+    }
+    // Verify user van con trong watched channel (defensive)
+    const vs = guild?.voiceStates.cache.get(userId)
+    if (!vs || !vs.channelId || !cfg.voiceChannelIds.includes(vs.channelId)) {
+      // User da roi ma bot miss event -> commit lan cuoi roi xoa
+      commitInterval(guildId, userId, rec.joinMs, now, cfg)
+      joinTimes.delete(k)
+      committed++
+      continue
+    }
+    commitInterval(guildId, userId, rec.joinMs, now, cfg)
+    rec.joinMs = now
+    committed++
+  }
+  return committed
+}
+
 module.exports = {
   name: 'voiceStateUpdate',
   execute(oldState, newState) {
@@ -86,4 +136,6 @@ module.exports = {
   _joinTimes: joinTimes,
   _commitInterval: commitInterval,
   _clipToFridayWindow: clipToFridayWindow,
+  sweepCurrentVoiceStates,
+  checkpointOpenSessions,
 }

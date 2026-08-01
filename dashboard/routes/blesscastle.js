@@ -40,10 +40,14 @@ function discordApi(path) {
   })
 }
 
+// Fetch full member list voi pagination (Discord API limit 1000/request).
+// Loop den khi tra ve < 1000 hoac cap 10 pages (10K members).
 async function fetchGuildMembersMap(guildId, { includeBots = false } = {}) {
-  const arr = await discordApi(`/api/v10/guilds/${guildId}/members?limit=1000`)
   const map = new Map()
-  if (Array.isArray(arr)) {
+  let after = '0'
+  for (let i = 0; i < 10; i++) {
+    const arr = await discordApi(`/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`)
+    if (!Array.isArray(arr) || arr.length === 0) break
     for (const m of arr) {
       if (!m.user) continue
       if (!includeBots && m.user.bot) continue
@@ -53,6 +57,9 @@ async function fetchGuildMembersMap(guildId, { includeBots = false } = {}) {
         isBot: !!m.user.bot,
       })
     }
+    if (arr.length < 1000) break
+    after = arr[arr.length - 1].user?.id
+    if (!after) break
   }
   return map
 }

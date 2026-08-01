@@ -88,11 +88,51 @@ function tryCleanup() {
   metaSet('bc_last_cleanup_day', today)
 }
 
-function start() {
+function start(client) {
   // Bao dam bot_meta ton tai
   require('../../../shared/db').getDb().exec(`CREATE TABLE IF NOT EXISTS bot_meta (key TEXT PRIMARY KEY, value TEXT)`)
-  console.log('[BlessCastle] Scheduler started (tick 60s)')
-  setInterval(() => { tryFinalize(); tryCleanup() }, 60_000)
+
+  const tracker = require('../events/blesscastle-voice-tracker')
+
+  // Startup sweep: capture users dang trong watched channel luc bot online
+  if (client) {
+    try {
+      const swept = tracker.sweepCurrentVoiceStates(client)
+      if (swept > 0) console.log(`[BlessCastle] Startup sweep: captured ${swept} ongoing voice session(s)`)
+    } catch (err) {
+      console.error('[BlessCastle] startup sweep error:', err.message)
+    }
+  }
+
+  console.log('[BlessCastle] Scheduler started (tick 60s: finalize + cleanup + voice checkpoint)')
+  setInterval(() => {
+    tryFinalize()
+    tryCleanup()
+    // Voice checkpoint: chong mat data neu bot restart, va bat user da vao voice
+    // trong luc bot chua enable / bot vua restart
+    if (client) {
+      try {
+        // Truoc khi checkpoint, sweep them user moi dang trong voice ma chua co trong joinTimes
+        // (ex: admin vua enable config sau khi user da vao voice)
+        for (const [guildId, guild] of client.guilds.cache) {
+          const cfg = bcDb.getConfig(guildId)
+          if (!cfg.enabled || cfg.voiceChannelIds.length === 0) continue
+          const now = Date.now()
+          for (const [, vs] of guild.voiceStates.cache) {
+            if (!vs.channelId || !cfg.voiceChannelIds.includes(vs.channelId)) continue
+            if (vs.member?.user?.bot) continue
+            const k = `${guildId}::${vs.id}`
+            if (!tracker._joinTimes.has(k)) {
+              tracker._joinTimes.set(k, { channelId: vs.channelId, joinMs: now })
+            }
+          }
+        }
+        tracker.checkpointOpenSessions(client)
+      } catch (err) {
+        console.error('[BlessCastle] checkpoint error:', err.message)
+      }
+    }
+  }, 60_000)
 }
 
 module.exports = { start, _tryFinalize: tryFinalize, _tryCleanup: tryCleanup }
