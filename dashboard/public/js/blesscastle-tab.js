@@ -212,8 +212,10 @@ function renderMembers() {
     return
   }
 
-  const inWindow = isInManualWindow() && state.isCurrentWeek
+  // Cho phep tick bat cu luc nao trong tuan hien tai (Mon-Sun ISO week).
+  // Sau finalize, tick van hoat dong va tu auto-award +1 sao neu user chua duoc award.
   const canTick = state.isCurrentWeek
+  const inWindow = canTick
   const canRedeemGlobal = state.isCurrentWeek
   const minSec = state.minMinutes * 60
 
@@ -260,17 +262,14 @@ function renderMembers() {
 }
 
 async function toggleManual(userId, next) {
-  if (!isInManualWindow()) {
-    flashSave('Chỉ có thể tick từ T2 đến 19h thứ 6', false)
-    return
-  }
   try {
+    let r
     if (next) {
-      await api('POST', '/api/blesscastle/attendance', { userId })
+      r = await api('POST', '/api/blesscastle/attendance', { userId })
     } else {
-      await api('DELETE', '/api/blesscastle/attendance', { userId })
+      r = await api('DELETE', '/api/blesscastle/attendance', { userId })
     }
-    flashSave('Đã cập nhật ✓')
+    flashSave(r?.awarded ? 'Đã tick + cộng 1⭐ ✓' : 'Đã cập nhật ✓')
     await refreshMembers()
   } catch (e) {
     flashSave(`Lỗi: ${e.message}`, false)

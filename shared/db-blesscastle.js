@@ -283,6 +283,22 @@ function setManualAttendance(guildId, userId, weekKey, value) {
   `).run(guildId, userId, weekKey, v, v)
 }
 
+// Tick manual + auto-award sao ngay neu tuan da finalize va user chua duoc award.
+// Dung khi admin tick sau finalize (miss member) va muon cong sao ngay.
+// Return: { awarded: true/false } - true neu vua auto-award +1 sao.
+function setManualAttendanceWithAutoAward(guildId, userId, weekKey, minSeconds) {
+  const cur = getUserWeekAttendance(guildId, userId, weekKey)
+  const alreadyEligible = cur.attended_manual === 1 || cur.voice_seconds >= minSeconds
+  setManualAttendance(guildId, userId, weekKey, 1)
+  // Auto-award chi khi: tuan da finalized VA user chua eligible truoc tick
+  // -> khong bi double-award neu voice >= min (da awarded o finalize truoc)
+  if (cur.finalized === 1 && !alreadyEligible) {
+    incrementStars(guildId, userId, 1)
+    return { awarded: true }
+  }
+  return { awarded: false }
+}
+
 function getWeekAttendance(guildId, weekKey) {
   return db()
     .prepare(`
@@ -415,6 +431,7 @@ module.exports = {
   // attendance
   addVoiceSeconds,
   setManualAttendance,
+  setManualAttendanceWithAutoAward,
   getWeekAttendance,
   getUserWeekAttendance,
   finalizeWeek,

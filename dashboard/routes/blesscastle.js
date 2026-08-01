@@ -236,19 +236,15 @@ router.post('/reset', (req, res) => {
 router.post('/attendance', (req, res) => {
   const { userId } = req.body || {}
   if (!userId) return res.status(400).json({ error: 'userId bat buoc' })
-  if (!bcDb.isInManualWindow()) {
-    return res.status(400).json({ error: 'Chi co the diem danh thu cong tu T2 den 19h thu 6 (gio Saigon)' })
-  }
-  bcDb.setManualAttendance(GUILD_ID(), userId, bcDb.currentWeekKey(), 1)
-  res.json({ ok: true })
+  const guildId = GUILD_ID()
+  const cfg = bcDb.getConfig(guildId)
+  const result = bcDb.setManualAttendanceWithAutoAward(guildId, userId, bcDb.currentWeekKey(), cfg.minMinutes * 60)
+  res.json({ ok: true, ...result })
 })
 
 router.delete('/attendance', (req, res) => {
   const { userId } = req.body || {}
   if (!userId) return res.status(400).json({ error: 'userId bat buoc' })
-  if (!bcDb.isInManualWindow()) {
-    return res.status(400).json({ error: 'Chi co the diem danh thu cong tu T2 den 19h thu 6 (gio Saigon)' })
-  }
   bcDb.setManualAttendance(GUILD_ID(), userId, bcDb.currentWeekKey(), 0)
   res.json({ ok: true })
 })
