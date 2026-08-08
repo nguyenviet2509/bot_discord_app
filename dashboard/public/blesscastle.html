@@ -96,6 +96,18 @@
         </div>
         <div id="enabledToggle" class="toggle"></div>
       </div>
+      <div class="md:col-span-2 pt-3 border-t border-slate-100">
+        <label class="field-label">Channel thông báo sau chốt tuần (tùy chọn)</label>
+        <select id="announceChannel" class="input-field">
+          <option value="">-- Không gửi thông báo --</option>
+        </select>
+        <p class="text-xs text-slate-400 mt-1">Sau khi chốt tuần (thủ công hoặc cron Chủ nhật 21:00) → gửi leaderboard vào channel này.</p>
+      </div>
+      <div class="md:col-span-2">
+        <label class="field-label">Nội dung thông báo</label>
+        <textarea id="announceMessage" rows="8" class="input-field" style="font-family:inherit;resize:vertical" placeholder="Nội dung thông báo..."></textarea>
+        <p class="text-xs text-slate-400 mt-1">Placeholders: <code>{week_date}</code> (ngày thứ 6 của tuần), <code>{deadline_date}</code> (hạn chót = 2 ngày sau chốt). Để trống dùng mặc định.</p>
+      </div>
     </div>
     <div class="mt-5 flex justify-end">
       <button id="saveConfigBtn" class="btn-primary">Lưu cấu hình</button>

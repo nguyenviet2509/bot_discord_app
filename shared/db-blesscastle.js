@@ -62,8 +62,17 @@ const SCHEMA_SQL = `
     ON blesscastle_redemptions(guild_id, redeemed_at DESC);
 `
 
+const DEFAULT_ANNOUNCE_MESSAGE = `📢 **THÔNG BÁO GHI NHẬN THAM GIA BLESSCASTLE TUẦN {week_date}** @everyone
+
+Hí anh em, đây là dữ liệu hệ thống ghi nhận tự động trong buổi BC ngày {week_date}. Nếu có thiếu sót thành viên nào có tham gia mà chưa được ghi nhận thì hãy nhanh tay liên hệ với BQT Clan để được hỗ trợ. Hạn chót tới 20:00 ngày {deadline_date}.
+
+Vì hệ thống mới được phát triển và hoạt động thực tế, nếu có thiếu sót mong anh em thông cảm. Xin cảm ơn anh em đã tin tưởng và tham gia cùng Clan 💖`
+
 function initBlessCastleSchema(database) {
   database.exec(SCHEMA_SQL)
+  // Migration: them cot announce_channel_id + announce_message
+  try { database.exec(`ALTER TABLE blesscastle_config ADD COLUMN announce_channel_id TEXT`) } catch (_) {}
+  try { database.exec(`ALTER TABLE blesscastle_config ADD COLUMN announce_message TEXT`) } catch (_) {}
 }
 
 function db() {
@@ -155,6 +164,8 @@ function getConfig(guildId) {
     sessionStartHour: row.session_start_hour,
     sessionEndHour: row.session_end_hour,
     enabled: !!row.enabled,
+    announceChannelId: row.announce_channel_id || null,
+    announceMessage: row.announce_message || DEFAULT_ANNOUNCE_MESSAGE,
   } : {
     guildId,
     voiceChannelIds: [],
@@ -162,6 +173,8 @@ function getConfig(guildId) {
     sessionStartHour: 20,
     sessionEndHour: 21,
     enabled: false,
+    announceChannelId: null,
+    announceMessage: DEFAULT_ANNOUNCE_MESSAGE,
   }
   _configCache.set(guildId, { config: cfg, expiresAt: now + CONFIG_TTL_MS })
   return cfg
@@ -180,17 +193,22 @@ function upsertConfig(guildId, patch) {
     sessionStartHour: patch.sessionStartHour ?? cur.sessionStartHour,
     sessionEndHour: patch.sessionEndHour ?? cur.sessionEndHour,
     enabled: patch.enabled ?? cur.enabled,
+    announceChannelId: patch.announceChannelId !== undefined ? patch.announceChannelId : cur.announceChannelId,
+    announceMessage: patch.announceMessage !== undefined ? patch.announceMessage : cur.announceMessage,
   }
   db().prepare(`
     INSERT INTO blesscastle_config
-      (guild_id, voice_channel_ids, min_minutes, session_start_hour, session_end_hour, enabled, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, unixepoch())
+      (guild_id, voice_channel_ids, min_minutes, session_start_hour, session_end_hour, enabled,
+       announce_channel_id, announce_message, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, unixepoch())
     ON CONFLICT(guild_id) DO UPDATE SET
       voice_channel_ids = excluded.voice_channel_ids,
       min_minutes = excluded.min_minutes,
       session_start_hour = excluded.session_start_hour,
       session_end_hour = excluded.session_end_hour,
       enabled = excluded.enabled,
+      announce_channel_id = excluded.announce_channel_id,
+      announce_message = excluded.announce_message,
       updated_at = unixepoch()
   `).run(
     guildId,
@@ -199,6 +217,8 @@ function upsertConfig(guildId, patch) {
     next.sessionStartHour,
     next.sessionEndHour,
     next.enabled ? 1 : 0,
+    next.announceChannelId || null,
+    next.announceMessage || null,
   )
   _configCache.delete(guildId)
   return getConfig(guildId)
@@ -446,6 +466,7 @@ function countRedemptions(guildId) {
 
 module.exports = {
   initBlessCastleSchema,
+  DEFAULT_ANNOUNCE_MESSAGE,
   // time
   currentWeekKey,
   activeWeekKey,

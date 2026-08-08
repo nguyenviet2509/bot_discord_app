@@ -5,6 +5,8 @@
 // Dung setInterval tick 60s + idempotency qua bang bot_meta.
 
 const bcDb = require('../../../shared/db-blesscastle')
+const { buildAnnouncement } = require('../../../shared/build-bc-announcement')
+const { sendDiscordMessage } = require('../../../shared/send-discord-message')
 
 const TZ_OFFSET_MS = 7 * 60 * 60 * 1000
 const SEVEN_DAYS_SEC = 7 * 86400
@@ -40,16 +42,69 @@ async function tryFinalize() {
   for (const gid of guildIds) {
     try {
       const cfg = bcDb.getConfig(gid)
-      // Flush voice tracker in-memory intervals dang mo (best-effort)
       flushOpenSessions(gid, cfg)
       const awarded = bcDb.finalizeWeek(gid, weekKey, cfg.minMinutes * 60)
-      bcDb.setClosedWeek(gid, weekKey) // Dong tuan -> UI advance sang tuan sau
+      bcDb.setClosedWeek(gid, weekKey)
       console.log(`[BlessCastle] Auto-finalize guild=${gid} week=${weekKey} awarded=${awarded.length}`)
+      await sendAnnouncement(gid, cfg)
     } catch (err) {
       console.error(`[BlessCastle] Finalize guild=${gid} error:`, err.message)
     }
   }
   metaSet('bc_last_finalize_week', weekKey)
+}
+
+// Gui thong bao ket qua chot tuan ra channel neu co config.
+async function sendAnnouncement(guildId, cfg) {
+  if (!cfg.announceChannelId) return
+  try {
+    const starsRows = bcDb.listActiveStars(guildId)
+    // Fetch members qua Discord REST API de resolve avatar/name (khong dung bot client)
+    const membersMap = await fetchMembersMap(guildId)
+    const payload = buildAnnouncement({
+      starsRows: starsRows.filter(r => membersMap.has(r.user_id)),
+      membersMap,
+      template: cfg.announceMessage,
+    })
+    const r = await sendDiscordMessage(cfg.announceChannelId, payload)
+    if (r.ok) console.log(`[BlessCastle] Announcement sent guild=${guildId} channel=${cfg.announceChannelId}`)
+    else console.warn(`[BlessCastle] Announcement fail guild=${guildId}: status=${r.status} body=${r.body || r.error}`)
+  } catch (err) {
+    console.error(`[BlessCastle] Announcement error guild=${guildId}:`, err.message)
+  }
+}
+
+// Simple fetch de resolve member info trong context bot (dashboard co ban riêng).
+async function fetchMembersMap(guildId) {
+  const https = require('https')
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'discord.com',
+      path: `/api/v10/guilds/${guildId}/members?limit=1000`,
+      method: 'GET',
+      headers: { Authorization: `Bot ${process.env.BOT_TOKEN}` },
+    }, (res) => {
+      let buf = ''
+      res.on('data', c => buf += c)
+      res.on('end', () => {
+        const map = new Map()
+        try {
+          const arr = JSON.parse(buf)
+          if (Array.isArray(arr)) {
+            for (const m of arr) {
+              if (m.user && !m.user.bot) map.set(m.user.id, {
+                username: m.nick || m.user.global_name || m.user.username,
+                avatar: m.user.avatar,
+              })
+            }
+          }
+        } catch (_) {}
+        resolve(map)
+      })
+    })
+    req.on('error', () => resolve(new Map()))
+    req.end()
+  })
 }
 
 // Flush open voice sessions (user con dang trong watched channel luc chot tuan)

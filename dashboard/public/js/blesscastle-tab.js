@@ -53,6 +53,7 @@ function isInManualWindow() {
 const state = {
   config: null,
   allVoiceChannels: [],
+  allTextChannels: [],
   members: [],
   filtered: [],
   weekKey: '',
@@ -67,18 +68,21 @@ const state = {
 
 async function loadAll() {
   try {
-    const [cfg, chs, weeks] = await Promise.all([
+    const [cfg, chs, tcs, weeks] = await Promise.all([
       api('GET', '/api/blesscastle/config'),
       api('GET', '/api/blesscastle/voice-channels'),
+      api('GET', '/api/blesscastle/text-channels'),
       api('GET', '/api/blesscastle/weeks?limit=20'),
     ])
     state.config = cfg
     state.allVoiceChannels = chs
+    state.allTextChannels = tcs
     state.weeks = weeks
     if (!state.selectedWeek) state.selectedWeek = weeks[0]?.weekKey || ''
     renderConfig()
     renderChannelSelect()
     renderChannelChips()
+    renderTextChannelSelect()
     renderWeekSelect()
     await Promise.all([
       loadMembersForWeek(state.selectedWeek),
@@ -87,6 +91,13 @@ async function loadAll() {
   } catch (e) {
     flashSave(`Lỗi tải dữ liệu: ${e.message}`, false)
   }
+}
+
+function renderTextChannelSelect() {
+  const sel = document.getElementById('announceChannel')
+  const cur = state.config.announceChannelId || ''
+  sel.innerHTML = '<option value="">-- Không gửi thông báo --</option>' +
+    state.allTextChannels.map(c => `<option value="${c.id}"${c.id === cur ? ' selected' : ''}># ${escapeHtml(c.name)}</option>`).join('')
 }
 
 async function loadMembersForWeek(weekKey) {
@@ -130,6 +141,7 @@ function renderConfig() {
   document.getElementById('endHour').value = c.sessionEndHour
   const t = document.getElementById('enabledToggle')
   t.classList.toggle('on', !!c.enabled)
+  document.getElementById('announceMessage').value = c.announceMessage || ''
 }
 
 function renderChannelChips() {
@@ -183,12 +195,15 @@ document.getElementById('saveConfigBtn').addEventListener('click', async () => {
       sessionStartHour: parseInt(document.getElementById('startHour').value),
       sessionEndHour: parseInt(document.getElementById('endHour').value),
       enabled: !!state.config.enabled,
+      announceChannelId: document.getElementById('announceChannel').value || null,
+      announceMessage: document.getElementById('announceMessage').value || '',
     }
     const cfg = await api('PUT', '/api/blesscastle/config', payload)
     state.config = cfg
     state.minMinutes = cfg.minMinutes
     renderConfig()
-    renderMembers() // re-render vi threshold thay doi
+    renderTextChannelSelect()
+    renderMembers()
     flashSave('Đã lưu ✓')
   } catch (e) {
     flashSave(`Lỗi: ${e.message}`, false)
@@ -385,7 +400,8 @@ document.getElementById('finalizeBtn').addEventListener('click', async () => {
   if (!confirm('Chốt tuần hiện tại?\n\nMember đủ điều kiện (voice ≥ min phút HOẶC đã tick thủ công) sẽ được +1 sao.\n\n⚠️ Sau khi chốt, tuần này sẽ bị đóng (chỉ xem read-only), UI chuyển sang tuần mới.\n\nTiếp tục?')) return
   try {
     const r = await api('POST', '/api/blesscastle/finalize')
-    flashSave(`Đã chốt tuần ${r.weekKey}: +1⭐ cho ${r.count} member ✓`)
+    const announceInfo = r.announced ? ' + gửi thông báo' : (state.config?.announceChannelId ? ' (gửi thông báo LỖI - xem log bot)' : '')
+    flashSave(`Đã chốt tuần ${r.weekKey}: +1⭐ cho ${r.count} member ✓${announceInfo}`)
     // Reset selectedWeek de load active week moi (nextWeek)
     state.selectedWeek = r.nextWeek || ''
     await loadAll()

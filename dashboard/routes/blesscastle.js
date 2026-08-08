@@ -12,6 +12,8 @@
 const https = require('https')
 const express = require('express')
 const bcDb = require('../../shared/db-blesscastle')
+const { buildAnnouncement } = require('../../shared/build-bc-announcement')
+const { sendDiscordMessage } = require('../../shared/send-discord-message')
 
 const router = express.Router()
 const GUILD_ID = () => process.env.GUILD_ID
@@ -83,19 +85,33 @@ router.get('/config', (req, res) => {
 })
 
 router.put('/config', (req, res) => {
-  const { voiceChannelIds, minMinutes, sessionStartHour, sessionEndHour, enabled } = req.body || {}
+  const { voiceChannelIds, minMinutes, sessionStartHour, sessionEndHour, enabled,
+          announceChannelId, announceMessage } = req.body || {}
   const patch = {}
   if (Array.isArray(voiceChannelIds)) patch.voiceChannelIds = voiceChannelIds.map(String)
   if (Number.isInteger(minMinutes) && minMinutes >= 1 && minMinutes <= 180) patch.minMinutes = minMinutes
   if (Number.isInteger(sessionStartHour) && sessionStartHour >= 0 && sessionStartHour <= 23) patch.sessionStartHour = sessionStartHour
   if (Number.isInteger(sessionEndHour) && sessionEndHour >= 0 && sessionEndHour <= 23) patch.sessionEndHour = sessionEndHour
   if (typeof enabled === 'boolean') patch.enabled = enabled
+  if (announceChannelId !== undefined) patch.announceChannelId = announceChannelId ? String(announceChannelId) : null
+  if (typeof announceMessage === 'string') patch.announceMessage = announceMessage.trim() || null
   if (patch.sessionStartHour !== undefined && patch.sessionEndHour !== undefined
       && patch.sessionEndHour <= patch.sessionStartHour) {
     return res.status(400).json({ error: 'session_end_hour phai lon hon session_start_hour' })
   }
   const cfg = bcDb.upsertConfig(GUILD_ID(), patch)
   res.json(cfg)
+})
+
+// Lay list text channels de admin chon lam announce channel
+router.get('/text-channels', async (req, res) => {
+  const arr = await discordApi(`/api/v10/guilds/${GUILD_ID()}/channels`)
+  if (!Array.isArray(arr)) return res.json([])
+  // type 0 = GUILD_TEXT, 5 = GUILD_ANNOUNCEMENT
+  const out = arr.filter(c => c.type === 0 || c.type === 5)
+    .map(c => ({ id: c.id, name: c.name, position: c.position ?? 0 }))
+    .sort((a, b) => a.position - b.position)
+  res.json(out)
 })
 
 router.get('/voice-channels', async (req, res) => {
@@ -198,15 +214,35 @@ router.get('/weeks', (req, res) => {
 
 // Chốt tuần thủ công (admin): cong +1 sao cho ai du dieu kien VA dong tuan.
 // Sau khi chot: activeWeekKey se advance sang tuan ke tiep, UI khong tick/redeem duoc
-// vao tuan da chot nua (chi xem read-only).
-router.post('/finalize', (req, res) => {
+// vao tuan da chot nua (chi xem read-only). Neu co announce_channel_id -> gui thong bao.
+router.post('/finalize', async (req, res) => {
   const guildId = GUILD_ID()
   const cfg = bcDb.getConfig(guildId)
   const weekKey = bcDb.activeWeekKey(guildId)
   const awarded = bcDb.finalizeWeek(guildId, weekKey, cfg.minMinutes * 60)
-  bcDb.setClosedWeek(guildId, weekKey)  // Dong tuan -> activeWeekKey advance
+  bcDb.setClosedWeek(guildId, weekKey)
   const nextWeek = bcDb.activeWeekKey(guildId)
-  res.json({ ok: true, weekKey, awarded, count: awarded.length, nextWeek })
+
+  // Gui thong bao ra channel neu co config
+  let announced = false
+  if (cfg.announceChannelId) {
+    try {
+      const starsRows = bcDb.listActiveStars(guildId)
+      const membersMap = await fetchGuildMembersMap(guildId)
+      const payload = buildAnnouncement({
+        starsRows: starsRows.filter(r => membersMap.has(r.user_id)), // bo bot va user da roi
+        membersMap,
+        template: cfg.announceMessage,
+      })
+      const r = await sendDiscordMessage(cfg.announceChannelId, payload)
+      announced = r.ok
+      if (!r.ok) console.warn('[BlessCastle] announce send fail:', r.status, r.body || r.error)
+    } catch (err) {
+      console.error('[BlessCastle] announce error:', err.message)
+    }
+  }
+
+  res.json({ ok: true, weekKey, awarded, count: awarded.length, nextWeek, announced })
 })
 
 // DEBUG endpoints (chi bat khi BLESSCASTLE_TEST_MODE=1)
