@@ -103,6 +103,29 @@ router.put('/config', (req, res) => {
   res.json(cfg)
 })
 
+// Gui thu thong bao voi config hien tai (khong finalize, khong dong tuan)
+router.post('/announce/test', async (req, res) => {
+  const guildId = GUILD_ID()
+  const cfg = bcDb.getConfig(guildId)
+  if (!cfg.announceChannelId) return res.status(400).json({ error: 'Chua chon channel thong bao' })
+  try {
+    const starsRows = bcDb.listActiveStars(guildId)
+    const membersMap = await fetchGuildMembersMap(guildId)
+    const payload = buildAnnouncement({
+      starsRows: starsRows.filter(r => membersMap.has(r.user_id)),
+      membersMap,
+      template: cfg.announceMessage,
+    })
+    // Prefix [TEST] de phan biet
+    payload.content = `🧪 [TEST] ${payload.content}`
+    const r = await sendDiscordMessage(cfg.announceChannelId, payload)
+    if (r.ok) res.json({ ok: true, message: 'Da gui tin test' })
+    else res.status(502).json({ error: `Discord API loi: status=${r.status} body=${(r.body || '').slice(0, 200)}` })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Lay list text channels de admin chon lam announce channel
 router.get('/text-channels', async (req, res) => {
   const arr = await discordApi(`/api/v10/guilds/${GUILD_ID()}/channels`)

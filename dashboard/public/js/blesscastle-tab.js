@@ -383,6 +383,23 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadAll())
 
+document.getElementById('testAnnounceBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('testAnnounceBtn')
+  btn.disabled = true
+  try {
+    if (!state.config?.announceChannelId) {
+      flashSave('Chưa chọn channel thông báo (nhớ Lưu cấu hình trước)', false)
+      return
+    }
+    const r = await api('POST', '/api/blesscastle/announce/test')
+    flashSave(r?.message || 'Đã gửi thử ✓')
+  } catch (e) {
+    flashSave(`Lỗi: ${e.message}`, false)
+  } finally {
+    btn.disabled = false
+  }
+})
+
 document.getElementById('historyPrev').addEventListener('click', () => {
   if (state.history.page > 1) { state.history.page--; reloadHistory() }
 })
