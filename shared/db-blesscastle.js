@@ -331,6 +331,31 @@ function setManualAttendance(guildId, userId, weekKey, value) {
 // Set finalized=1 sau khi award de finalizeWeek() sau khong double-award.
 // Chong double khi: voice >= min (da qualify), attended_manual da 1, hoac finalized=1.
 // Return: { awarded: true/false } - true neu vua cong +1 sao.
+// Untick manual + auto-revoke -1 sao neu tuan da finalize va truoc do user duoc
+// award CHI VI attended_manual (voice < min). Neu voice >= min thi sao van giu.
+// Return: { revoked: true/false }
+function setManualUntickWithAutoRevoke(guildId, userId, weekKey, minSeconds) {
+  const cur = getUserWeekAttendance(guildId, userId, weekKey)
+  const wasEligible = cur.attended_manual === 1 || cur.voice_seconds >= minSeconds
+  const stillEligibleAfterUntick = cur.voice_seconds >= minSeconds
+  // Revoke chi khi: row finalized (da xu ly), truoc do eligible, sau untick khong con eligible
+  const shouldRevoke = cur.finalized === 1 && wasEligible && !stillEligibleAfterUntick && cur.attended_manual === 1
+
+  const tx = db().transaction(() => {
+    setManualAttendance(guildId, userId, weekKey, 0)
+    if (shouldRevoke) {
+      // Tru sao, khong duoi 0
+      db().prepare(`
+        UPDATE blesscastle_stars SET stars = MAX(0, stars - 1), last_updated = unixepoch()
+        WHERE guild_id = ? AND user_id = ?
+      `).run(guildId, userId)
+    }
+  })
+  tx()
+
+  return { revoked: shouldRevoke }
+}
+
 function setManualAttendanceWithAutoAward(guildId, userId, weekKey, minSeconds) {
   const cur = getUserWeekAttendance(guildId, userId, weekKey)
   // alreadyEligible = da hoac se duoc award (voice>=min tai finalize, hoac attended da 1)
@@ -492,6 +517,7 @@ module.exports = {
   addVoiceSeconds,
   setManualAttendance,
   setManualAttendanceWithAutoAward,
+  setManualUntickWithAutoRevoke,
   getWeekAttendance,
   getUserWeekAttendance,
   finalizeWeek,

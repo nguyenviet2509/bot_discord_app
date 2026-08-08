@@ -110,10 +110,10 @@ async function loadMembersForWeek(weekKey) {
     state.isCurrentWeek = mem.isCurrentWeek
     state.minMinutes = mem.minMinutes
     renderMembers()
-    document.getElementById('weekBadge').textContent = state.isCurrentWeek ? 'Tuần hiện tại' : 'Tuần đã qua (chỉ xem)'
+    document.getElementById('weekBadge').textContent = state.isCurrentWeek ? 'Tuần hiện tại' : 'Tuần đã chốt (có thể chỉnh sửa)'
     document.getElementById('weekBadge').className = state.isCurrentWeek
       ? 'text-xs text-emerald-600 font-medium'
-      : 'text-xs text-slate-500 italic'
+      : 'text-xs text-amber-600 font-medium'
   } catch (e) {
     flashSave(`Lỗi tải thành viên: ${e.message}`, false)
   }
@@ -227,9 +227,9 @@ function renderMembers() {
     return
   }
 
-  // Cho phep tick bat cu luc nao trong tuan hien tai (Mon-Sun ISO week).
-  // Sau finalize, tick van hoat dong va tu auto-award +1 sao neu user chua duoc award.
-  const canTick = state.isCurrentWeek
+  // Cho phep tick moi tuan (bao gom tuan qua khu de admin update list awarded).
+  // Tuan past: se yeu cau confirm truoc khi thao tac.
+  const canTick = true
   const inWindow = canTick
   const canRedeemGlobal = state.isCurrentWeek
   const minSec = state.minMinutes * 60
@@ -277,15 +277,21 @@ function renderMembers() {
 }
 
 async function toggleManual(userId, next) {
+  // Confirm khi thao tac tuan qua khu (co the +/- sao cua tuan cu)
+  if (!state.isCurrentWeek) {
+    const action = next ? 'thêm vào list và cộng +1⭐' : 'gỡ khỏi list và trừ -1⭐ (nếu chỉ được cộng qua tick manual)'
+    if (!confirm(`Chỉnh sửa tuần đã chốt ${state.weekKey}: ${action}?\n\nTiếp tục?`)) return
+  }
   try {
     const body = { userId, weekKey: state.weekKey }
     let r
     if (next) {
       r = await api('POST', '/api/blesscastle/attendance', body)
+      flashSave(r?.awarded ? 'Đã tick + cộng 1⭐ ✓' : 'Đã cập nhật ✓')
     } else {
       r = await api('DELETE', '/api/blesscastle/attendance', body)
+      flashSave(r?.revoked ? 'Đã gỡ tick + trừ 1⭐ ✓' : 'Đã cập nhật ✓')
     }
-    flashSave(r?.awarded ? 'Đã tick + cộng 1⭐ ✓' : 'Đã cập nhật ✓')
     await refreshMembers()
   } catch (e) {
     flashSave(`Lỗi: ${e.message}`, false)

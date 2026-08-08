@@ -195,19 +195,18 @@ router.get('/members', async (req, res) => {
     })
   }
 
-  // 3. Only current week: them TAT CA member thuc trong guild de admin co the tick manual
-  if (isCurrentWeek) {
-    for (const [uid, info] of members) {
-      if (result.find(r => r.userId === uid)) continue
-      result.push({
-        userId: uid,
-        username: info.username,
-        avatar: avatarUrl(uid, info.avatar),
-        stars: 0,
-        lastUpdated: null,
-        thisWeek: { voiceSeconds: 0, voiceMinutes: 0, attendedManual: false, achieved: false },
-      })
-    }
+  // 3. Them TAT CA member thuc trong guild (cho ca tuan hien tai va tuan qua khu).
+  // Tuan qua khu: admin van co the tick de add/remove member trong list awarded.
+  for (const [uid, info] of members) {
+    if (result.find(r => r.userId === uid)) continue
+    result.push({
+      userId: uid,
+      username: info.username,
+      avatar: avatarUrl(uid, info.avatar),
+      stars: 0,
+      lastUpdated: null,
+      thisWeek: { voiceSeconds: 0, voiceMinutes: 0, attendedManual: false, achieved: false },
+    })
   }
 
   // Sort: achieved DESC, stars DESC, username
@@ -295,29 +294,30 @@ router.post('/reset', (req, res) => {
   res.json({ ok: true, message: 'Da xoa toan bo du lieu BlessCastle (giu lai cau hinh)' })
 })
 
+// Tick manual: chap nhan weekKey bat ky (default = active).
+// Tuan qua khu (finalized): auto-award +1 sao neu chua eligible.
+// Tuan active: grant ngay nhu binh thuong.
 router.post('/attendance', (req, res) => {
   const { userId, weekKey: reqWeek } = req.body || {}
   if (!userId) return res.status(400).json({ error: 'userId bat buoc' })
   const guildId = GUILD_ID()
-  const active = bcDb.activeWeekKey(guildId)
-  if (reqWeek && reqWeek !== active) {
-    return res.status(400).json({ error: 'Tuan da chot, khong the tick manual nua' })
-  }
   const cfg = bcDb.getConfig(guildId)
-  const result = bcDb.setManualAttendanceWithAutoAward(guildId, userId, active, cfg.minMinutes * 60)
-  res.json({ ok: true, ...result })
+  const weekKey = (reqWeek && /^\d{4}-\d{2}$/.test(reqWeek)) ? reqWeek : bcDb.activeWeekKey(guildId)
+  const result = bcDb.setManualAttendanceWithAutoAward(guildId, userId, weekKey, cfg.minMinutes * 60)
+  res.json({ ok: true, weekKey, ...result })
 })
 
+// Untick manual: chap nhan weekKey bat ky.
+// Tuan qua khu: neu user duoc award CHI VI manual (voice < min) -> tru 1 sao.
+// Tuan active/finalized voi voice >= min: sao van giu.
 router.delete('/attendance', (req, res) => {
   const { userId, weekKey: reqWeek } = req.body || {}
   if (!userId) return res.status(400).json({ error: 'userId bat buoc' })
   const guildId = GUILD_ID()
-  const active = bcDb.activeWeekKey(guildId)
-  if (reqWeek && reqWeek !== active) {
-    return res.status(400).json({ error: 'Tuan da chot, khong the sua nua' })
-  }
-  bcDb.setManualAttendance(guildId, userId, active, 0)
-  res.json({ ok: true })
+  const cfg = bcDb.getConfig(guildId)
+  const weekKey = (reqWeek && /^\d{4}-\d{2}$/.test(reqWeek)) ? reqWeek : bcDb.activeWeekKey(guildId)
+  const result = bcDb.setManualUntickWithAutoRevoke(guildId, userId, weekKey, cfg.minMinutes * 60)
+  res.json({ ok: true, weekKey, ...result })
 })
 
 router.post('/redeem', (req, res) => {
